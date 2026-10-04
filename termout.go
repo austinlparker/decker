@@ -1,37 +1,35 @@
 package decker
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 
 	tea "charm.land/bubbletea/v2"
+	uv "github.com/charmbracelet/ultraviolet"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/charmbracelet/x/term"
 )
 
-// The live deck writes its own frames instead of using Bubble Tea's
-// renderer. Bubble Tea's renderer takes each frame as an escape-coded
-// string, parses it back into cells, and then updates the terminal with
-// every shortcut the terminal claims to support: scrolling regions,
-// repeated and inserted characters, erases. At 682×171 that costs ~8ms a
-// frame, and when a shortcut lands differently than the renderer expects,
-// stripes come out shifted or the wrong color until the whole screen is
-// redrawn.
+// termWriter draws the live deck in place of Bubble Tea's renderer, which
+// re-parses each frame and updates with shortcuts (scrolling regions, repeated
+// and inserted characters) that can land wrong, leaving shifted or mis-colored
+// stripes; at 682×171 it costs ~8ms a frame.
 //
-// termWriter takes each frame as a Grid, compares it with the last frame it
-// wrote, and sends only the changed cells, using nothing but cursor moves,
-// colors and text. Each frame is wrapped in synchronized output, so the
-// terminal shows it whole or not at all. Writing happens on its own
-// goroutine: if the terminal falls behind, frames are dropped rather than
-// queued, and the deck keeps responding to keys.
+// termWriter diffs each grid against the last one written and sends only
+// changed cells, using just cursor moves, colors and text, in synchronized
+// output so a frame shows whole or not at all. It writes on its own goroutine;
+// if the terminal falls behind, frames are dropped, not queued.
 type termWriter struct {
 	out io.Writer
 
 	mu       sync.Mutex
-	pending  *Grid
+	pending  *grid
 	title    string
 	full     bool // redraw every cell next frame
 	notify   chan struct{}
@@ -39,16 +37,14 @@ type termWriter struct {
 	finished chan struct{}
 
 	// Owned by the writing goroutine.
-	prev      *Grid
+	prev      *grid
 	lastTitle string
 	buf       []byte
 }
 
-const (
-	// Unchanged cells between two changes are rewritten rather than skipped
-	// with a cursor move, if there are at most this many of them.
-	rewriteGap = 8
-)
+// rewriteGap is how many unchanged cells between changes are rewritten rather
+// than skipped with a cursor move.
+const rewriteGap = 8
 
 func newTermWriter(out io.Writer, bg RGB) *termWriter {
 	w := &termWriter{
@@ -58,22 +54,17 @@ func newTermWriter(out io.Writer, bg RGB) *termWriter {
 		finished: make(chan struct{}),
 	}
 	q := bg.q()
-	// Alternate screen, cursor hidden, no autowrap (so writing the last
-	// column never scrolls), and the deck's background as the terminal's,
-	// so window padding matches the slides.
-	io.WriteString(out, "\x1b[?1049h\x1b[?25l\x1b[?7l\x1b]11;#"+hex2(q[0])+hex2(q[1])+hex2(q[2])+"\x07\x1b[2J")
+	// No autowrap (the last column never scrolls); the deck's background
+	// becomes the terminal's.
+	io.WriteString(out, ansi.SetModeAltScreenSaveCursor+ansi.HideCursor+ansi.ResetModeAutoWrap+
+		ansi.SetBackgroundColor(fmt.Sprintf("#%02x%02x%02x", q[0], q[1], q[2]))+ansi.EraseEntireScreen)
 	go w.loop()
 	return w
 }
 
-func hex2(v uint8) string {
-	const digits = "0123456789abcdef"
-	return string([]byte{digits[v>>4], digits[v&15]})
-}
-
-// submit hands a frame to the writer, which owns it from now on. A frame
-// that hasn't been written yet is dropped in favor of the new one.
-func (w *termWriter) submit(g *Grid, title string) {
+// submit hands g to the writer, which owns it from now on; a frame not yet
+// written is dropped.
+func (w *termWriter) submit(g *grid, title string) {
 	w.mu.Lock()
 	w.pending.release()
 	w.pending, w.title = g, title
@@ -84,19 +75,18 @@ func (w *termWriter) submit(g *Grid, title string) {
 	}
 }
 
-// invalidate makes the next frame redraw every cell, in case something
-// else drew on the terminal.
+// invalidate makes the next frame redraw every cell, after something else drew
+// on the terminal.
 func (w *termWriter) invalidate() {
 	w.mu.Lock()
 	w.full = true
 	w.mu.Unlock()
 }
 
-// close stops the writer and restores the terminal.
 func (w *termWriter) close() {
 	close(w.quit)
 	<-w.finished
-	io.WriteString(w.out, "\x1b[0m\x1b[?7h\x1b[?25h\x1b[?1049l\x1b]111\x07")
+	io.WriteString(w.out, "\x1b[0m"+ansi.SetModeAutoWrap+ansi.ShowCursor+ansi.ResetModeAltScreenSaveCursor+ansi.ResetBackgroundColor)
 }
 
 func (w *termWriter) loop() {
@@ -118,80 +108,68 @@ func (w *termWriter) loop() {
 	}
 }
 
-func (w *termWriter) write(g *Grid, title string, full bool) {
+// write encodes g as a diff against the previous frame (in full if full or
+// resized) and takes ownership of g.
+func (w *termWriter) write(g *grid, title string, full bool) {
 	prev := w.prev
-	if prev == nil || prev.W != g.W || prev.H != g.H {
-		full = true
-	}
-	b := append(w.buf[:0], "\x1b[?2026h"...)
-	start := len(b)
+	full = full || prev == nil || prev.W != g.W || prev.H != g.H
+	b := append(w.buf[:0], ansi.SetModeSynchronizedOutput...)
+	changed := full
 	if title != w.lastTitle {
-		b = append(b, "\x1b]2;"...)
-		b = append(b, title...)
-		b = append(b, '\a')
-		w.lastTitle = title
+		b = append(b, ansi.SetWindowTitle(title)...)
+		w.lastTitle, changed = title, true
 	}
 	if full {
-		b = append(b, "\x1b[0m\x1b[2J"...)
+		b = append(b, "\x1b[0m"+ansi.EraseEntireScreen...)
 	}
 	var p pen
 	b = append(b, "\x1b[0m"...)
-	for y := 0; y < g.H; y++ {
+	mark := len(b)
+	for y := range g.H {
 		row := g.Cells[y*g.W : (y+1)*g.W]
 		if full {
-			b = moveTo(b, 0, y)
-			b = p.run(b, row, 0, g.W-1)
-			continue
-		}
-		old := prev.Cells[y*g.W : (y+1)*g.W]
-		for x := 0; x < g.W; {
-			if row[x] == old[x] {
-				x++
-				continue
-			}
-			first := x
-			if row[first].ch == "" && first > 0 {
-				first-- // start at the wide character this half belongs to
-			}
-			last, gap := x, 0
-			for x2 := x + 1; x2 < g.W && gap <= rewriteGap; x2++ {
-				if row[x2] != old[x2] {
-					last, gap = x2, 0
-				} else {
-					gap++
-				}
-			}
-			b = moveTo(b, first, y)
-			b = p.run(b, row, first, last)
-			x = last + 1
+			b = p.run(moveTo(b, 0, y), row, 0, g.W-1)
+		} else {
+			b = diffRow(b, &p, row, prev.Cells[y*g.W:(y+1)*g.W], y)
 		}
 	}
-	if len(b) > start+len("\x1b[0m") || full {
-		b = append(b, "\x1b[?2026l"...)
-		if _, err := w.out.Write(b); err != nil {
-			// The terminal went away; nothing useful to do.
-			_ = err
-		}
+	if changed || len(b) > mark {
+		b = append(b, ansi.ResetModeSynchronizedOutput...)
+		_, _ = w.out.Write(b) // if the terminal went away there's nothing useful to do
 	}
 	w.buf = b
 	w.prev.release()
 	w.prev = g
 }
 
-// run appends cells first..last of row.
-func (p *pen) run(b []byte, row []gcell, first, last int) []byte {
-	for x := first; x <= last && x < len(row); x++ {
-		c := &row[x]
-		if c.ch == "" {
+// diffRow appends the moves and cells that turn old into row y; changes at most
+// rewriteGap apart form one run.
+func diffRow(b []byte, p *pen, row, old []gcell, y int) []byte {
+	for x := 0; x < len(row); {
+		if row[x] == old[x] {
+			x++
 			continue
 		}
-		b = p.cell(b, c)
-		if c.wide {
-			x++
+		first := x
+		if row[first].ch == "" && first > 0 {
+			first-- // start at the wide character this half belongs to
 		}
+		last, gap := x, 0
+		for x2 := x + 1; x2 < len(row) && gap <= rewriteGap; x2++ {
+			if row[x2] != old[x2] {
+				last, gap = x2, 0
+			} else {
+				gap++
+			}
+		}
+		b = p.run(moveTo(b, first, y), row, first, last)
+		x = last + 1
 	}
 	return b
 }
+
+// The encoder appends bytes by hand: it runs per changed cell per frame, and
+// x/ansi's helpers allocate.
 
 // moveTo appends a cursor move to column x, row y (0-based).
 func moveTo(b []byte, x, y int) []byte {
@@ -202,9 +180,91 @@ func moveTo(b []byte, x, y int) []byte {
 	return append(b, 'H')
 }
 
-// liveTerminal sets up the terminal for the live deck: raw keyboard input,
-// window size reports and the frame writer. Bubble Tea runs without its
-// renderer, which also means it leaves the keyboard and resizing to us.
+// String encodes the grid as exactly H lines of W cells, each with an explicit
+// background (a translucent terminal only shows through the default one).
+// Colors are written only on change.
+func (g *grid) String() string {
+	var b strings.Builder
+	b.Grow(g.W * g.H * 6)
+	var buf []byte
+	for y := range g.H {
+		var p pen
+		row := g.Cells[y*g.W : (y+1)*g.W]
+		buf = p.run(buf[:0], row, 0, len(row)-1)
+		b.Write(buf)
+		if p.on {
+			b.WriteString("\x1b[m")
+		}
+		if y < g.H-1 {
+			b.WriteByte('\n')
+		}
+	}
+	return b.String()
+}
+
+// pen tracks the terminal's current colors and attributes so encoding writes
+// only changes.
+type pen struct {
+	fg, bg     [3]uint8
+	fgOn, bgOn bool
+	attrs, ul  uint8
+	on         bool // anything set since the last reset
+}
+
+func (p *pen) cell(buf []byte, c *gcell) []byte {
+	if c.attrs != p.attrs || c.ul != p.ul {
+		// Attributes can only be turned off together: reset, then set.
+		buf = append(buf, "\x1b[0"...)
+		st := uv.Style{Attrs: c.attrs, Underline: uv.Underline(c.ul)}
+		if c.attrs != 0 || c.ul != 0 {
+			if s := st.String(); len(s) > 3 { // "\x1b[" + params + "m"
+				buf = append(buf, ';')
+				buf = append(buf, s[2:len(s)-1]...)
+			}
+		}
+		buf = append(buf, 'm')
+		p.fgOn, p.bgOn = false, false
+		p.attrs, p.ul, p.on = c.attrs, c.ul, true
+	}
+	// A plain space shows only its background; skip changing the foreground.
+	plainSpace := c.ch == " " && c.attrs == 0 && c.ul == 0
+	if !plainSpace && (!p.fgOn || p.fg != c.fg) {
+		buf = sgrColor(buf, '3', c.fg)
+		p.fg, p.fgOn, p.on = c.fg, true, true
+	}
+	if !p.bgOn || p.bg != c.bg {
+		buf = sgrColor(buf, '4', c.bg)
+		p.bg, p.bgOn, p.on = c.bg, true, true
+	}
+	return append(buf, c.ch...)
+}
+
+func (p *pen) run(b []byte, row []gcell, first, last int) []byte {
+	for x := first; x <= last && x < len(row); x++ {
+		c := &row[x]
+		if c.ch == "" {
+			continue // drawn by the wide character before it
+		}
+		b = p.cell(b, c)
+		if c.wide {
+			x++
+		}
+	}
+	return b
+}
+
+// sgrColor appends a 24-bit color: kind '3' for foreground, '4' background.
+func sgrColor(buf []byte, kind byte, c [3]uint8) []byte {
+	buf = append(buf, "\x1b["...)
+	buf = append(buf, kind, '8', ';', '2')
+	for _, v := range c {
+		buf = strconv.AppendUint(append(buf, ';'), uint64(v), 10)
+	}
+	return append(buf, 'm')
+}
+
+// liveTerminal sets up raw input, window size reports and the frame writer
+// Bubble Tea leaves to us.
 type liveTerminal struct {
 	writer  *termWriter
 	restore func()
@@ -242,10 +302,8 @@ func (lt *liveTerminal) watchSize(p *tea.Program) {
 }
 
 func (lt *liveTerminal) close() {
-	if lt.sigs != nil {
-		signal.Stop(lt.sigs)
-		close(lt.sigs)
-	}
+	signal.Stop(lt.sigs)
+	close(lt.sigs)
 	lt.writer.close()
 	lt.restore()
 }

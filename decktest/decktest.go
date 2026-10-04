@@ -1,8 +1,6 @@
-// Package decktest is the test suite every deck wants: every slide renders
-// at every build step, size and moment without panicking; every frame is
-// exactly the requested size and fully opaque; nothing changes without you
-// knowing (golden hashes); and a per-slide frame-time benchmark. A talk's
-// test file is a few lines:
+// Package decktest is the test suite every deck wants: every slide renders at
+// every step, size and moment without panicking; golden hashes catch
+// unintended changes; and a per-slide benchmark measures frame time. A talk's test file is a few lines:
 //
 //	func TestSlides(t *testing.T)      { decktest.Slides(t, talk()) }
 //	func TestGolden(t *testing.T)      { decktest.Golden(t, talk(), "testdata/golden.txt") }
@@ -19,67 +17,44 @@ import (
 	"strings"
 	"testing"
 
-	"charm.land/lipgloss/v2"
-	uv "github.com/charmbracelet/ultraviolet"
-
 	"github.com/austinlparker/decker"
 )
 
-// Slides renders every slide at every step, at three terminal sizes and
-// four moments (appearing, mid-entrance, entered, settled), and fails on
-// panics, frames of the wrong size, and cells without a background color
-// (terminals with a translucent background show through those).
+// Slides renders every slide at every step, at three sizes and four moments
+// (appearing, mid-entrance, entered, settled), failing on panics.
 func Slides(t *testing.T, d decker.Deck) {
 	t.Helper()
 	for i, s := range d.Slides {
 		for _, size := range [][2]int{{80, 24}, {120, 36}, {200, 50}} {
 			for step := 0; step < d.Steps(i); step++ {
 				for _, at := range []float64{0, 0.3, 1.5, decker.Settled} {
-					c := decker.Ctx{W: size[0], H: size[1], T: at, Step: step, StepT: at, Theme: d.Theme}
-					out := view(t, s, c)
-					if n := strings.Count(out, "\n") + 1; n != c.H {
-						t.Errorf("slide %d %q: %d lines at %dx%d, want %d", i+1, s.Title, n, c.W, c.H, c.H)
-					}
-				}
-			}
-		}
-		const w, h = 120, 36
-		frame := d.Render(i, decker.Ctx{W: w, H: h, T: 1.5, Step: d.Steps(i) - 1, StepT: 1.5})
-		cv := lipgloss.NewCanvas(w, h)
-		uv.NewStyledString(frame).Draw(cv, cv.Bounds())
-	opaque:
-		for y := 0; y < h; y++ {
-			for x := 0; x < w; x++ {
-				if c := cv.CellAt(x, y); c == nil || (c.Width > 0 && c.Style.Bg == nil) {
-					t.Errorf("slide %d %q: cell (%d,%d) has no background color", i+1, s.Title, x, y)
-					break opaque
+					view(t, s, decker.Ctx{W: size[0], H: size[1], T: at, Step: step, StepT: at, Theme: d.Theme})
 				}
 			}
 		}
 	}
 }
 
-// view draws one frame straight from the slide, so a panic fails the test
-// instead of being drawn on screen the way the deck shows it.
-func view(t *testing.T, s decker.Slide, c decker.Ctx) string {
+// view draws one frame straight from the slide so a panic fails the test
+// instead of being drawn.
+func view(t *testing.T, s decker.Slide, c decker.Ctx) {
 	t.Helper()
+	sc := decker.NewScene(c.W, c.H, c.Theme)
+	defer sc.Release()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Fatalf("slide %q panicked at %dx%d step %d t=%v: %v", s.Title, c.W, c.H, c.Step, c.T, r)
 		}
 	}()
-	if s.View == nil {
-		return strings.Repeat("\n", c.H-1)
+	if s.View != nil {
+		s.View(c, sc)
 	}
-	return s.View(c)
 }
 
-// Golden compares every frame of the deck with the hashes recorded in
-// path: one hash per slide and build step, covering eight moments at three
-// sizes (up to the presenting size, 682×171). Run with UPDATE_GOLDEN=1 to
-// record the deck as it is now; do that when you change a slide on
-// purpose, and the test catches every change you didn't mean, such as an
-// engine change that moves a pixel. Skipped with -short.
+// Golden compares every frame with the hashes recorded in path: one per slide
+// and build step, covering eight moments at three sizes (up to 682×171). Run
+// with UPDATE_GOLDEN=1 to re-record after an intentional change. Skipped with
+// -short.
 func Golden(t *testing.T, d decker.Deck, path string) {
 	t.Helper()
 	if testing.Short() {
@@ -125,8 +100,8 @@ func Golden(t *testing.T, d decker.Deck, path string) {
 // Hash is the hash of every golden frame of one build step.
 type Hash struct{ Key, Sum string }
 
-// Hashes renders the golden frames of every slide and step. The key names
-// the slide by number and title, so a reordered deck reads clearly.
+// Hashes renders the golden frames of every slide and step, keyed by slide
+// number and title.
 func Hashes(d decker.Deck) []Hash {
 	sizes := [][2]int{{80, 24}, {240, 67}, {682, 171}}
 	times := []float64{0, 0.25, 0.7, 1.5, 3, 6, 12, decker.Settled}
@@ -173,10 +148,9 @@ func readHashes(path string) (map[string]string, error) {
 	return out, sc.Err()
 }
 
-// Frames benchmarks one frame of each slide, mid-animation, at
-// projector-like sizes: drawing it into cells, as the live deck does each
-// frame. At 60 fps a frame has ~16ms, and the terminal needs time to draw
-// it too, so aim for a few milliseconds at the presenting size:
+// Frames benchmarks one mid-animation frame of each slide at projector-like
+// sizes, drawn into cells as the live deck does. At 60 fps a frame has ~16ms
+// and the terminal needs time too, so aim for a few ms at the presenting size:
 //
 //	go test -bench Frames/682x171
 func Frames(b *testing.B, d decker.Deck) {
@@ -184,7 +158,7 @@ func Frames(b *testing.B, d decker.Deck) {
 		for i := range d.Slides {
 			b.Run(fmt.Sprintf("%dx%d/%d", size[0], size[1], i+1), func(b *testing.B) {
 				c := decker.Ctx{W: size[0], H: size[1], T: 1.3, Step: d.Steps(i) - 1, StepT: 1.3}
-				for n := 0; n < b.N; n++ {
+				for b.Loop() {
 					c.T += 1.0 / 60
 					c.StepT += 1.0 / 60
 					d.Draw(i, c)

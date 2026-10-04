@@ -5,17 +5,14 @@ import (
 	"embed"
 	"fmt"
 	"io/fs"
+	"math"
 	pathpkg "path"
+	"slices"
 	"strconv"
 	"strings"
-	"sync"
+	"unicode"
 	"unicode/utf8"
 )
-
-// Block fonts: classic FIGlet fonts, designed as terminal characters
-// (█ ▀ ╗ ═ …) and drawn onto the pixel canvas at a screen-relative scale.
-// Use them for titles and impact lines; see Block for drawing and
-// blockfx.go for animations. Font files and provenance are in fonts/figlet.
 
 //go:embed fonts/figlet/*.flf
 var figFiles embed.FS
@@ -29,19 +26,26 @@ var (
 	BlockFancy  = stockFig("Delta Corps Priest 1") // dramatic; 8 rows
 )
 
-// FigFont is a parsed FIGlet font.
+// FigFont is a parsed FIGlet (.flf) font, classic terminal-character type drawn
+// by Block. Stock fonts' files and provenance are in fonts/figlet.
 type FigFont struct {
-	Name    string
+	Name string // the font's file name without .flf
+	// Height is the row count the font file declares. Rendered lines trim
+	// blank padding rows, so use Rows for the height of drawn text.
 	Height  int
 	kerning bool // false = full width (each glyph keeps its own box)
 	glyphs  map[rune][][]rune
 }
 
+// hardBlank stands in for the font's hardblank, which stops glyphs kerning into
+// each other, until layout turns it into a space.
+const hardBlank = ' '
+
 func stockFig(name string) *FigFont { return LoadFigFont(figFiles, "fonts/figlet/"+name+".flf") }
 
-// LoadFigFont loads a FIGlet (.flf) font from fsys, named after its file.
-// Fonts whose glyphs are made of block (█ ▀ ▄ ░) and box-drawing (═ ║ ╗)
-// characters draw best. It panics if the font is missing or broken.
+// LoadFigFont loads a FIGlet (.flf) font from fsys, named after its file. Fonts
+// of block (█ ▀ ▄ ░) and box-drawing (═ ║ ╗) characters draw best. It panics if
+// the font is missing or broken.
 func LoadFigFont(fsys fs.FS, path string) *FigFont {
 	b, err := fs.ReadFile(fsys, path)
 	if err != nil {
@@ -55,9 +59,9 @@ func LoadFigFont(fsys fs.FS, path string) *FigFont {
 	return f
 }
 
-// parseFig reads the FIGlet .flf format: a header line, comment lines, then
-// each character's rows. Rows end with an end mark (usually '@', doubled on
-// a character's last row). Only the required ASCII characters are loaded.
+// parseFig reads the .flf format: header, comment lines, then each character's
+// rows, which end with an end mark (usually '@', doubled on the last row). Only
+// ASCII is loaded.
 func parseFig(name, src string) (*FigFont, error) {
 	sc := bufio.NewScanner(strings.NewReader(src))
 	sc.Buffer(make([]byte, 1<<16), 1<<20)
@@ -77,7 +81,7 @@ func parseFig(name, src string) (*FigFont, error) {
 	f := &FigFont{Name: name, Height: height, kerning: oldLayout >= 0, glyphs: map[rune][][]rune{}}
 	for r := rune(32); r <= 126; r++ {
 		rows := make([][]rune, 0, height)
-		for i := 0; i < height; i++ {
+		for range height {
 			if !sc.Scan() {
 				return nil, fmt.Errorf("truncated at %q", r)
 			}
@@ -89,7 +93,7 @@ func parseFig(name, src string) (*FigFont, error) {
 			row := []rune(line)
 			for j, ch := range row {
 				if ch == hardblank {
-					row[j] = '\u00a0' // placeholder; becomes a space after layout
+					row[j] = hardBlank
 				}
 			}
 			rows = append(rows, row)
@@ -99,11 +103,17 @@ func parseFig(name, src string) (*FigFont, error) {
 	return f, nil
 }
 
-func (f *FigFont) glyph(r rune) [][]rune {
+// lookup returns r's glyph, falling back to its uppercase.
+func (f *FigFont) lookup(r rune) ([][]rune, bool) {
 	if g, ok := f.glyphs[r]; ok {
-		return g
+		return g, true
 	}
-	if g, ok := f.glyphs[toUpper(r)]; ok {
+	g, ok := f.glyphs[toUpper(r)]
+	return g, ok
+}
+
+func (f *FigFont) glyph(r rune) [][]rune {
+	if g, ok := f.lookup(r); ok {
 		return g
 	}
 	return f.glyphs['?']
@@ -116,25 +126,21 @@ func toUpper(r rune) rune {
 	return r
 }
 
-// render lays out one line of text. It returns the rows and, for every
-// cell, the index of the source character it came from (-1 for blanks).
-// Layouts are remembered, since block text is measured and drawn every
-// frame; callers must not modify the result.
-func (f *FigFont) render(s string) ([][]rune, [][]int) {
-	key := figKey{f, s}
-	figMu.Lock()
-	l, ok := figCache[key]
-	figMu.Unlock()
-	if !ok {
-		l.rows, l.owner = f.layout(s)
-		figMu.Lock()
-		if len(figCache) > 4096 {
-			clear(figCache)
-		}
-		figCache[key] = l
-		figMu.Unlock()
+// figCell is one cell of a rendered line: its character, and the index of
+// the source character it came from (-1 for blanks).
+type figCell struct {
+	r     rune
+	owner int
+}
+
+type figLayout [][]figCell
+
+func (l figLayout) width() int {
+	w := 0
+	for _, row := range l {
+		w = max(w, len(row))
 	}
-	return l.rows, l.owner
+	return w
 }
 
 type figKey struct {
@@ -142,159 +148,131 @@ type figKey struct {
 	s string
 }
 
-type figLayout struct {
-	rows  [][]rune
-	owner [][]int
+var figLayouts = memo[figKey, figLayout]{max: 4096}
+
+// render lays out one line of text. Callers must not modify the result.
+func (f *FigFont) render(s string) figLayout {
+	return figLayouts.get(figKey{f, s}, func() figLayout { return f.layout(s) })
 }
 
-var (
-	figMu    sync.Mutex
-	figCache = map[figKey]figLayout{}
-)
-
-func (f *FigFont) layout(s string) ([][]rune, [][]int) {
-	rows := make([][]rune, f.Height)
-	owner := make([][]int, f.Height)
+func (f *FigFont) layout(s string) figLayout {
+	rows := make(figLayout, f.Height)
 	for i, r := range []rune(s) {
 		g := f.glyph(r)
 		gw := 0
 		for _, gr := range g {
 			gw = max(gw, len(gr))
 		}
-		// Kerning: slide the glyph left until it would touch what's there.
 		shift := 0
 		if f.kerning && i > 0 {
-			shift = 1 << 30
-			for y := 0; y < f.Height; y++ {
-				trail := 0
-				for x := len(rows[y]) - 1; x >= 0 && rows[y][x] == ' '; x-- {
-					trail++
-				}
-				lead := 0
-				for x := 0; x < len(g[y]) && g[y][x] == ' '; x++ {
-					lead++
-				}
-				if len(g[y]) == 0 {
-					lead = gw
-				}
-				shift = min(shift, trail+lead)
-			}
-			if shift == 1<<30 {
-				shift = 0
-			}
+			shift = kernShift(rows, g, gw)
 		}
-		for y := 0; y < f.Height; y++ {
+		for y := range f.Height {
 			start := len(rows[y]) - shift
-			for x := 0; x < gw; x++ {
+			for x := range gw {
 				ch := ' '
 				if x < len(g[y]) {
 					ch = g[y][x]
 				}
-				pos := start + x
-				for pos >= len(rows[y]) {
-					rows[y] = append(rows[y], ' ')
-					owner[y] = append(owner[y], -1)
+				for start+x >= len(rows[y]) {
+					rows[y] = append(rows[y], figCell{' ', -1})
 				}
 				if ch != ' ' {
-					rows[y][pos] = ch
-					owner[y][pos] = i
+					rows[y][start+x] = figCell{ch, i}
 				}
 			}
 		}
 	}
-	for y := range rows {
-		for x, ch := range rows[y] {
-			if ch == '\u00a0' {
-				rows[y][x] = ' '
-				owner[y][x] = -1
+	for _, row := range rows {
+		for x, c := range row {
+			if c.r == hardBlank {
+				row[x] = figCell{' ', -1}
 			}
 		}
 	}
-	return trimBlankRows(rows, owner)
+	return trimBlankRows(rows)
 }
 
-// trimBlankRows removes empty rows at the top and bottom of a glyph block
-// (many fonts pad with an empty row), so blocks stack tightly.
-func trimBlankRows(rows [][]rune, owner [][]int) ([][]rune, [][]int) {
-	blank := func(r []rune) bool { return strings.TrimSpace(string(r)) == "" }
+// kernShift is how far glyph g (gw wide) can slide left into rows before it
+// would touch what's there.
+func kernShift(rows figLayout, g [][]rune, gw int) int {
+	shift := math.MaxInt
+	for y, row := range rows {
+		trail := 0
+		for x := len(row) - 1; x >= 0 && row[x].r == ' '; x-- {
+			trail++
+		}
+		lead := 0
+		for x := 0; x < len(g[y]) && g[y][x] == ' '; x++ {
+			lead++
+		}
+		if len(g[y]) == 0 {
+			lead = gw
+		}
+		shift = min(shift, trail+lead)
+	}
+	if shift == math.MaxInt {
+		return 0
+	}
+	return shift
+}
+
+// trimBlankRows drops blank rows at the top and bottom (many fonts pad them).
+func trimBlankRows(rows figLayout) figLayout {
+	blank := func(row []figCell) bool {
+		return !slices.ContainsFunc(row, func(c figCell) bool { return !unicode.IsSpace(c.r) })
+	}
 	for len(rows) > 0 && blank(rows[len(rows)-1]) {
-		rows, owner = rows[:len(rows)-1], owner[:len(owner)-1]
+		rows = rows[:len(rows)-1]
 	}
 	for len(rows) > 0 && blank(rows[0]) {
-		rows, owner = rows[1:], owner[1:]
+		rows = rows[1:]
 	}
-	return rows, owner
+	return rows
 }
 
 // Width returns the width in cells of s rendered on one line.
-func (f *FigFont) Width(s string) int {
-	rows, _ := f.render(s)
+func (f *FigFont) Width(s string) int { return f.render(s).width() }
+
+func (f *FigFont) widest(lines []string) int {
 	w := 0
-	for _, r := range rows {
-		w = max(w, len(r))
+	for _, l := range lines {
+		w = max(w, f.Width(l))
 	}
 	return w
 }
 
-// Rows returns the height in cells of one rendered line.
-func (f *FigFont) Rows() int {
-	rows, _ := f.render("AgjM")
-	return len(rows)
-}
+// Rows returns the height in cells of one rendered line, measured on a sample
+// with ascenders, descenders and capitals so it is the same for every line.
+func (f *FigFont) Rows() int { return len(f.render("AgjM")) }
 
-// Wrap breaks s into lines no wider than maxW cells, at spaces. "\n" is kept.
+// Wrap breaks s into lines no wider than maxW cells, at spaces, keeping "\n".
+// Like Font.Wrap it balances the lines: each paragraph uses the narrowest
+// width needing no more lines than maxW does.
 func (f *FigFont) Wrap(s string, maxW int) []string {
-	var out []string
-	for _, para := range strings.Split(s, "\n") {
-		line := ""
-		for _, word := range strings.Fields(para) {
-			try := word
-			if line != "" {
-				try = line + " " + word
-			}
-			if line != "" && f.Width(try) > maxW {
-				out = append(out, line)
-				line = word
-			} else {
-				line = try
-			}
-		}
-		out = append(out, line)
-	}
-	return out
+	return wrapBalanced(s, float64(maxW), func(l string) float64 { return float64(f.Width(l)) })
 }
 
-// Has reports whether the font has a visible glyph for every non-space
-// character in s (some fonts have no digits or punctuation).
+// Has reports whether the font has a visible glyph for each non-space rune of
+// s.
 func (f *FigFont) Has(s string) bool {
 	for _, r := range s {
 		if r == ' ' || r == '\n' {
 			continue
 		}
-		g, ok := f.glyphs[r]
-		if !ok {
-			g, ok = f.glyphs[toUpper(r)]
-		}
-		if !ok {
-			return false
-		}
-		ink := false
-		for _, row := range g {
-			if strings.TrimSpace(strings.ReplaceAll(string(row), "\u00a0", " ")) != "" {
-				ink = true
-			}
-		}
-		if !ink {
+		g, ok := f.lookup(r)
+		if !ok || !slices.ContainsFunc(g, func(row []rune) bool {
+			return slices.ContainsFunc(row, func(r rune) bool { return !unicode.IsSpace(r) })
+		}) {
 			return false
 		}
 	}
 	return true
 }
 
-// DropQuotes removes quote marks the font has no glyph for. Big block
-// letters read fine without them ("AGENTS ARENT USERS"), and dropping them
-// beats falling back to a smaller font. FitBlock does this itself; use it
-// when you wrap or measure a string FitBlock fitted.
+// DropQuotes removes quote marks the font has no glyph for, which beats falling
+// back to a smaller font. FitBlock does this itself; call it before wrapping or
+// measuring a string FitBlock fitted.
 func (f *FigFont) DropQuotes(s string) string {
 	return strings.Map(func(r rune) rune {
 		switch r {

@@ -2,26 +2,20 @@ package decker
 
 import (
 	"image/color"
-	"strconv"
-	"strings"
-	"sync"
 
 	"charm.land/lipgloss/v2"
 	uv "github.com/charmbracelet/ultraviolet"
 )
 
-// Grid is one finished frame as terminal cells: what the live deck writes to
-// the terminal (see termout.go), and what the string output is encoded
-// from. Slides build it straight from their pixel canvas, so the deck never
-// has to turn a frame into escape codes and parse it back.
-type Grid struct {
+// grid is one finished frame of terminal cells: what the live deck writes and
+// frame strings encode.
+type grid struct {
 	W, H  int
 	Cells []gcell
 }
 
-// gcell is one terminal cell. Most cells are a space or a half block (▀)
-// with explicit colors; rich cells (help, notes, the footer) can carry text
-// attributes.
+// gcell is a space or half block (▀) with explicit colors, or a rich cell with
+// text attributes.
 type gcell struct {
 	ch     string // one grapheme; "" for the second half of a wide character
 	fg, bg [3]uint8
@@ -32,31 +26,19 @@ type gcell struct {
 
 const halfBlock = "▀"
 
-// Grids are big (a 682×171 frame is ~117k cells) and one is made every
-// frame, so they're recycled.
-var (
-	gridPoolMu sync.Mutex
-	gridPool   []*Grid
-)
+// A 682×171 frame is ~117k cells and one is made every frame: recycle them.
+var grids = sizedPool[grid]{max: 6}
 
-// newGrid returns a w×h grid. Its cells are not cleared: callers fill every
-// cell.
-func newGrid(w, h int) *Grid {
+// newGrid returns a w×h grid with uncleared cells: callers fill every cell.
+func newGrid(w, h int) *grid {
 	w, h = max(w, 1), max(h, 1)
-	gridPoolMu.Lock()
-	for i, g := range gridPool {
-		if g.W == w && g.H == h {
-			gridPool = append(gridPool[:i], gridPool[i+1:]...)
-			gridPoolMu.Unlock()
-			return g
-		}
+	if g := grids.get(func(g *grid) bool { return g.W == w && g.H == h }); g != nil {
+		return g
 	}
-	gridPoolMu.Unlock()
-	return &Grid{W: w, H: h, Cells: make([]gcell, w*h)}
+	return &grid{W: w, H: h, Cells: make([]gcell, w*h)}
 }
 
-// blankGrid returns a grid filled with bg.
-func blankGrid(w, h int, bg RGB) *Grid {
+func blankGrid(w, h int, bg RGB) *grid {
 	g := newGrid(w, h)
 	q := bg.q()
 	for i := range g.Cells {
@@ -66,26 +48,19 @@ func blankGrid(w, h int, bg RGB) *Grid {
 }
 
 // release returns g to the pool. Don't use it afterwards.
-func (g *Grid) release() {
-	if g == nil {
-		return
+func (g *grid) release() {
+	if g != nil {
+		grids.put(g)
 	}
-	gridPoolMu.Lock()
-	if len(gridPool) < 6 {
-		gridPool = append(gridPool, g)
-	}
-	gridPoolMu.Unlock()
 }
 
-func (g *Grid) at(x, y int) *gcell { return &g.Cells[y*g.W+x] }
+func (g *grid) at(x, y int) *gcell { return &g.Cells[y*g.W+x] }
 
-// clone returns a copy of g that is not from the pool.
-func (g *Grid) clone() *Grid {
-	return &Grid{W: g.W, H: g.H, Cells: append([]gcell(nil), g.Cells...)}
-}
-
-// pixelCell is the cell showing two stacked pixels.
 func pixelCell(top, bot RGB) gcell {
+	if top == bot { // most cells are background
+		q := top.q()
+		return gcell{ch: " ", fg: q, bg: q}
+	}
 	qt, qb := top.q(), bot.q()
 	if qt == qb {
 		return gcell{ch: " ", fg: qt, bg: qb}
@@ -93,12 +68,12 @@ func pixelCell(top, bot RGB) gcell {
 	return gcell{ch: halfBlock, fg: qt, bg: qb}
 }
 
-// grid converts the scene into cells: pixels as half blocks, with the
-// character layer on top.
-func (s *Scene) grid() *Grid {
+// toGrid converts the scene to cells: pixels as half blocks, character layer on
+// top.
+func (s *Scene) toGrid() *grid {
 	g := newGrid(s.W, s.H)
 	w := s.W
-	for y := 0; y < s.H; y++ {
+	for y := range s.H {
 		top := s.Px.Pix[(2*y)*w : (2*y+1)*w]
 		bot := s.Px.Pix[(2*y+1)*w : (2*y+2)*w]
 		row := g.Cells[y*w : (y+1)*w]
@@ -106,29 +81,22 @@ func (s *Scene) grid() *Grid {
 			row[x] = pixelCell(top[x], bot[x])
 		}
 	}
-	if s.cells != nil {
-		for _, i := range s.used {
-			cell := s.cells[i]
-			if cell == nil {
-				continue
-			}
-			x, y := i%w, i/w
-			var fallback RGB
-			if cell.Style.Bg == nil {
-				fallback = Mix(s.Px.Pix[(2*y)*w+x], s.Px.Pix[(2*y+1)*w+x], 0.5)
-			}
-			g.setUV(x, y, cell, s.ink, fallback)
+	ink := s.ink.q()
+	for _, i := range s.used {
+		x, y := i%w, i/w
+		cell := s.cells[i]
+		var fallback [3]uint8
+		if cell.Style.Bg == nil {
+			fallback = Mix(s.Px.Pix[(2*y)*w+x], s.Px.Pix[(2*y+1)*w+x], 0.5).q()
 		}
+		g.setUV(x, y, cell, ink, fallback)
 	}
 	return g
 }
 
-// setUV stores a Lip Gloss / Ultraviolet cell at (x, y). A cell without a
-// foreground takes fg; without a background, bg.
-func (g *Grid) setUV(x, y int, cell *uv.Cell, fg, bg RGB) {
-	if x < 0 || y < 0 || x >= g.W || y >= g.H || cell == nil || cell.Width == 0 {
-		return
-	}
+// setUV stores a cell at an already-clipped (x, y); a missing foreground takes
+// fg, a missing background bg.
+func (g *grid) setUV(x, y int, cell *uv.Cell, fg, bg [3]uint8) {
 	c := gcell{ch: cell.Content, attrs: cell.Style.Attrs, ul: uint8(cell.Style.Underline)}
 	if c.ch == "" {
 		c.ch = " "
@@ -152,137 +120,78 @@ func (g *Grid) setUV(x, y int, cell *uv.Cell, fg, bg RGB) {
 	*g.at(x, y) = c
 }
 
-func colorQ(c color.Color, fallback RGB) [3]uint8 {
+func colorQ(c color.Color, fallback [3]uint8) [3]uint8 {
 	if c == nil {
-		return fallback.q()
+		return fallback
 	}
 	return toRGB(c).q()
 }
 
-// parseGrid draws a styled string (Lip Gloss output, or a frame string)
-// into a fresh w×h grid on the theme's background.
-func parseGrid(s string, w, h int, t *Theme) *Grid {
-	g := blankGrid(w, h, t.Background)
-	g.draw(0, 0, s, false, t.Text)
-	return g
+// pixels is the grid as a canvas twice as tall: a half block is its
+// foreground over its background, other characters blend the two.
+func (g *grid) pixels() *Pixels {
+	px := &Pixels{W: g.W, H: 2 * g.H, Pix: make([]RGB, 2*len(g.Cells))}
+	for i := range g.Cells {
+		c := &g.Cells[i]
+		fg, bg := rgbOf(c.fg), rgbOf(c.bg)
+		top, bot := bg, bg
+		switch c.ch {
+		case "", " ":
+		case halfBlock:
+			top = fg
+		case "▄":
+			bot = fg
+		case "█":
+			top, bot = fg, fg
+		default:
+			top = Mix(bg, fg, 0.5)
+			bot = top
+		}
+		y := i / g.W // the cell's pixels are rows 2y and 2y+1
+		px.Pix[i+y*g.W], px.Pix[i+(y+1)*g.W] = top, bot
+	}
+	return px
 }
 
-// draw places a styled block with its top-left corner at (x, y), with fg
-// for text that has no color of its own. If transparent, unstyled spaces
-// are skipped.
-func (g *Grid) draw(x, y int, block string, transparent bool, fg RGB) {
+func rgbOf(q [3]uint8) RGB { return RGB{float32(q[0]), float32(q[1]), float32(q[2])} }
+
+// draw places a styled block at (x, y); fg colors text with none. If
+// transparent, unstyled spaces are skipped.
+func (g *grid) draw(x, y int, block string, transparent bool, fg RGB) {
+	q := fg.q()
+	blit(block, x, y, g.W, g.H, transparent, func(tx, ty int, c *uv.Cell) {
+		g.setUV(tx, ty, c, q, g.at(tx, ty).bg)
+	})
+}
+
+// blit parses a styled block and calls set for each visible cell landing inside
+// a w×h area with the block's top-left at (x, y). If transparent, unstyled
+// spaces are skipped. set must not keep c.
+func blit(block string, x, y, w, h int, transparent bool, set func(tx, ty int, c *uv.Cell)) {
 	bw, bh := lipgloss.Size(block)
 	if bw == 0 || bh == 0 {
 		return
 	}
 	cv := lipgloss.NewCanvas(bw, bh)
 	uv.NewStyledString(block).Draw(cv, cv.Bounds())
-	for yy := 0; yy < bh; yy++ {
+	for yy := range bh {
 		ty := y + yy
-		if ty < 0 || ty >= g.H {
+		if ty < 0 || ty >= h {
 			continue
 		}
-		for xx := 0; xx < bw; xx++ {
+		for xx := range bw {
 			tx := x + xx
-			if tx < 0 || tx >= g.W {
+			if tx < 0 || tx >= w {
 				continue
 			}
-			cell := cv.CellAt(xx, yy)
-			if cell == nil || cell.Width == 0 {
+			c := cv.CellAt(xx, yy)
+			if c == nil || c.Width == 0 {
+				continue // continuation of a wide character
+			}
+			if transparent && (c.Content == " " || c.Content == "") && c.Style.Bg == nil {
 				continue
 			}
-			if transparent && (cell.Content == " " || cell.Content == "") && cell.Style.Bg == nil {
-				continue
-			}
-			under := g.at(tx, ty)
-			g.setUV(tx, ty, cell, fg, RGB{float32(under.bg[0]), float32(under.bg[1]), float32(under.bg[2])})
+			set(tx, ty, c)
 		}
 	}
-}
-
-// String encodes the grid as exactly H lines of exactly W cells, with every
-// cell's colors explicit. Colors are only written when they change.
-func (g *Grid) String() string {
-	var b strings.Builder
-	b.Grow(g.W * g.H * 6)
-	var p pen
-	for y := 0; y < g.H; y++ {
-		p.reset()
-		row := g.Cells[y*g.W : (y+1)*g.W]
-		for x := 0; x < len(row); x++ {
-			c := &row[x]
-			if c.ch == "" {
-				continue // drawn by the wide character before it
-			}
-			buf := p.cell(nil, c)
-			b.Write(buf)
-			if c.wide {
-				x++
-			}
-		}
-		if p.on {
-			b.WriteString("\x1b[m")
-		}
-		if y < g.H-1 {
-			b.WriteByte('\n')
-		}
-	}
-	return b.String()
-}
-
-// pen tracks the terminal's current colors and attributes, so encoding
-// only writes what changes.
-type pen struct {
-	fg, bg     [3]uint8
-	fgOn, bgOn bool
-	attrs, ul  uint8
-	on         bool // anything set since the last reset
-	scratch    [64]byte
-}
-
-func (p *pen) reset() { *p = pen{} }
-
-// cell appends the escape codes and text for c to buf (or to a scratch
-// buffer when buf is nil) and returns it.
-func (p *pen) cell(buf []byte, c *gcell) []byte {
-	if buf == nil {
-		buf = p.scratch[:0]
-	}
-	if c.attrs != p.attrs || c.ul != p.ul {
-		// Attributes can only be turned off together: reset, then set.
-		buf = append(buf, "\x1b[0"...)
-		st := uv.Style{Attrs: c.attrs, Underline: uv.Underline(c.ul)}
-		if c.attrs != 0 || c.ul != 0 {
-			if s := st.String(); len(s) > 3 { // "\x1b[" + params + "m"
-				buf = append(buf, ';')
-				buf = append(buf, s[2:len(s)-1]...)
-			}
-		}
-		buf = append(buf, 'm')
-		p.fgOn, p.bgOn = false, false
-		p.attrs, p.ul, p.on = c.attrs, c.ul, true
-	}
-	// A plain space shows only its background; skip changing the foreground.
-	plainSpace := c.ch == " " && c.attrs == 0 && c.ul == 0
-	if !plainSpace && (!p.fgOn || p.fg != c.fg) {
-		buf = sgrColor(buf, '3', c.fg)
-		p.fg, p.fgOn, p.on = c.fg, true, true
-	}
-	if !p.bgOn || p.bg != c.bg {
-		buf = sgrColor(buf, '4', c.bg)
-		p.bg, p.bgOn, p.on = c.bg, true, true
-	}
-	return append(buf, c.ch...)
-}
-
-// sgrColor appends a 24-bit color: kind '3' for foreground, '4' background.
-func sgrColor(buf []byte, kind byte, c [3]uint8) []byte {
-	buf = append(buf, "\x1b["...)
-	buf = append(buf, kind, '8', ';', '2', ';')
-	buf = strconv.AppendUint(buf, uint64(c[0]), 10)
-	buf = append(buf, ';')
-	buf = strconv.AppendUint(buf, uint64(c[1]), 10)
-	buf = append(buf, ';')
-	buf = strconv.AppendUint(buf, uint64(c[2]), 10)
-	return append(buf, 'm')
 }

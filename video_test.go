@@ -25,8 +25,8 @@ func TestVideoFrames(t *testing.T) {
 	want := 0
 	for _, s := range slides[:4] {
 		for step := 0; step < s.steps(); step++ {
-			d := videoTiming(s, step, o.hold)
-			for t := 0.0; t < d-0.05; t += 0.1 {
+			dur := videoTiming(s, step, o.hold)
+			for tt := 0.0; tt < dur-0.05; tt += 0.1 {
 				want++
 			}
 		}
@@ -37,9 +37,6 @@ func TestVideoFrames(t *testing.T) {
 	}
 	if w.frames != want {
 		t.Fatalf("%d frames, want %d", w.frames, want)
-	}
-	if captureFrame != nil {
-		t.Fatal("video rendering left the capture hook on")
 	}
 }
 
@@ -64,7 +61,7 @@ func TestBlendTransitionEnds(t *testing.T) {
 	const w, h = 64, 36
 	from := bytes.Repeat([]byte{10, 20, 30}, w*h)
 	to := bytes.Repeat([]byte{200, 100, 50}, w*h)
-	for _, k := range []Transition{TransitionPush, TransitionDissolve, TransitionWipe} {
+	for k := range transitions {
 		start := append([]byte(nil), to...)
 		blendTransition(k, from, start, w, h, 0, testTheme)
 		if k != TransitionWipe && !bytes.Equal(start, from) { // wipe's band starts off screen

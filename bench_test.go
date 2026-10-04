@@ -23,7 +23,7 @@ func BenchmarkLive(b *testing.B) {
 			m.w, m.h = 682, 171
 			tw := &termWriter{out: io.Discard}
 			start := m.now
-			for n := 0; n < b.N; n++ {
+			for n := range b.N {
 				m.now = start.Add(time.Duration(n) * time.Second / 60)
 				if tc.trans {
 					// Stay mid-transition: restart it every frame.

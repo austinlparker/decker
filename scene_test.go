@@ -3,11 +3,7 @@ package decker
 import (
 	"strings"
 	"testing"
-
-	"github.com/charmbracelet/x/ansi"
 )
-
-func frameLines(s string) []string { return strings.Split(ansi.Strip(s), "\n") }
 
 func TestSceneLayering(t *testing.T) {
 	sc := NewScene(10, 4, testTheme)
@@ -29,38 +25,10 @@ func TestSceneLayering(t *testing.T) {
 	}
 }
 
-// Every slide should render at every step, at several sizes and times,
-// without panicking and at exactly the requested size.
-func TestAllSlidesRender(t *testing.T) {
-	for i, s := range testDeck().Slides {
-		for _, size := range [][2]int{{80, 24}, {120, 36}, {200, 50}} {
-			for step := 0; step < s.steps(); step++ {
-				for _, at := range []float64{0, 0.3, 1.5, Settled} {
-					c := Ctx{W: size[0], H: size[1], T: at, Step: step, StepT: at, Theme: testTheme}
-					out := renderSlideStrict(t, s, c)
-					if n := len(strings.Split(out, "\n")); n != c.H {
-						t.Errorf("slide %d %q: %d lines at %dx%d, want %d", i+1, s.Title, n, c.W, c.H, c.H)
-					}
-				}
-			}
-		}
-	}
-}
-
-func renderSlideStrict(t *testing.T, s Slide, c Ctx) string {
-	t.Helper()
-	defer func() {
-		if r := recover(); r != nil {
-			t.Fatalf("slide %q panicked at %dx%d step %d t=%v: %v", s.Title, c.W, c.H, c.Step, c.T, r)
-		}
-	}()
-	return fit(s.View(c), c.W, c.H)
-}
-
 func TestTransitionsKeepSize(t *testing.T) {
 	a := strings.Repeat(strings.Repeat("a", 20)+"\n", 4) + strings.Repeat("a", 20)
 	b := strings.Repeat(strings.Repeat("b", 20)+"\n", 4) + strings.Repeat("b", 20)
-	for _, k := range []Transition{TransitionPush, TransitionDissolve, TransitionWipe} {
+	for k := range transitions {
 		for _, p := range []float64{0, 0.5, 1} {
 			for _, fwd := range []bool{true, false} {
 				out := frameLines(composeTransition(k, a, b, 20, 5, p, fwd, testTheme))
@@ -72,5 +40,19 @@ func TestTransitionsKeepSize(t *testing.T) {
 		if got := frameLines(composeTransition(k, a, b, 20, 5, 1, true, testTheme)); got[0] != strings.Repeat("b", 20) {
 			t.Errorf("transition %d at p=1 should be fully new, got %q", k, got[0])
 		}
+	}
+}
+
+// A slide may render off-screen scenes to strings and Put them on its own.
+func TestOffscreenSceneRenders(t *testing.T) {
+	s := Slide{Title: "x", View: func(c Ctx, sc *Scene) {
+		off := NewScene(c.W, c.H, c.Theme)
+		off.Text(0, 0, "hi", c.Theme.Text.Color())
+		sc.Put(0, 0, off.Render())
+	}}
+	g := renderSlideGrid(s, Ctx{W: 10, H: 2, Theme: testTheme})
+	defer g.release()
+	if g.at(0, 0).ch != "h" || g.at(1, 0).ch != "i" {
+		t.Fatalf("off-screen scene was lost: %q %q", g.at(0, 0).ch, g.at(1, 0).ch)
 	}
 }

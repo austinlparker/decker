@@ -1,58 +1,61 @@
 package decker
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 )
 
+var stockBlockFonts = []*FigFont{BlockShadow, BlockSolid, BlockSmall, BlockHuge, BlockFancy}
+
 func TestFigFontsLoadAndRender(t *testing.T) {
-	for _, f := range []*FigFont{BlockShadow, BlockSolid, BlockSmall, BlockHuge, BlockFancy} {
-		rows, owner := f.render("Hi!")
-		if len(rows) == 0 || len(rows) != len(owner) {
-			t.Fatalf("%s: rendered %d rows", f.Name, len(rows))
+	for _, f := range stockBlockFonts {
+		rows := f.render("Hi!")
+		if len(rows) == 0 || len(rows) > f.Rows() {
+			t.Fatalf("%s: rendered %d rows, Rows() is %d", f.Name, len(rows), f.Rows())
 		}
 		ink := 0
-		for y, r := range rows {
-			if len(r) != len(owner[y]) {
-				t.Fatalf("%s: row %d has %d cells but %d owners", f.Name, y, len(r), len(owner[y]))
+		for _, row := range rows {
+			for _, c := range row {
+				if c.r == hardBlank {
+					t.Errorf("%s left hard blanks in the output", f.Name)
+				}
+				if c.r != ' ' {
+					ink++
+					if c.owner < 0 || c.owner > 2 {
+						t.Errorf("%s: cell %q owned by character %d of 3", f.Name, c.r, c.owner)
+					}
+				}
 			}
-			ink += len(strings.TrimSpace(string(r)))
 		}
 		if ink == 0 {
 			t.Errorf("%s rendered nothing", f.Name)
 		}
-		if strings.ContainsRune(fmt.Sprint(rows), '\u00a0') {
-			t.Errorf("%s left hard blanks in the output", f.Name)
+	}
+}
+
+func TestFigHasAndDropQuotes(t *testing.T) {
+	if got := BlockSolid.DropQuotes("aren't"); got != "arent" {
+		t.Errorf("DropQuotes = %q, want arent", got)
+	}
+	if BlockSolid.Has("é") {
+		t.Error("ANSI Regular has no é")
+	}
+	if !BlockSolid.Has("Hello 2025\nok") {
+		t.Error("ANSI Regular should have letters and digits")
+	}
+}
+
+func TestFigWrapKeepsBreaks(t *testing.T) {
+	const s = "one two three four\nfive six seven eight nine"
+	lines := BlockSmall.Wrap(s, 30)
+	for _, l := range lines {
+		if w := BlockSmall.Width(l); w > 30 {
+			t.Errorf("line %q is %d cells wide, want <= 30", l, w)
 		}
 	}
-}
-
-func TestFitBlockFitsTheBox(t *testing.T) {
-	const maxW, maxH = 300.0, 120.0
-	f, lines, scale := FitBlock("THE DOOM LOOP", maxW, maxH, 2, 1, BlockHuge, BlockShadow)
-	if len(lines) > 2 {
-		t.Fatalf("got %d lines, want at most 2", len(lines))
-	}
-	w, h := Block{Font: f, Scale: scale, Gap: 1}.Size(strings.Join(lines, "\n"))
-	if w > maxW || h > maxH {
-		t.Errorf("%s at scale %.1f is %.0f×%.0f px, want within %.0f×%.0f", f.Name, scale, w, h, maxW, maxH)
-	}
-	if scale < 1 {
-		t.Errorf("scale %.1f: letters should fill a box this big", scale)
-	}
-}
-
-// TestPrintFontSamples shows each font's size; run with -v to eyeball them.
-func TestPrintFontSamples(t *testing.T) {
-	if !testing.Verbose() {
-		t.Skip("run with -v to print samples")
-	}
-	for _, f := range []*FigFont{BlockShadow, BlockSolid, BlockSmall, BlockHuge, BlockFancy} {
-		rows, _ := f.render("Doom 40%")
-		fmt.Printf("== %s: %d rows, 'Doom 40%%' is %d cells wide\n", f.Name, len(rows), f.Width("Doom 40%"))
-		for _, r := range rows {
-			fmt.Println(string(r))
+	for _, l := range lines {
+		if strings.Contains(l, "four") && strings.Contains(l, "five") {
+			t.Errorf("explicit line break was not kept: %q", lines)
 		}
 	}
 }

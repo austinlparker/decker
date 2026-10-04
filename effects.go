@@ -1,41 +1,60 @@
 package decker
 
-import (
-	"math"
-)
+import "math"
 
-// Ready-made per-glyph animations for Text.FX. Each takes the time since
-// the effect should start (seconds) and returns a func for Text.FX.
+// GlyphFX is an effect's instruction for one glyph of Text.
+type GlyphFX struct {
+	DX, DY float64 // offset in pixels
+	Alpha  float64 // 0 hides the glyph, 1 leaves it untouched
+	Rune   rune    // 0 = the real character; ignored for spaces
+}
 
-// RiseIn: letters spring up from below and fade in, one after another.
-// size is the text size (sets how far they travel).
-func RiseIn(t, stagger float64, size int) func(int) GlyphFX {
+func (a GlyphFX) then(b GlyphFX) GlyphFX {
+	a.DX += b.DX
+	a.DY += b.DY
+	a.Alpha *= b.Alpha
+	if b.Rune != 0 {
+		a.Rune = b.Rune
+	}
+	return a
+}
+
+// GlyphEffect animates the glyphs of a Text (Text.FX); i counts glyphs across
+// all lines, spaces and line breaks included.
+//
+// Constructors take t, the seconds since the effect starts. Effects must be
+// pure functions of t and i (no clock, no math/rand; use Hash01) so frames
+// replay exactly. The zero GlyphFX hides the glyph: return it before the effect
+// reaches i, and GlyphFX{Alpha: 1} for glyphs left alone.
+type GlyphEffect func(i int) GlyphFX
+
+func staggered(t, per float64, f func(lt float64) GlyphFX) GlyphEffect {
 	return func(i int) GlyphFX {
-		lt := t - float64(i)*stagger
-		if lt <= 0 {
-			return GlyphFX{}
+		if lt := t - float64(i)*per; lt > 0 {
+			return f(lt)
 		}
-		y := Spring(1, 0, lt, 7, 0.55)
-		return GlyphFX{DY: y * float64(size) * 0.7, Alpha: Ease(lt, 0.25)}
+		return GlyphFX{}
 	}
 }
 
-// DropIn: letters fall from above with a bounce.
-func DropIn(t, stagger float64, size int) func(int) GlyphFX {
-	return func(i int) GlyphFX {
-		lt := t - float64(i)*stagger
-		if lt <= 0 {
-			return GlyphFX{}
-		}
-		y := Spring(-1, 0, lt, 6, 0.4)
-		return GlyphFX{DY: y * float64(size), Alpha: Ease(lt, 0.15)}
-	}
+// RiseIn springs letters up from below, fading in; size sets how far they
+// travel.
+func RiseIn(t, stagger float64, size int) GlyphEffect {
+	return staggered(t, stagger, func(lt float64) GlyphFX {
+		return GlyphFX{DY: Spring(1, 0, lt, 7, 0.55) * float64(size) * 0.7, Alpha: Ease(lt, 0.25)}
+	})
 }
 
-// Decode: each letter cycles through random characters before locking in,
-// left to right, like a terminal decrypting a message. dur is how long the
-// whole reveal takes.
-func Decode(t, dur float64, n int) func(int) GlyphFX {
+// DropIn drops letters from above with a bounce, stagger seconds apart.
+func DropIn(t, stagger float64, size int) GlyphEffect {
+	return staggered(t, stagger, func(lt float64) GlyphFX {
+		return GlyphFX{DY: Spring(-1, 0, lt, 6, 0.4) * float64(size), Alpha: Ease(lt, 0.15)}
+	})
+}
+
+// Decode cycles letters through random characters before locking them in, left
+// to right over dur seconds; n is the number of glyphs.
+func Decode(t, dur float64, n int) GlyphEffect {
 	const pool = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%&@$*+=<>/"
 	return func(i int) GlyphFX {
 		if t <= 0 {
@@ -51,8 +70,8 @@ func Decode(t, dur float64, n int) func(int) GlyphFX {
 	}
 }
 
-// TypeOn: letters appear one at a time at cps characters per second.
-func TypeOn(t, cps float64) func(int) GlyphFX {
+// TypeOn shows letters one at a time at cps characters per second.
+func TypeOn(t, cps float64) GlyphEffect {
 	return func(i int) GlyphFX {
 		if float64(i) < t*cps {
 			return GlyphFX{Alpha: 1}
@@ -61,21 +80,21 @@ func TypeOn(t, cps float64) func(int) GlyphFX {
 	}
 }
 
-// FadeUp: the whole block fades in while sliding up a little.
-func FadeUp(t, dur float64, size int) func(int) GlyphFX {
+// FadeUp fades the block in over dur seconds while sliding up 0.4×size.
+func FadeUp(t, dur float64, size int) GlyphEffect {
 	p := Ease(t, dur)
 	return func(int) GlyphFX { return GlyphFX{DY: (1 - p) * float64(size) * 0.4, Alpha: p} }
 }
 
-// Wave: a continuous gentle bob, for playful emphasis.
-func Wave(t, amp float64) func(int) GlyphFX {
+// Wave bobs letters by amp pixels in a travelling wave. It never settles.
+func Wave(t, amp float64) GlyphEffect {
 	return func(i int) GlyphFX {
 		return GlyphFX{DY: amp * math.Sin(t*5-float64(i)*0.55), Alpha: 1}
 	}
 }
 
-// Jitter: letters shake nervously (for "this is bad" moments).
-func Jitter(t, amp float64) func(int) GlyphFX {
+// Jitter shakes letters by up to amp pixels.
+func Jitter(t, amp float64) GlyphEffect {
 	frame := int(t * 20)
 	return func(i int) GlyphFX {
 		return GlyphFX{
@@ -86,32 +105,33 @@ func Jitter(t, amp float64) func(int) GlyphFX {
 	}
 }
 
-// Chain runs effects together (offsets add, alphas multiply).
-func Chain(fxs ...func(int) GlyphFX) func(int) GlyphFX {
+// Chain runs effects together: offsets add, alphas multiply, and the last
+// stand-in rune wins.
+func Chain(fxs ...GlyphEffect) GlyphEffect {
 	return func(i int) GlyphFX {
 		out := GlyphFX{Alpha: 1}
 		for _, f := range fxs {
-			g := f(i)
-			out.DX += g.DX
-			out.DY += g.DY
-			out.Alpha *= g.Alpha
-			if g.Rune != 0 {
-				out.Rune = g.Rune
-			}
+			out = out.then(f(i))
 		}
 		return out
 	}
 }
 
-// ShineBand returns a Text.Shine func: a bright diagonal-ish band that
-// sweeps left to right once, starting at t=0 and taking dur seconds.
-func ShineBand(t, dur, strength float64) func(float64) float64 {
-	pos := Lerp(-0.3, 1.3, Progress(t, 0, dur))
-	return func(u float64) float64 {
-		d := math.Abs(u-pos) / 0.12
-		if d >= 1 {
-			return 0
-		}
-		return strength * (1 - d*d)
+// sweepPos runs -0.3 to 1.3 over dur, so the band starts and ends off the
+// block.
+func sweepPos(t, dur float64) float64 { return Lerp(-0.3, 1.3, Progress(t, 0, dur)) }
+
+func bandFalloff(delta float64) float64 {
+	d := math.Abs(delta) / 0.12
+	if d >= 1 {
+		return 0
 	}
+	return 1 - d*d
+}
+
+// ShineBand returns a Text.Shine func: a bright band sweeping left to right
+// once over dur seconds from t=0.
+func ShineBand(t, dur, strength float64) func(float64) float64 {
+	pos := sweepPos(t, dur)
+	return func(u float64) float64 { return strength * bandFalloff(u-pos) }
 }

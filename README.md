@@ -132,11 +132,6 @@ The presenter view shows:
   build steps, so a slide with four builds gets four times a section
   opener's share of the time.
 
-In Ghostty or kitty, the previews are real images of the slides at full
-resolution, drawn with the kitty graphics protocol. Other terminals, and
-Ghostty inside tmux or zellij, get blurrier previews made of half-block
-characters. To choose yourself, pass `-previews image` or `-previews cells`.
-
 For a different talk length, pass `-length 45m` to the presenter view.
 
 The two windows talk over a Unix socket in the temp directory, named after
@@ -149,19 +144,20 @@ These work in the deck and in the presenter view:
 
 | Key | Action |
 | --- | --- |
-| `→` `l` `space` `pgdn` `enter` | next step / slide |
-| `←` `h` `pgup` | previous |
+| `→` `l` `space` `pgdn` `j` `↓` `enter` | next step / slide |
+| `←` `h` `pgup` `k` `↑` `backspace` | previous |
 | `]` `[` | next / previous slide, skipping steps |
-| `g` `G` | first / last slide |
+| `g` `home` / `G` `end` | first / last slide |
 | `12g` or `12⏎` | jump to slide 12 |
 | `r` | replay the current slide's animations |
-| `q` | quit (that window only) |
+| `q` `ctrl+c` | quit (that window only) |
 
 Only in the presenter view: `t` starts or pauses the timer, `T` resets it.
 
 Only in the deck: `n` shows the notes on the projector (a fallback if the
-presenter view isn't running) and `?` shows help. In dev mode the deck also
-has a one-line footer with the build status and slide counter.
+presenter view isn't running), `?` shows help (`esc` closes it) and
+`ctrl+l` redraws the screen. In dev mode the deck also has a one-line
+footer with the build status and slide counter. The key table is `keys.go`.
 
 ## Anatomy of a deck
 
@@ -209,8 +205,7 @@ func mySlide() decker.Slide {
 		Steps:      2,                     // "next" presses before moving on (build steps)
 		Notes:      "say the thing",       // shown in the presenter view
 		Transition: decker.TransitionWipe, // Push (default), Dissolve, Wipe, None
-		View: func(c decker.Ctx) string {
-			sc := c.Scene()
+		View: func(c decker.Ctx, sc *decker.Scene) {
 			p := sc.Px // the pixel canvas; c.PW() × c.PH() pixels
 
 			top := title(c, sc, "Something") // the talk's title template; returns the y below it
@@ -225,14 +220,15 @@ func mySlide() decker.Slide {
 				r := c.Unit(0.05) * decker.EaseOutBack(decker.Progress(c.Since(1), 0, 0.4))
 				p.Disc(c.X(0.8), c.Y(0.7), r, c.Theme.Accent2, 1)
 			}
-			return sc.Render()
 		},
 	}
 }
 ```
 
-`View` runs about 60 times per second. The `Ctx` it receives holds everything
-that changes between frames:
+`View` runs about 60 times per second. It draws onto `sc`, a scene the engine
+has already filled with the theme's background and will show (and release)
+when `View` returns, with the theme's `Overlay` on top; a nil `View` is a blank
+slide. The `Ctx` it receives holds everything that changes between frames:
 
 - `c.T`: seconds since the slide appeared.
 - `c.Step`, `c.StepT`: the current build step, and seconds since it began.
@@ -246,8 +242,8 @@ that changes between frames:
 
 A frame depends only on `Ctx`, so any moment can be replayed, snapshotted, or
 resumed. Never use the clock or `math/rand` in a slide; `decker.Hash01` gives
-repeatable noise. If a slide panics, the deck shows the error in place of the
-slide.
+repeatable noise. If a slide panics, the deck draws the error in place of the
+slide, in the pixels, so a video or PNG shows it too.
 
 ### Toolbox
 
@@ -258,10 +254,10 @@ Everything here is in package `decker`.
 | Big type | `Text{Font, Size, Color, To (gradient), Glow, Shine, FX, MaxW}.Draw(p, s, x, y)` with `Align`; returns width and height. `DrawMid` centers a line's ink on a y |
 | Sizing text to a box | `font.Fit(...)`, `FitAll(...)` for several lines at one size |
 | Small labels | `c.SmallText(font)`: the smallest readable size; `Label`, `Chip`, `LineLabel` (text sitting on an arrow) |
-| Block letters | `f, lines, scale := FitBlock(s, maxW, maxH, maxLines, gap, fonts...)` picks a font and scale for a pixel box; `Block{Font, Scale, Color, To, Shadow, Drop, Align, Glow, FX}.Draw(p, s, x, y)`; effects `BlockDecrypt`, `BlockRain`, `BlockBeam`, `BlockSlide`, `BlockType`, `BlockGlitch`, `BlockFade`, combined with `BlockChain` |
+| Block letters | `f, lines, scale := FitBlock(s, maxW, maxH, maxLines, gap, fonts...)` picks a font and scale for a pixel box; `Block{Font, Scale, Color, To, Shadow, Drop, Align, Glow, FX}.Draw(p, s, x, y)`; `BlockEffect`s for `Block.FX`: `BlockDecrypt`, `BlockRain`, `BlockBeam`, `BlockSlide`, `BlockType`, `BlockGlitch`, `BlockFade`, combined with `BlockChain` |
 | Diagrams | `Panel`, `Arrow`, `CycleDiagram` (numbered ring with a legend), `BulletList`, `SpeechBubble` |
 | Unfinished material | `PlaceholderBox` (dashed frame) and `IllustrativeTag` (made-up data) mark what to replace before the talk |
-| Letter animations | `RiseIn`, `DropIn`, `Decode` (scramble), `TypeOn`, `FadeUp`, `Wave`, `Jitter`, combined with `Chain` |
+| Letter animations | `GlyphEffect`s for `Text.FX`: `RiseIn`, `DropIn`, `Decode` (scramble), `TypeOn`, `FadeUp`, `Wave`, `Jitter`, combined with `Chain` |
 | A moving highlight | `Shine: ShineBand(t, dur, strength)` |
 | Shapes | `p.Disc`, `p.Arc` (rings, gauges), `p.Line`, `p.Rect`, `p.RoundRect` (fill or outline), `p.Glow`, `p.VGradient`; `p.Box` and `Coverage` for shapes of your own |
 | Pixel art | `p.Art(PixelArt{Rows, Colors}, x, y, scale, alpha, flip)`; return a different frame for a different `t` to animate |
@@ -269,8 +265,8 @@ Everything here is in package `decker`.
 | Images | `NewImages(fsys, dir)` over the talk's embedded files, then `images.Draw(p, "shot.png", x, y, w, h, alpha)` |
 | Motion | `Ease`, `EaseOutBack`, `EaseInOutCubic`, `Spring` (Harmonica), `Pulse`, `Lerp`, `Progress` |
 | Color | `Hex("#FFB000")`, `Mix`, `RGB.Scale` |
-| Off-screen drawing | `NewScene(w, h, theme)`, then `Release` it when you've copied what you need |
-| Small native terminal text (rarely) | `sc.Text`, `sc.Put`, `sc.Sprite` draw on top of the pixels |
+| Off-screen drawing | `NewScene(w, h, theme)`, then `Render` it to a string (to `sc.Put` on the slide's own scene) or `Release` it when you've copied what you need |
+| Small native terminal text (rarely) | `sc.Text`, `sc.Put`, `sc.Sprite` draw on top of the pixels; videos only have the pixels |
 
 ### Tests
 
@@ -283,8 +279,7 @@ func BenchmarkFrames(b *testing.B) { decktest.Frames(b, talk()) }
 ```
 
 `Slides` renders every slide at every build step, at three sizes and four
-moments, and fails on panics, frames of the wrong size, and cells without a
-background. `Golden` hashes every frame of every step at eight moments and
+moments, and fails on panics. `Golden` hashes every frame of every step at eight moments and
 three sizes, and fails if any of them changed: after changing a slide on
 purpose, record it with `UPDATE_GOLDEN=1 go test -run Golden`. That makes
 the engine safe to change: an engine change that moves one pixel of any
@@ -292,21 +287,26 @@ talk fails that talk's test.
 
 ## Where things live
 
+Changing the engine itself? Read [AGENTS.md](AGENTS.md) first: the
+invariants, the golden tests, and a recipe for each kind of addition.
+
 | File | What's in it |
 | --- | --- |
-| `deck.go`, `main.go` | `Deck`, and `Main`: the command line (live, dev, presenter, snapshot, sheet, video) |
-| `slide.go`, `layout.go` | `Slide`, `Ctx`, transitions, and layout in screen fractions |
-| `theme.go` | `Theme`, `Hex` |
+| `deck.go`, `slide.go`, `ctx.go` | `Deck`, `Slide`, and `Ctx` with its layout in screen fractions |
+| `cli.go` | `Main`: the command line (live, dev, presenter, list, snapshot, sheet, video) |
+| `theme.go`, `color.go` | `Theme`; `RGB`, `Hex`, `Mix` |
 | `draw.go` | stock components: `Panel`, `Arrow`, `Label`, `Chip`, `CycleDiagram`, `BulletList`… |
-| `text.go`, `fonts/` | smooth type: fonts, fitting and wrapping, glow, gradients |
-| `figlet.go`, `block.go`, `blockfx.go`, `fonts/figlet/` | block letters: FIGlet font loading, drawing, and effects |
-| `effects.go` | letter animations |
-| `pixels.go`, `sprites.go`, `image.go` | the pixel canvas, shapes, pixel art, images |
+| `font.go`, `fit.go`, `text.go`, `coverage.go`, `memo.go`, `fonts/` | smooth type: font loading and glyphs, fitting and wrapping, drawing with glow and gradients, coverage masks, cached fits |
+| `figlet.go`, `block.go`, `blockfit.go`, `blockglyph.go`, `fonts/figlet/` | block letters: FIGlet font loading, drawing, fitting to a box, block-character glyphs |
+| `effects.go`, `blockfx.go` | letter animations: `GlyphEffect` for `Text`, `BlockEffect` for `Block` |
+| `pixels.go`, `pixelart.go`, `image.go` | the pixel canvas and shapes, pixel art, images |
 | `anim.go` | easing, springs, noise |
-| `scene.go`, `grid.go` | combine the pixel canvas and character layer into terminal cells |
-| `transition.go` | slide transitions |
-| `model.go`, `termout.go`, `dev.go`, `preview.go` | the app: navigation, writing frames, dev reload, PNG snapshots |
-| `presenter.go`, `link.go`, `kitty.go` | the presenter view, the socket link to the deck, image previews |
+| `scene.go`, `grid.go`, `pool.go` | combine the pixel canvas and character layer into terminal cells; reused frame buffers |
+| `render.go` | a slide's frame: the scene `View` draws on, the overlay, panics caught |
+| `transition.go` | slide transitions and the registry of their cell and video versions |
+| `model.go`, `keys.go`, `termout.go`, `dev.go` | the app: navigation, the key table, writing frames, dev reload |
+| `presenter.go`, `link.go`, `preview.go` | the presenter view, the socket link to the deck, slide previews |
+| `png.go` | PNG snapshots and contact sheets, painted from cell grids |
 | `video.go` | rendering a deck to a video |
 | `decktest/` | the test suite for decks |
 
