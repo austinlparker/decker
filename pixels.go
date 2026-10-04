@@ -126,7 +126,12 @@ func (p *Pixels) Arc(cx, cy, r, thick, a0, a1 float64, c RGB, alpha float64) {
 		return
 	}
 	half := thick / 2
-	full := a1-a0 >= 2*math.Pi-1e-9
+	if thick > 0 && a1-a0 >= 2*math.Pi-1e-9 {
+		// A full ring is a RoundRect outline with the same distance field.
+		outer := r + half
+		p.RoundRect(cx-outer, cy-outer, 2*outer, 2*outer, outer, thick, c, alpha)
+		return
+	}
 	capA := [2][2]float64{
 		{cx + r*math.Sin(a0), cy - r*math.Cos(a0)},
 		{cx + r*math.Sin(a1), cy - r*math.Cos(a1)},
@@ -135,14 +140,15 @@ func (p *Pixels) Arc(cx, cy, r, thick, a0, a1 float64, c RGB, alpha float64) {
 	for py := y0; py <= y1; py++ {
 		for px := x0; px <= x1; px++ {
 			fx, fy := float64(px)+0.5-cx, float64(py)+0.5-cy
+			d := math.Abs(math.Hypot(fx, fy)-r) - half
+			if d >= 0.5 {
+				continue // the caps sit on the ring, so they can't reach it either
+			}
 			ang := math.Atan2(fx, -fy)
 			if ang < 0 {
 				ang += 2 * math.Pi
 			}
-			var d float64
-			if full || angleIn(ang, a0, a1) {
-				d = math.Abs(math.Hypot(fx, fy)-r) - half
-			} else {
+			if !angleIn(ang, a0, a1) {
 				d = min(
 					math.Hypot(float64(px)+0.5-capA[0][0], float64(py)+0.5-capA[0][1]),
 					math.Hypot(float64(px)+0.5-capA[1][0], float64(py)+0.5-capA[1][1]),
