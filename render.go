@@ -12,6 +12,7 @@ import (
 // encoding it to a string: pixels if set, else grid; the last scene wins.
 // Scenes made with NewScene are never captured.
 type frameSink struct {
+	w, h   int // the frame's size in cells; other scenes render normally
 	pixels func(*Pixels)
 	grid   func(*grid) // takes ownership of the grid
 }
@@ -19,7 +20,7 @@ type frameSink struct {
 // renderSlideGrid is renderSlide as cells; the caller releases the grid.
 func renderSlideGrid(s Slide, c Ctx) *grid {
 	var got *grid
-	c.sink = &frameSink{grid: func(g *grid) { got.release(); got = g }}
+	c.sink = &frameSink{w: c.W, h: c.H, grid: func(g *grid) { got.release(); got = g }}
 	out := renderSlide(s, c)
 	if got != nil {
 		return got

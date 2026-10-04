@@ -69,7 +69,7 @@ func writeVideoFrames(d *Deck, o videoOptions, w io.Writer) error {
 	frame := make([]byte, 3*o.width*o.height)
 	from := make([]byte, len(frame)) // the previous slide's last frame, for transitions
 	drew := false
-	sink := &frameSink{pixels: func(p *Pixels) {
+	sink := &frameSink{w: cw, h: ch, pixels: func(p *Pixels) {
 		toRGB24(p, frame)
 		drew = true
 	}}

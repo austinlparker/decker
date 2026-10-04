@@ -183,6 +183,9 @@ func (s *Scene) Render() string {
 		s.themeOverlay(s.Px)
 	}
 	k := s.sink
+	if k != nil && (s.W != k.w || s.H != k.h) {
+		k = nil // a scene from a resized Ctx is not the frame
+	}
 	if k != nil && k.pixels != nil {
 		k.pixels(s.Px)
 		s.Release()

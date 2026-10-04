@@ -222,7 +222,7 @@ func slideFrame(s Slide, w, h int, t float64, step int) string {
 // toRGB24), at w×h video pixels.
 func rgbFrame(s Slide, w, h int, t float64, step int) []byte {
 	out := make([]byte, 3*w*h)
-	sink := &frameSink{pixels: func(p *Pixels) { toRGB24(p, out) }}
+	sink := &frameSink{w: w, h: h / 2, pixels: func(p *Pixels) { toRGB24(p, out) }}
 	renderSlide(s, Ctx{W: w, H: h / 2, T: t, Step: step, StepT: t, Theme: testTheme, sink: sink})
 	return out
 }
