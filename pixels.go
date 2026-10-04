@@ -126,12 +126,6 @@ func (p *Pixels) Arc(cx, cy, r, thick, a0, a1 float64, c RGB, alpha float64) {
 		return
 	}
 	half := thick / 2
-	if thick > 0 && a1-a0 >= 2*math.Pi-1e-9 {
-		// A full ring is a RoundRect outline with the same distance field.
-		outer := r + half
-		p.RoundRect(cx-outer, cy-outer, 2*outer, 2*outer, outer, thick, c, alpha)
-		return
-	}
 	capA := [2][2]float64{
 		{cx + r*math.Sin(a0), cy - r*math.Cos(a0)},
 		{cx + r*math.Sin(a1), cy - r*math.Cos(a1)},
