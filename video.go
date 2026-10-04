@@ -8,7 +8,6 @@ import (
 	"time"
 )
 
-// videoOptions are the settings of one renderVideo run.
 type videoOptions struct {
 	path          string
 	width, height int // in pixels; height must be even
@@ -17,8 +16,7 @@ type videoOptions struct {
 	first, last   int     // slides to include, 0-based
 }
 
-// videoTiming returns how long step (0-based) of s stays on screen. The
-// first step also gets the time its entrance transition takes.
+// videoTiming is how long step (0-based) of s stays on screen; step 0 adds the entrance transition.
 func videoTiming(s Slide, step int, hold float64) float64 {
 	if s.Hold > 0 {
 		hold = s.Hold
@@ -30,9 +28,8 @@ func videoTiming(s Slide, step int, hold float64) float64 {
 }
 
 // renderVideo draws every slide and build step in order, with entrance
-// animations and slide transitions, and pipes the rgb24 frames into ffmpeg
-// (on PATH). Frames come straight from the pixel canvas, one video pixel per
-// canvas pixel: a 1920×1080 video is a 1920×540-cell canvas.
+// animations and transitions, and pipes rgb24 frames into ffmpeg (on PATH).
+// One video pixel is one canvas pixel: 1920×1080 is a 1920×540-cell canvas.
 func renderVideo(d *Deck, o videoOptions) error {
 	if o.width <= 0 || o.height <= 0 || o.height%2 != 0 {
 		return fmt.Errorf("video size must be positive with an even height, got %dx%d", o.width, o.height)
@@ -112,7 +109,6 @@ func writeVideoFrames(d *Deck, o videoOptions, w io.Writer) error {
 	return nil
 }
 
-// toRGB24 packs a canvas into 3 bytes per pixel.
 func toRGB24(p *Pixels, dst []byte) {
 	for i, c := range p.Pix {
 		q := c.q()

@@ -1,10 +1,8 @@
 package decker
 
-// Ctx is everything a slide needs to draw a frame.
-//
-// Its layout methods take fractions of the pixel canvas, so a slide looks the
-// same at any terminal size: c.X(0.5) is the horizontal center, c.Size(0.1) a
-// font one tenth of the screen tall.
+// Ctx is everything a slide needs to draw a frame. Its layout methods take
+// fractions of the pixel canvas (W wide, 2H tall), so a slide looks the same at
+// any size: c.X(0.5) is the center, c.Size(0.1) a font a tenth of the screen tall.
 type Ctx struct {
 	W, H  int     // drawable area in cells
 	T     float64 // seconds since this slide appeared
@@ -17,8 +15,8 @@ type Ctx struct {
 	sink *frameSink // where Scene.Render sends its frame, if the engine is capturing
 }
 
-// Scene returns an empty Scene the size of the drawable area, on the
-// theme's background. Rendering it draws the theme's Overlay on top.
+// Scene returns an empty Scene sized to the drawable area on the theme's
+// background; Render draws the theme's Overlay on top.
 func (c Ctx) Scene() *Scene {
 	sc := NewScene(c.W, c.H, c.Theme)
 	sc.sink = c.sink
@@ -28,12 +26,11 @@ func (c Ctx) Scene() *Scene {
 	return sc
 }
 
-// Reached reports whether the slide is at or past the given step.
+// Reached reports whether the slide is at or past step.
 func (c Ctx) Reached(step int) bool { return c.Step >= step }
 
-// Since returns seconds elapsed since the given step began: negative
-// before the step, and a large "settled" value if we are past it. Use it to
-// animate the element a step introduces, e.g. Ease(Since(2), 0.5).
+// Since returns seconds since step began: negative before it, Settled after
+// it. Animate a step's element with Ease(Since(2), 0.5).
 func (c Ctx) Since(step int) float64 {
 	switch {
 	case c.Step < step:
@@ -45,9 +42,8 @@ func (c Ctx) Since(step int) float64 {
 	}
 }
 
-// Settled is a time far enough in the future that every entrance animation
-// has finished. Slides entered "backwards" (or past steps) use it so they
-// appear fully built rather than replaying their animations.
+// Settled is a time past every entrance animation; slides entered backwards
+// or past a step use it to appear fully built.
 const Settled = 1000.0
 
 // PW returns the pixel canvas width.
@@ -62,19 +58,15 @@ func (c Ctx) X(f float64) float64 { return f * c.PW() }
 // Y converts a fraction of the canvas height to a pixel y coordinate.
 func (c Ctx) Y(f float64) float64 { return f * c.PH() }
 
-// Size is a font size in pixels as a fraction of the canvas height, never
-// below 6.
+// Size returns a font size in pixels, f of the canvas height, at least 6.
 func (c Ctx) Size(f float64) int { return max(int(f*c.PH()), 6) }
 
-// MinText is the smallest text size (as a fraction of the canvas height)
-// that stays readable at typical projector resolutions. Don't go below it.
+// MinText is the smallest text size, as a canvas-height fraction, readable at projector resolutions.
 const MinText = 0.068
 
-// Unit is a length that scales with the canvas (a stroke, gap or radius): a
-// fraction of its height. It equals Y; use it when the number is not a
-// position.
+// Unit scales a stroke, gap or radius with the canvas: f of its height.
+// Same as Y; use it when the number isn't a position.
 func (c Ctx) Unit(f float64) float64 { return f * c.PH() }
 
-// SmallText is the smallest readable text size for f on this screen, as it
-// will actually be drawn.
+// SmallText is the smallest readable size for f on this screen, as drawn.
 func (c Ctx) SmallText(f *Font) int { return f.Drawn(c.Size(MinText)) }

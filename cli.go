@@ -12,7 +12,6 @@ import (
 	tea "charm.land/bubbletea/v2"
 )
 
-// options are the command-line flags of Main.
 type options struct {
 	slide, step, fps int
 	dev, list        bool
@@ -30,11 +29,9 @@ type options struct {
 	until            int
 }
 
-// Main runs a deck from the command line: live in the terminal (the
-// default), in dev mode, as the presenter view, or rendered to snapshots,
-// a contact sheet or a video, as the flags say. Call it from the talk's
-// main function. Register any flags of the talk's own before calling it;
-// Main parses the command line.
+// Main runs a deck from the command line: live in the terminal by default,
+// or as dev mode, presenter view, snapshot, contact sheet or video, as the
+// flags say. It parses the command line, so register the talk's own flags first.
 func Main(d Deck) {
 	if err := run(&d); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -111,8 +108,7 @@ func listSlides(d *Deck) {
 	}
 }
 
-// stillFrame renders slide idx at the given step, secs into its life, at w×h
-// cells.
+// stillFrame renders slide idx at step, secs after it appeared, at w×h cells.
 func stillFrame(d *Deck, idx, step int, secs float64, w, h int) string {
 	m := newModel(d, idx, step, 60, nil)
 	m.w, m.h = w, h
@@ -176,8 +172,7 @@ func runLive(d *Deck, o options) error {
 		return err
 	}
 	if m, ok := final.(model); ok && m.execOnQuit != nil {
-		// Dev mode rebuilt us: become the new binary, on the same slide. A
-		// connected presenter view sees the link drop and reconnects.
+		// Dev mode rebuilt us: exec the new binary on the same slide; a presenter view reconnects.
 		if err := execRestart(m.execOnQuit, o.socket); err != nil {
 			return fmt.Errorf("restart failed: %w", err)
 		}

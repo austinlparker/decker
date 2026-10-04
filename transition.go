@@ -1,7 +1,6 @@
 package decker
 
-// Transition controls how a slide enters. Each kind but TransitionDefault
-// and TransitionNone needs an entry in transitions.
+// Transition is how a slide enters. Each kind but Default and None needs an entry in transitions.
 type Transition int
 
 const (
@@ -18,7 +17,6 @@ var DefaultTransition = TransitionPush
 // TransitionDuration is how long every transition takes, in seconds.
 const TransitionDuration = 0.45
 
-// resolve replaces TransitionDefault with DefaultTransition.
 func (k Transition) resolve() Transition {
 	if k == TransitionDefault {
 		return DefaultTransition
@@ -26,11 +24,10 @@ func (k Transition) resolve() Transition {
 	return k
 }
 
-// transitionImpl draws a transition into terminal cells and into video
-// pixels. In both, p is linear progress from 0 (all old) to 1 (all new);
-// implementations apply their own easing.
+// transitionImpl draws a transition into cells and into video pixels. In both,
+// p is linear progress from 0 (all old) to 1 (all new); each applies its own easing.
 type transitionImpl struct {
-	// cells fills out; forward is false when navigating backwards.
+	// cells fills out; forward is false when going backwards.
 	cells func(out, from, to *grid, p float64, forward bool, t *Theme)
 	// pixels mixes from into to in place, as packed RGB w×h frames.
 	pixels func(from, to []byte, w, h int, p float64, t *Theme)
@@ -42,8 +39,7 @@ var transitions = map[Transition]transitionImpl{
 	TransitionWipe:     {wipeCells, wipePixels},
 }
 
-// composeGrid mixes two frames of the same size into a new grid. Kinds
-// without an implementation cut straight to `to`.
+// composeGrid mixes two same-size frames into a new grid. Kinds without an implementation cut to `to`.
 func composeGrid(kind Transition, from, to *grid, p float64, forward bool, t *Theme) *grid {
 	out := newGrid(to.W, to.H)
 	if impl, ok := transitions[kind]; ok {
@@ -54,16 +50,13 @@ func composeGrid(kind Transition, from, to *grid, p float64, forward bool, t *Th
 	return out
 }
 
-// blendTransition mixes the outgoing frame `from` into `to` in place.
-// Kinds without an implementation leave `to` alone.
+// blendTransition mixes `from` into `to` in place. Kinds without an implementation leave `to` alone.
 func blendTransition(kind Transition, from, to []byte, w, h int, p float64, t *Theme) {
 	if impl, ok := transitions[kind]; ok {
 		impl.pixels(from, to, w, h, p, t)
 	}
 }
 
-// pushCells pushes the old frame out to the left, or to the right when
-// going backwards.
 func pushCells(out, from, to *grid, p float64, forward bool, _ *Theme) {
 	w, h := to.W, to.H
 	off := LerpInt(0, w, EaseInOutCubic(p))
@@ -126,8 +119,7 @@ func wipeCells(out, from, to *grid, p float64, forward bool, t *Theme) {
 	}
 }
 
-// fixWideEdges blanks halves of wide characters that lost their other
-// half when two frames were cut together.
+// fixWideEdges blanks wide-character halves orphaned by cutting two frames together.
 func fixWideEdges(row []gcell) {
 	for x := range row {
 		c := &row[x]
@@ -164,7 +156,6 @@ func dissolvePixels(from, to []byte, w, h int, p float64, _ *Theme) {
 	}
 }
 
-// wipePixels sweeps an accent band left to right.
 func wipePixels(from, to []byte, w, h int, p float64, t *Theme) {
 	band := float64(w) / 60
 	edge := -band + (float64(w)+2*band)*EaseInOutCubic(p)

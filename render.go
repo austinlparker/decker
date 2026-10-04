@@ -8,15 +8,15 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
-// frameSink receives a slide's own scene (Ctx.Scene) in place of Scene.Render
-// encoding it to a string (pixels if set, else grid; the last scene wins).
+// frameSink receives a slide's own scene (Ctx.Scene) instead of Scene.Render
+// encoding it to a string: pixels if set, else grid; the last scene wins.
 // Scenes made with NewScene are never captured.
 type frameSink struct {
 	pixels func(*Pixels)
 	grid   func(*grid) // takes ownership of the grid
 }
 
-// renderSlideGrid draws one frame of s as cells, at exactly c.W × c.H.
+// renderSlideGrid is renderSlide as cells; the caller releases the grid.
 func renderSlideGrid(s Slide, c Ctx) *grid {
 	var got *grid
 	c.sink = &frameSink{grid: func(g *grid) { got.release(); got = g }}
@@ -42,16 +42,14 @@ func renderSlide(s Slide, c Ctx) (out string) {
 	return fit(s.View(c), c.W, c.H)
 }
 
-// opaque redraws a styled string (the footer, panels, an error message) as
-// a w×h scene on the theme's background, so it gets an explicit background
-// color everywhere, like the slides.
+// opaque redraws a styled string (footer, panel, error) as a w×h scene on the
+// theme's background, so every cell has an explicit background, like slides.
 func opaque(s string, w, h int, t *Theme) string {
 	sc := NewScene(w, h, t)
 	sc.Put(0, 0, s)
 	return sc.Render()
 }
 
-// fit clips or pads s to exactly w x h cells.
 func fit(s string, w, h int) string {
 	lines := strings.Split(s, "\n")
 	if len(lines) > h {
@@ -68,17 +66,15 @@ func fit(s string, w, h int) string {
 	return strings.Join(lines, "\n")
 }
 
-// narrowWidth is a fast width for lines made of escape sequences and
-// single-width characters, which is what Scene.Render produces. It reports
-// ok=false if the line might hold wide characters (CJK, emoji), so the
-// caller can fall back to a full measurement. Checking every frame with
-// ansi.StringWidth costs several milliseconds at big terminal sizes.
+// narrowWidth is a fast width for lines of escape sequences and single-width
+// characters, which is what Scene.Render produces. ok=false means the line
+// might hold wide characters (CJK, emoji) and needs a full measurement:
+// ansi.StringWidth on every frame costs several milliseconds at big sizes.
 func narrowWidth(s string) (n int, ok bool) {
 	for i := 0; i < len(s); {
 		c := s[i]
 		switch {
 		case c == 0x1b:
-			// Skip a CSI sequence: ESC [ params final-byte.
 			if i+1 < len(s) && s[i+1] == '[' {
 				i += 2
 				for i < len(s) && (s[i] < 0x40 || s[i] > 0x7e) {

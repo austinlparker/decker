@@ -31,7 +31,6 @@ var bindings = []binding{
 	{"q ctrl+c", "quit", false, "q", "quit"},
 }
 
-// keyActs maps a key name to its binding.
 var keyActs = func() map[string]binding {
 	m := map[string]binding{}
 	for _, b := range bindings {
@@ -42,9 +41,8 @@ var keyActs = func() map[string]binding {
 	return m
 }()
 
-// countKey tracks the numeric prefix for jumps ("12g", "12⏎") as keys
-// arrive. It reports done when k was a digit, or completed a jump to the
-// 1-based slide (0 for a digit).
+// countKey tracks the numeric prefix for jumps ("12g", "12⏎"). It reports done
+// when k was a digit (slide 0) or completed a jump to the 1-based slide.
 func countKey(count *string, k string) (slide int, done bool) {
 	if len(k) == 1 && k[0] >= '0' && k[0] <= '9' {
 		*count += k

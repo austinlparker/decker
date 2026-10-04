@@ -11,9 +11,8 @@ import (
 
 type tickMsg time.Time
 
-// model is the Bubble Tea model of a running deck: the position, the active
-// transition, and the dev-mode and presenter-link hooks. With live set the
-// frames go to the terminal writer and View is empty.
+// model is the Bubble Tea model of a running deck. With live set, frames go to
+// the terminal writer and View is empty; otherwise (snapshots, tests) View returns them.
 type model struct {
 	slides    []Slide
 	theme     *Theme
@@ -30,8 +29,6 @@ type model struct {
 	transStart time.Time
 	transFwd   bool
 
-	// live writes frames to the terminal; nil when frames are only
-	// returned from View (snapshots, tests).
 	live *termWriter
 
 	showNotes, showHelp bool
@@ -55,14 +52,13 @@ func newModel(d *Deck, idx, step, fps int, dev *devState) model {
 
 func (m model) cur() Slide { return m.slides[m.idx] }
 
-// tick waits for the next frame. Frames fall on multiples of the frame time
-// on the clock, so drawing time doesn't stretch the interval; a frame that
-// runs long skips to the next slot instead of piling up.
+// tick waits for the next frame. Frames land on multiples of the frame time, so
+// drawing time doesn't stretch the interval; a long frame skips to the next
+// slot instead of piling up.
 func (m model) tick() tea.Cmd {
 	return tea.Every(time.Second/time.Duration(m.fps), func(t time.Time) tea.Msg { return tickMsg(t) })
 }
 
-// advance moves the clock to now and ends a finished transition.
 func (m *model) advance(now time.Time) {
 	m.now = now
 	if m.transFrom != nil && now.Sub(m.transStart).Seconds() >= TransitionDuration {
@@ -142,8 +138,7 @@ func (m model) handle(msg tea.Msg) (model, tea.Cmd) {
 	return m, nil
 }
 
-// handleKey applies one key; digits build a count that g, Home or Enter
-// turn into a jump.
+// handleKey applies one key; digits build a count that g, Home or Enter turn into a jump.
 func (m model) handleKey(k string) (model, tea.Cmd) {
 	if n, done := countKey(&m.count, k); done {
 		if n > 0 {
@@ -211,8 +206,8 @@ func (m *model) goTo(idx, step int, forward bool) {
 		return
 	}
 	if m.w > 0 && m.h > 0 {
-		// Start from what's on screen, even mid-transition.
-		// The grid is never released to the pool, so it stays valid.
+		// Start from what's on screen, even mid-transition. The grid is never
+		// released to the pool, so it stays valid.
 		bodyH, _ := m.layout()
 		m.transFrom = m.body(bodyH)
 	}
@@ -239,8 +234,7 @@ func (m model) ctx(h int) Ctx {
 	}
 }
 
-// body draws the slide area at exactly m.w × h: the current slide, mixed
-// with the previous one during a transition.
+// body draws the slide area at exactly m.w × h, mixed with the previous slide during a transition.
 func (m model) body(h int) *grid {
 	g := renderSlideGrid(m.cur(), m.ctx(h))
 	if from := m.transFrom; from != nil && from.W == g.W && from.H == g.H {
@@ -252,8 +246,6 @@ func (m model) body(h int) *grid {
 	return g
 }
 
-// frame draws the whole screen: the slide area, then any panels and the
-// footer below it.
 func (m model) frame() *grid {
 	bodyH, panels := m.layout()
 	body := m.body(bodyH)
@@ -279,8 +271,7 @@ func (m model) frame() *grid {
 	return g
 }
 
-// View is the frame as a string, for snapshots and tests. The live deck
-// writes frames itself (see termout.go), so there it's empty.
+// View is the frame as a string, for snapshots and tests; the live deck writes frames itself (termout.go).
 func (m model) View() tea.View {
 	if m.live != nil || m.w == 0 || m.h == 0 {
 		return tea.NewView("")
@@ -296,9 +287,8 @@ func (m model) View() tea.View {
 
 const chromeHeight = 1
 
-// showChrome reports whether to draw the footer. The audience never sees
-// it: it's a dev-mode aid (build status, slide counter). When presenting,
-// progress lives in the presenter view.
+// showChrome reports whether to draw the footer: a dev-mode aid (build status,
+// slide counter) the audience never sees; presenting shows progress in the presenter view.
 func (m model) showChrome() bool { return m.dev != nil && !m.cur().HideChrome }
 
 // layout returns the height left for the slide and the panels below it.
@@ -314,7 +304,6 @@ func (m model) layout() (bodyH int, panels string) {
 	return max(h, 1), panels
 }
 
-// panels renders the optional bottom panels: build errors and speaker notes.
 func (m model) panels() string {
 	var out []string
 	panel := func(title, body string, accent RGB, maxLines int) string {
@@ -343,8 +332,6 @@ func (m model) panels() string {
 	return strings.Join(out, "\n")
 }
 
-// chrome is the one-line footer: a thin progress bar, with the slide
-// counter and any status indicators at the right.
 func (m model) chrome() string {
 	n := len(m.slides)
 	var right []string

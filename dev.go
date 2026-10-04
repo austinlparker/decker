@@ -15,12 +15,10 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
-// devState implements -dev: it watches the Go sources, rebuilds on save, and
-// if the build succeeds, the process is replaced by the new binary on the
-// same slide. If the build fails, the compiler output shows on top of the
-// deck and the old version keeps running. It rebuilds the running deck's
-// own main package and watches every package of the same module that the
-// deck imports, so editing the talk or the engine both reload.
+// devState implements -dev: it rebuilds the deck's main package on save of any
+// watched Go source (every same-module package it imports, so talk and engine
+// edits both reload). A good build replaces the process on the same slide; a
+// failed one shows the compiler output over the deck while the old version runs.
 type devState struct {
 	events     chan struct{}
 	pkg        string // the package to build
@@ -78,13 +76,11 @@ func (d *devState) wait() tea.Cmd {
 	}
 }
 
-// changed records a file change and waits for the next one.
 func (d *devState) changed() tea.Cmd {
 	d.pending, d.lastChange = true, time.Now()
 	return d.wait()
 }
 
-// tick starts a build once the changes have settled.
 func (d *devState) tick(now time.Time) tea.Cmd {
 	if !d.pending || d.building || now.Sub(d.lastChange) <= debounce {
 		return nil
@@ -113,15 +109,13 @@ func (d *devState) restartArgs(slide, step, fps int) []string {
 	return []string{d.bin, "-dev", "-slide", strconv.Itoa(slide), "-step", strconv.Itoa(step), "-fps", strconv.Itoa(fps)}
 }
 
-// execRestart replaces this process with args, linked over socket.
 func execRestart(args []string, socket string) error {
 	args = append(args, "-socket", socket)
 	return syscall.Exec(args[0], args, os.Environ())
 }
 
-// devTarget returns the running deck's main package and the directories of
-// every package in its module that it depends on. Without build info (or
-// outside the module) it falls back to the current directory.
+// devTarget returns the deck's main package and the directories of every
+// same-module package it depends on; without build info it falls back to ".".
 func devTarget() (pkg string, dirs []string) {
 	pkg = "."
 	if bi, ok := debug.ReadBuildInfo(); ok && bi.Path != "" && bi.Path != "command-line-arguments" {
