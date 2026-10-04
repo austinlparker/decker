@@ -14,7 +14,6 @@ const (
 	Right               // x is the right edge
 )
 
-// shift is the offset from the anchor x to the left edge of content w wide.
 func (a Align) shift(w float64) float64 {
 	switch a {
 	case Center:
@@ -25,8 +24,7 @@ func (a Align) shift(w float64) float64 {
 	return 0
 }
 
-// DefaultLeading is the line height, as a multiple of the text size, that
-// Text uses when Leading is zero.
+// DefaultLeading is the line height, as a multiple of size, used when Leading is 0.
 const DefaultLeading = 1.1
 
 func leadingOr(l float64) float64 {
@@ -36,8 +34,7 @@ func leadingOr(l float64) float64 {
 	return l
 }
 
-// Text describes how to draw a block of raster type with a Font. Sizes
-// below 4 pixels are drawn at 4.
+// Text draws a block of raster type with a Font; sizes below 4 pixels are drawn at 4.
 type Text struct {
 	Font    *Font   // required
 	Size    int     // pixels
@@ -49,16 +46,13 @@ type Text struct {
 	Glow      float64 // soft glow strength, 0 (none) to ~1.5
 	GlowColor *RGB    // defaults to Color
 
-	// MaxW, if set, wraps lines to this width so text never runs off the
-	// side of its area.
+	// MaxW, if set, wraps lines to this width.
 	MaxW float64
 
-	// Shine, if set, returns extra brightness (0..1) for a horizontal
-	// position u from 0 (left edge) to 1 (right edge) of the block.
-	// ShineBand makes a moving highlight.
+	// Shine returns extra brightness (0..1) at horizontal position u, 0 at the block's
+	// left edge to 1 at its right; see ShineBand.
 	Shine func(u float64) float64
 
-	// FX, if set, animates each glyph; see GlyphEffect.
 	FX GlyphEffect
 }
 
@@ -71,10 +65,9 @@ func (t Text) font() *Font {
 
 func (t Text) resolved() (*Font, int) { return t.font().resolve(t.Size) }
 
-// DrawMid draws a single line of s so that its ink is centered vertically
-// on cy (x as for Draw). Use it to put a label in the middle of a box:
-// centering the line box instead leaves lowercase text sitting low, and
-// descenders poking into the border.
+// DrawMid draws one line of s with its ink centered vertically on cy (x as for
+// Draw). Centering the line box instead leaves lowercase text low and
+// descenders poking into borders.
 func (t Text) DrawMid(p *Pixels, s string, x, cy float64) (w, h float64) {
 	f, size := t.resolved()
 	top, bot := f.Ink(s, size)
@@ -85,23 +78,20 @@ func (t Text) DrawMid(p *Pixels, s string, x, cy float64) (w, h float64) {
 	return t.Draw(p, s, x, baseline-t.baseOff(f, size))
 }
 
-// Baseline is the distance from the top of a line to its baseline, as Draw
-// lays lines out.
+// Baseline is the distance from the top of a line to its baseline, as Draw lays it out.
 func (t Text) Baseline() float64 {
 	f, size := t.resolved()
 	return t.baseOff(f, size)
 }
 
-// baseOff is the distance from the top of a line to its baseline: the
-// font's ascent plus half the leading, nudged up so the ink sits centered
-// in its line box.
+// baseOff is the top-of-line to baseline distance; the 0.08*size nudge centers ink in the line box.
 func (t Text) baseOff(f *Font, size int) float64 {
 	return f.Ascent(size) + (float64(size)*leadingOr(t.Leading)-float64(size))/2 - float64(size)*0.08
 }
 
-// Draw renders s (which may contain "\n") with its top edge at y and
-// returns the block's width and height. With FX, glyph indexes count every
-// rune of every line, spaces included, plus one per line break.
+// Draw renders s (which may contain "\n") with its top edge at y and returns the
+// block's size. With FX, glyph indexes count every rune of every line, spaces
+// included, plus one per line break.
 func (t Text) Draw(p *Pixels, s string, x, y float64) (w, h float64) {
 	f, size := t.resolved()
 	if t.MaxW > 0 {
@@ -117,8 +107,7 @@ func (t Text) Draw(p *Pixels, s string, x, y float64) (w, h float64) {
 	h = lineH * float64(len(lines))
 	blockX := x + t.Align.shift(w)
 
-	// The coverage buffer has room around the block for glow and effect
-	// motion.
+	// The coverage buffer is padded by size on every side for glow and effect motion.
 	pad := float64(size)
 	cov := newCoverage(int(math.Floor(blockX-pad)), int(math.Floor(y-pad)), int(math.Ceil(w+2*pad))+1, int(math.Ceil(h+2*pad))+1)
 	t.stamp(cov, f, size, lines, widths, x, y, lineH)
@@ -134,8 +123,6 @@ func (t Text) Draw(p *Pixels, s string, x, y float64) (w, h float64) {
 	return w, h
 }
 
-// stamp rasterizes lines into cov, aligned around x with the first line's
-// top at y.
 func (t Text) stamp(cov coverage, f *Font, size int, lines []string, widths []float64, x, y, lineH float64) {
 	baseOff := t.baseOff(f, size)
 	gi := 0
@@ -170,8 +157,6 @@ func (t Text) stamp(cov coverage, f *Font, size int, lines []string, widths []fl
 	}
 }
 
-// colorAt is the text color at u, from 0 at the left edge of the block to 1
-// at the right.
 func (t Text) colorAt(u float64) RGB {
 	c := t.Color
 	if t.To != nil {
@@ -183,7 +168,6 @@ func (t Text) colorAt(u float64) RGB {
 	return c
 }
 
-// paint blends cov onto p in the text's colors; the block is w wide from blockX.
 func (t Text) paint(p *Pixels, cov coverage, blockX, w float64) {
 	for y := 0; y < cov.h; y++ {
 		for x := 0; x < cov.w; x++ {

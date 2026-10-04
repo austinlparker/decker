@@ -33,8 +33,7 @@ var boxArms = map[rune][4]uint8{
 	'╸': {0, 0, 0, 1}, '╹': {1, 0, 0, 0}, '╺': {0, 1, 0, 0}, '╻': {0, 0, 1, 0},
 }
 
-// isSolid reports whether r is a filled block character, which takes the
-// block's color and glows, as opposed to a box-drawing edge or small mark.
+// isSolid reports whether r is a filled block character (colored and glowing).
 func isSolid(r rune) bool { return solidRunes[r] }
 
 var solidRunes = func() map[rune]bool {
@@ -48,8 +47,7 @@ var solidRunes = func() map[rune]bool {
 	return m
 }()
 
-// drawBlockRunePx paints one block or box-drawing character into the k×2k
-// pixel box at (x, y).
+// drawBlockRunePx paints one block or box-drawing rune into the k×2k box at (x, y).
 func drawBlockRunePx(p *Pixels, r rune, x, y, k float64, c RGB, a float64) {
 	cw, ch := k, 2*k
 	if m, ok := quadrants[r]; ok {

@@ -26,10 +26,8 @@ var (
 	BlockFancy  = stockFig("Delta Corps Priest 1") // dramatic; 8 rows
 )
 
-// FigFont is a parsed FIGlet (.flf) font: classic terminal-character type
-// (█ ▀ ╗ ═ …) that Block draws onto the pixel canvas at a screen-relative
-// scale, for titles and impact lines. Load more with LoadFigFont; the stock
-// fonts' files and provenance are in fonts/figlet.
+// FigFont is a parsed FIGlet (.flf) font, classic terminal-character type drawn
+// by Block. Stock fonts' files and provenance are in fonts/figlet.
 type FigFont struct {
 	Name string // the font's file name without .flf
 	// Height is the row count the font file declares. Rendered lines trim
@@ -39,15 +37,15 @@ type FigFont struct {
 	glyphs  map[rune][][]rune
 }
 
-// hardBlank stands in for the font's hardblank character, which keeps
-// glyphs from kerning into each other, until layout turns it into a space.
+// hardBlank stands in for the font's hardblank, which stops glyphs kerning into
+// each other, until layout turns it into a space.
 const hardBlank = ' '
 
 func stockFig(name string) *FigFont { return LoadFigFont(figFiles, "fonts/figlet/"+name+".flf") }
 
-// LoadFigFont loads a FIGlet (.flf) font from fsys, named after its file.
-// Fonts whose glyphs are made of block (█ ▀ ▄ ░) and box-drawing (═ ║ ╗)
-// characters draw best. It panics if the font is missing or broken.
+// LoadFigFont loads a FIGlet (.flf) font from fsys, named after its file. Fonts of
+// block (█ ▀ ▄ ░) and box-drawing (═ ║ ╗) characters draw best. It panics if the
+// font is missing or broken.
 func LoadFigFont(fsys fs.FS, path string) *FigFont {
 	b, err := fs.ReadFile(fsys, path)
 	if err != nil {
@@ -61,9 +59,8 @@ func LoadFigFont(fsys fs.FS, path string) *FigFont {
 	return f
 }
 
-// parseFig reads the FIGlet .flf format: a header line, comment lines, then
-// each character's rows. Rows end with an end mark (usually '@', doubled on
-// a character's last row). Only the required ASCII characters are loaded.
+// parseFig reads the .flf format: header, comment lines, then each character's rows,
+// which end with an end mark (usually '@', doubled on the last row). Only ASCII is loaded.
 func parseFig(name, src string) (*FigFont, error) {
 	sc := bufio.NewScanner(strings.NewReader(src))
 	sc.Buffer(make([]byte, 1<<16), 1<<20)
@@ -150,7 +147,6 @@ type figKey struct {
 	s string
 }
 
-// Block text is measured and drawn every frame.
 var figLayouts = memo[figKey, figLayout]{max: 4096}
 
 // render lays out one line of text. Callers must not modify the result.
@@ -220,8 +216,7 @@ func kernShift(rows figLayout, g [][]rune, gw int) int {
 	return shift
 }
 
-// trimBlankRows removes empty rows at the top and bottom of a glyph block
-// (many fonts pad with an empty row), so blocks stack tightly.
+// trimBlankRows drops blank rows at the top and bottom (many fonts pad them).
 func trimBlankRows(rows figLayout) figLayout {
 	blank := func(row []figCell) bool {
 		return !slices.ContainsFunc(row, func(c figCell) bool { return !unicode.IsSpace(c.r) })
@@ -238,8 +233,6 @@ func trimBlankRows(rows figLayout) figLayout {
 // Width returns the width in cells of s rendered on one line.
 func (f *FigFont) Width(s string) int { return f.render(s).width() }
 
-// widest returns the width in cells of the widest of lines, each rendered on
-// one line.
 func (f *FigFont) widest(lines []string) int {
 	w := 0
 	for _, l := range lines {
@@ -248,9 +241,8 @@ func (f *FigFont) widest(lines []string) int {
 	return w
 }
 
-// Rows returns the height in cells of one rendered line, blank padding rows
-// trimmed. It is measured on a sample with ascenders, descenders and capitals
-// so that it is the same for every line of text.
+// Rows returns the height in cells of one rendered line, measured on a sample
+// with ascenders, descenders and capitals so it is the same for every line.
 func (f *FigFont) Rows() int { return len(f.render("AgjM")) }
 
 // Wrap breaks s greedily into lines no wider than maxW cells, at spaces,
@@ -259,8 +251,7 @@ func (f *FigFont) Wrap(s string, maxW int) []string {
 	return wrapGreedy(s, float64(maxW), func(l string) float64 { return float64(f.Width(l)) })
 }
 
-// Has reports whether the font has a visible glyph for every non-space
-// character in s (some fonts have no digits or punctuation).
+// Has reports whether the font has a visible glyph for each non-space rune of s.
 func (f *FigFont) Has(s string) bool {
 	for _, r := range s {
 		if r == ' ' || r == '\n' {
@@ -276,10 +267,9 @@ func (f *FigFont) Has(s string) bool {
 	return true
 }
 
-// DropQuotes removes quote marks the font has no glyph for. Big block
-// letters read fine without them ("AGENTS ARENT USERS"), and dropping them
-// beats falling back to a smaller font. FitBlock does this itself; use it
-// when you wrap or measure a string FitBlock fitted.
+// DropQuotes removes quote marks the font has no glyph for, which beats falling
+// back to a smaller font. FitBlock does this itself; call it before wrapping or
+// measuring a string FitBlock fitted.
 func (f *FigFont) DropQuotes(s string) string {
 	return strings.Map(func(r rune) rune {
 		switch r {

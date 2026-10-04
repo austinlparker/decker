@@ -2,8 +2,7 @@ package decker
 
 import "math"
 
-// coverage is a float alpha mask whose top-left corner sits at (x0, y0) on
-// the pixel canvas.
+// coverage is a float alpha mask with its top-left at (x0, y0) on the pixel canvas.
 type coverage struct {
 	a      []float32
 	w, h   int
@@ -53,8 +52,7 @@ func (c coverage) addGlow(p *Pixels, radius int, col RGB, strength float64) {
 	}
 }
 
-// boxBlur approximates a Gaussian blur with two box-blur passes in each
-// direction.
+// boxBlur approximates a Gaussian with two box-blur passes per direction.
 func boxBlur(src []float32, w, h, r int) []float32 {
 	a := append([]float32(nil), src...)
 	b := make([]float32, len(src))
@@ -65,9 +63,8 @@ func boxBlur(src []float32, w, h, r int) []float32 {
 	return a
 }
 
-// blur1D box-blurs m lines of n samples from src into dst. Samples are si
-// apart within a line and lines sj apart; samples beyond a line's ends count
-// as zero.
+// blur1D box-blurs m lines of n samples from src into dst; samples are si apart
+// within a line, lines sj apart, and out-of-range samples count as zero.
 func blur1D(src, dst []float32, n, m, si, sj, r int) {
 	norm := 1 / float32(2*r+1)
 	for j := range m {

@@ -6,10 +6,9 @@ import (
 	"unicode/utf8"
 )
 
-// Block draws text in a block font (see FigFont) onto the pixel canvas,
-// scaled to the screen: each character cell of the font becomes a
-// Scale×(2·Scale) pixel box, so block letters are as big on stage at 682
-// columns as at 240. Use FitBlock to pick a font and scale for a box.
+// Block draws text in a block font onto the pixel canvas, scaled to the screen:
+// each font cell becomes a Scale×(2·Scale) pixel box, so block letters are as
+// big on stage at 682 columns as at 240. FitBlock picks a font and scale.
 type Block struct {
 	Font  *FigFont
 	Scale float64 // pixel width of one font cell, at least 0.5; it is twice as tall
@@ -24,7 +23,6 @@ type Block struct {
 	// Glow draws a soft light behind the solid parts.
 	Glow float64
 
-	// FX, if set, animates each cell; see BlockEffect.
 	FX BlockEffect
 }
 
@@ -42,8 +40,6 @@ func (b Block) Size(s string) (w, h float64) {
 	return float64(cw) * b.Scale, float64(ch) * 2 * b.Scale
 }
 
-// placedCell is a block cell after effects: where to paint which character
-// in what color.
 type placedCell struct {
 	x, y  float64 // top-left pixel
 	r     rune
@@ -52,9 +48,8 @@ type placedCell struct {
 	solid bool
 }
 
-// Draw renders s (which may contain "\n") with its top edge at pixel y. x
-// is the left edge, center, or right edge according to Align. It returns
-// the block's size in pixels.
+// Draw renders s (which may contain "\n") with its top edge at pixel y and x as
+// the left edge, center or right edge per Align. It returns the size in pixels.
 func (b Block) Draw(p *Pixels, s string, x, y float64) (w, h float64) {
 	k := math.Max(b.Scale, 0.5)
 	lines := strings.Split(s, "\n")
@@ -82,8 +77,7 @@ func (b Block) Draw(p *Pixels, s string, x, y float64) (w, h float64) {
 	return w, h
 }
 
-// place lays out lines in a cw×ch cell block whose top-left pixel is
-// (left, y), runs the effects, and returns the cells that stay visible.
+// place lays out lines, runs the effects, and returns the cells that stay visible.
 func (b Block) place(lines []string, cw, ch int, left, y, k float64, shadow RGB) []placedCell {
 	var cells []placedCell
 	row0, chars := 0, 0
@@ -146,7 +140,6 @@ func (b Block) place(lines []string, cw, ch int, left, y, k float64, shadow RGB)
 	return cells
 }
 
-// glow lights up the solid cells' surroundings.
 func (b Block) glow(p *Pixels, cells []placedCell, left, y, k, w, h float64) {
 	if b.Glow <= 0 {
 		return

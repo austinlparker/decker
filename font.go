@@ -14,15 +14,12 @@ import (
 //go:embed fonts/*.ttf
 var stockFonts embed.FS
 
-// StockFont loads one of the typefaces that ship with the engine (SIL Open
-// Font License; see fonts/): "SpaceGrotesk-Bold", "SpaceGrotesk-Medium" or
-// "JetBrainsMono-ExtraBold". Load each once, at startup: a Font caches its
-// rendered glyphs.
+// StockFont loads a bundled typeface (SIL OFL; see fonts/): "SpaceGrotesk-Bold",
+// "SpaceGrotesk-Medium" or "JetBrainsMono-ExtraBold". Load each once: a Font caches glyphs.
 func StockFont(name string) *Font { return LoadFont(stockFonts, "fonts/"+name+".ttf") }
 
-// LoadFont loads a TrueType or OpenType font from fsys, typically a deck's
-// own embedded files. It panics if the font is missing or broken: fonts
-// are built in, so that's a bug in the deck, not a runtime condition.
+// LoadFont loads a TrueType or OpenType font from fsys. It panics if the font is
+// missing or broken: fonts are built in, so that is a deck bug.
 func LoadFont(fsys fs.FS, path string) *Font {
 	b, err := fs.ReadFile(fsys, path)
 	if err != nil {
@@ -44,10 +41,8 @@ func ParseFont(data []byte) (*Font, error) {
 	return &Font{otf: f, faces: map[int]font.Face{}, glyphs: map[glyphKey]*glyph{}, kerns: map[kernKey]float64{}}, nil
 }
 
-// Font is a typeface that draws raster type at any pixel size, with
-// per-size caches of rasterized glyphs. Sizes are in pixels; the pixel
-// layer is twice as tall as the terminal in cells, so a 40px font is about
-// 20 terminal rows tall. Text draws with one.
+// Font draws raster type at any pixel size, caching rasterized glyphs per size.
+// The pixel layer is twice as tall as the terminal in cells.
 type Font struct {
 	otf    *opentype.Font
 	mu     sync.Mutex // guards the caches; a font.Face is not safe for concurrent use
@@ -55,14 +50,12 @@ type Font struct {
 	glyphs map[glyphKey]*glyph
 	kerns  map[kernKey]float64
 
-	// Small, if set, is used instead below SmallBelow pixels: a medium
-	// weight gets spindly at low resolution, so point it at a bolder cut
-	// (SpaceGrotesk-Bold for SpaceGrotesk-Medium).
+	// Small, if set, replaces this font below SmallBelow pixels: medium weights get
+	// spindly at low resolution, so point it at a bolder cut.
 	Small      *Font
 	SmallBelow int
 }
 
-// minFontSize is the smallest size text is drawn at.
 const minFontSize = 4
 
 type glyphKey struct {
@@ -76,8 +69,8 @@ type kernKey struct {
 	size int
 }
 
-// subpixel is how many horizontal positions per pixel glyphs are rendered
-// at. Without it, small type gets uneven letter spacing from rounding.
+// subpixel is the number of horizontal glyph positions per pixel; without it
+// small type gets uneven letter spacing from rounding.
 const subpixel = 4
 
 // gammaLUT slightly thickens antialiased edges ("stem darkening") so light
@@ -89,8 +82,7 @@ var gammaLUT = func() (t [256]uint8) {
 	return
 }()
 
-// glyph is a cached alpha mask. (ox, oy) is the mask's top-left corner
-// relative to the pen position on the baseline.
+// glyph is a cached alpha mask; (ox, oy) is its top-left from the baseline pen.
 type glyph struct {
 	a      []uint8
 	w, h   int
@@ -116,8 +108,7 @@ func (f *Font) face(size int) font.Face {
 
 func (f *Font) glyph(r rune, size int) *glyph { return f.glyphAt(r, size, 0) }
 
-// glyphAt returns r rendered with the pen shifted right by q/subpixel of a
-// pixel.
+// glyphAt returns r rendered with the pen shifted right by q/subpixel pixels.
 func (f *Font) glyphAt(r rune, size, q int) *glyph {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -159,9 +150,8 @@ func (f *Font) metrics(size int) font.Metrics {
 	return f.face(size).Metrics()
 }
 
-// resolve returns the font and pixel size that text requested at size is
-// drawn with: sizes below minFontSize are raised to it, and below
-// SmallBelow the Small font replaces f, where thin strokes break up.
+// resolve returns the font and size that text requested at size is drawn with:
+// size is raised to minFontSize, and below SmallBelow f.Small replaces f.
 func (f *Font) resolve(size int) (*Font, int) {
 	size = max(size, minFontSize)
 	if f.Small != nil && size < f.SmallBelow {
@@ -193,9 +183,9 @@ func (f *Font) Measure(s string, size int) float64 {
 	return w
 }
 
-// Ink returns how far s's glyphs actually reach above and below the
-// baseline at size: top is negative (above), bottom positive. Spaces don't
-// count. Both are 0 if s has no visible glyphs.
+// Ink returns how far s's glyphs reach above (top, negative) and below (bottom,
+// positive) the baseline at size, ignoring spaces. Both are 0 if s has no
+// visible glyphs.
 func (f *Font) Ink(s string, size int) (top, bottom float64) {
 	f, size = f.resolve(size)
 	first := true

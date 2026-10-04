@@ -21,15 +21,13 @@ type fitBlockResult struct {
 	scale float64
 }
 
-// Slides call FitBlock every frame with the same arguments.
 var fitBlocks = memo[fitBlockKey, fitBlockResult]{max: 4096}
 
-// FitBlock picks a font and scale at which s, wrapped to at most maxLines
-// lines with gap blank rows between them, is as big as possible inside a
-// maxW×maxH pixel box. Fonts missing a character of s are skipped. Fonts
-// are listed in order of preference: a later font only wins if its letters
-// come out clearly (15%+) taller. Scales snap to half pixels (whole pixels
-// from 4 up), for nearly crisp edges.
+// FitBlock picks a font and scale at which s, wrapped to at most maxLines lines
+// with gap blank rows between them, is as big as possible in a maxW×maxH pixel
+// box. Fonts missing a character of s are skipped. Fonts are in order of
+// preference: a later one only wins if its letters come out 15%+ taller. Scales
+// snap to half pixels (whole from 4 up) for nearly crisp edges.
 func FitBlock(s string, maxW, maxH float64, maxLines, gap int, fonts ...*FigFont) (*FigFont, []string, float64) {
 	var ids strings.Builder
 	for _, f := range fonts {
@@ -73,7 +71,6 @@ func fitBlock(s string, maxW, maxH float64, maxLines, gap int, fonts []*FigFont)
 // or nil if even one line is more than maxLines.
 func fitFont(f *FigFont, text string, maxW, maxH float64, maxLines, gap int) (best []string, bestScale float64) {
 	bestWidest := 0
-	// Try narrower and narrower wraps; keep the one that scales up most.
 	for tw := f.widest(strings.Split(text, "\n")); tw > 0; tw = tw * 94 / 100 {
 		lines := balancedWrap(f, text, tw)
 		if maxLines > 0 && len(lines) > maxLines {
@@ -94,10 +91,8 @@ func fitFont(f *FigFont, text string, maxW, maxH float64, maxLines, gap int) (be
 	return best, bestScale
 }
 
-// balancedWrap wraps each paragraph of s to at most maxW cells in as few
-// lines as greedy wrapping needs, but with the breaks evened out: it finds
-// the narrowest width that still takes that many lines. "What Your MCP
-// Server / Does" becomes "What Your MCP / Server Does".
+// balancedWrap wraps each paragraph to at most maxW cells in as few lines as
+// greedy wrapping needs, using the narrowest width that still takes that many.
 func balancedWrap(f *FigFont, s string, maxW int) []string {
 	var out []string
 	for _, para := range strings.Split(s, "\n") {
@@ -116,8 +111,7 @@ func balancedWrap(f *FigFont, s string, maxW int) []string {
 	return out
 }
 
-// snapScale rounds a scale down to half pixels (whole pixels from 4 up), so
-// block edges land on or halfway between pixels and stay nearly crisp.
+// snapScale rounds down to half pixels (whole from 4 up) so edges stay nearly crisp.
 func snapScale(s float64) float64 {
 	if s >= 4 {
 		return math.Floor(s)
