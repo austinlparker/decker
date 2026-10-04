@@ -48,8 +48,8 @@ var solidRunes = func() map[rune]bool {
 }()
 
 // drawBlockRunePx paints one block or box-drawing rune into the k×2k box at (x,
-// y).
-func drawBlockRunePx(p *Pixels, r rune, x, y, k float64, c RGB, a float64) {
+// y), and reports whether it knows r.
+func drawBlockRunePx(p *Pixels, r rune, x, y, k float64, c RGB, a float64) bool {
 	cw, ch := k, 2*k
 	if m, ok := quadrants[r]; ok {
 		// Snap to whole pixels so neighboring cells tile exactly: with
@@ -60,7 +60,7 @@ func drawBlockRunePx(p *Pixels, r rune, x, y, k float64, c RGB, a float64) {
 		xm, ym := math.Round(x+cw/2), math.Round(y+ch/2)
 		if m == 0b1111 {
 			p.Rect(x0, y0, x1-x0, y1-y0, c, a)
-			return
+			return true
 		}
 		quads := [4][4]float64{{x0, y0, xm, ym}, {xm, y0, x1, ym}, {x0, ym, xm, y1}, {xm, ym, x1, y1}}
 		for i, q := range quads {
@@ -68,24 +68,27 @@ func drawBlockRunePx(p *Pixels, r rune, x, y, k float64, c RGB, a float64) {
 				p.Rect(q[0], q[1], q[2]-q[0], q[3]-q[1], c, a)
 			}
 		}
-		return
+		return true
 	}
 	x, y = math.Round(x), math.Round(y)
 	if shade, ok := blockShades[r]; ok {
 		p.Rect(x, y, cw, ch, c, a*shade)
-		return
+		return true
 	}
 	switch r {
 	case '■', '◆':
 		p.Rect(x+cw*0.2, y+ch*0.3, cw*0.6, ch*0.4, c, a)
-		return
+		return true
 	case '·':
 		p.Rect(x+cw*0.35, y+ch*0.42, cw*0.3, ch*0.16, c, a)
-		return
+		return true
+	case '▁':
+		p.Rect(x, y+ch*0.875, cw, ch*0.125, c, a)
+		return true
 	}
 	arms, ok := boxArms[r]
 	if !ok {
-		return
+		return false
 	}
 	// Mixed single and double joins are drawn as single lines.
 	double := arms[0] != 1 && arms[1] != 1 && arms[2] != 1 && arms[3] != 1
@@ -109,7 +112,8 @@ func drawBlockRunePx(p *Pixels, r rune, x, y, k float64, c RGB, a float64) {
 		o := math.Max(k*0.22, t*0.8)
 		stroke(-o, -o)
 		stroke(o, o)
-		return
+		return true
 	}
 	stroke(0, 0)
+	return true
 }
