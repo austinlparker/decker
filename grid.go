@@ -57,6 +57,10 @@ func (g *grid) release() {
 func (g *grid) at(x, y int) *gcell { return &g.Cells[y*g.W+x] }
 
 func pixelCell(top, bot RGB) gcell {
+	if top == bot { // most cells are background
+		q := top.q()
+		return gcell{ch: " ", fg: q, bg: q}
+	}
 	qt, qb := top.q(), bot.q()
 	if qt == qb {
 		return gcell{ch: " ", fg: qt, bg: qb}

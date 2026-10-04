@@ -37,7 +37,16 @@ func (c RGB) Color() color.Color {
 }
 
 // q rounds c to 0-255 bytes.
-func (c RGB) q() [3]uint8 {
-	cl := func(v float32) uint8 { return uint8(max(0, min(255, v+0.5))) }
-	return [3]uint8{cl(c.R), cl(c.G), cl(c.B)}
+func (c RGB) q() [3]uint8 { return [3]uint8{q8(c.R), q8(c.G), q8(c.B)} }
+
+// q8 uses plain comparisons: builtin min/max's NaN handling costs ~30% on
+// this per-cell path.
+func q8(v float32) uint8 {
+	if v += 0.5; v <= 0 {
+		return 0
+	}
+	if v >= 255 {
+		return 255
+	}
+	return uint8(v)
 }
