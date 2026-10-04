@@ -1,56 +1,26 @@
 package decker
 
-import (
-	"image/color"
-	"math"
-)
+import "math"
 
 // Pixels is a true-color framebuffer that a slide paints into. The scene
 // shows it with half-block characters: each terminal cell displays two
 // vertically stacked pixels (the top in the foreground color of "▀", the
-// bottom in the background color). A 240×60 terminal is therefore a
-// 240×120 pixel display.
+// bottom in the background color), so a 240×60 terminal is a 240×120 pixel
+// display.
 //
-// Everything that should look big and smooth on a projector goes here:
-// raster type, shapes, glows, pixel-art characters. Coordinates are floats so
-// shapes can sit between pixels and still be smooth (antialiased).
+// Everything that should look big and smooth on a projector goes here: raster
+// type, shapes, glows, pixel-art characters. Coordinates are floats and edges
+// are antialiased. Drawing methods blend with opacity a in 0..1 (1 is opaque).
 type Pixels struct {
 	W, H int
 	Pix  []RGB
 	BG   RGB // the color the canvas was cleared to
 }
 
-// RGB is a color with 0..255 float channels, used for fast blending.
-type RGB struct{ R, G, B float32 }
-
-func toRGB(c color.Color) RGB {
-	r, g, b, _ := c.RGBA()
-	return RGB{float32(r >> 8), float32(g >> 8), float32(b >> 8)}
-}
-
-// Mix blends two colors: p=0 is a, p=1 is b.
-func Mix(a, b RGB, p float64) RGB {
-	q := float32(Clamp01(p))
-	return RGB{a.R + (b.R-a.R)*q, a.G + (b.G-a.G)*q, a.B + (b.B-a.B)*q}
-}
-
-// Scale multiplies a color's brightness.
-func (c RGB) Scale(k float64) RGB {
-	f := float32(k)
-	return RGB{min(c.R*f, 255), min(c.G*f, 255), min(c.B*f, 255)}
-}
-
-func (c RGB) q() [3]uint8 {
-	cl := func(v float32) uint8 { return uint8(max(0, min(255, v+0.5))) }
-	return [3]uint8{cl(c.R), cl(c.G), cl(c.B)}
-}
-
 // NewPixels returns a w×h framebuffer filled with bg.
 func NewPixels(w, h int, bg RGB) *Pixels {
 	p := &Pixels{W: w, H: h, Pix: make([]RGB, w*h), BG: bg}
-	for i := range p.Pix {
-		p.Pix[i] = bg
-	}
+	p.Fill(bg)
 	return p
 }
 
@@ -69,7 +39,7 @@ func (p *Pixels) Set(x, y int, c RGB) {
 	}
 }
 
-// Blend paints c over pixel (x, y) with opacity a (0..1).
+// Blend paints c over pixel (x, y) with opacity a.
 func (p *Pixels) Blend(x, y int, c RGB, a float64) {
 	if a <= 0 || x < 0 || y < 0 || x >= p.W || y >= p.H {
 		return
@@ -93,8 +63,8 @@ func (p *Pixels) Add(x, y int, c RGB, a float64) {
 	p.Pix[i] = RGB{min(d.R+c.R*f, 255), min(d.G+c.G*f, 255), min(d.B+c.B*f, 255)}
 }
 
-// Box returns the integer pixel bounds covering [x0,x1]×[y0,y1], clipped
-// to the canvas. Use it to bound a per-pixel loop in custom drawing.
+// Box returns the pixel bounds covering [x0,x1]×[y0,y1], clipped to the
+// canvas. The bounds are inclusive: loop "for py := y0; py <= y1; py++".
 func (p *Pixels) Box(x0, y0, x1, y1 float64) (int, int, int, int) {
 	ix0 := max(int(math.Floor(x0)), 0)
 	iy0 := max(int(math.Floor(y0)), 0)
@@ -107,20 +77,20 @@ func (p *Pixels) Box(x0, y0, x1, y1 float64) (int, int, int, int) {
 // opacity, for custom shapes drawn pixel by pixel.
 func Coverage(d float64) float64 { return Clamp01(0.5 - d) }
 
-// Fill paints the whole framebuffer.
+// Fill paints every pixel with c (BG is unchanged).
 func (p *Pixels) Fill(c RGB) {
 	for i := range p.Pix {
 		p.Pix[i] = c
 	}
 }
 
-// Rect fills an axis-aligned rectangle.
+// Rect fills a rectangle; fractional edges are antialiased by coverage.
 func (p *Pixels) Rect(x, y, w, h float64, c RGB, a float64) {
 	x0, y0, x1, y1 := p.Box(x, y, x+w, y+h)
 	for py := y0; py <= y1; py++ {
-		cy := Clamp01(math.Min(float64(py)+1, y+h) - math.Max(float64(py), y))
+		cy := Clamp01(min(float64(py)+1, y+h) - max(float64(py), y))
 		for px := x0; px <= x1; px++ {
-			cx := Clamp01(math.Min(float64(px)+1, x+w) - math.Max(float64(px), x))
+			cx := Clamp01(min(float64(px)+1, x+w) - max(float64(px), x))
 			p.Blend(px, py, c, a*cx*cy)
 		}
 	}
@@ -129,7 +99,7 @@ func (p *Pixels) Rect(x, y, w, h float64, c RGB, a float64) {
 // VGradient fills rows y0..y1 with a vertical gradient from top to bottom.
 func (p *Pixels) VGradient(y0, y1 int, top, bottom RGB) {
 	for y := max(y0, 0); y <= min(y1, p.H-1); y++ {
-		c := Mix(top, bottom, float64(y-y0)/math.Max(float64(y1-y0), 1))
+		c := Mix(top, bottom, float64(y-y0)/max(float64(y1-y0), 1))
 		for x := 0; x < p.W; x++ {
 			p.Pix[y*p.W+x] = c
 		}
@@ -186,7 +156,7 @@ func (p *Pixels) Arc(cx, cy, r, thick, a0, a1 float64, c RGB, alpha float64) {
 			if full || angleIn(ang, a0, a1) {
 				d = math.Abs(math.Hypot(fx, fy)-r) - half
 			} else {
-				d = math.Min(
+				d = min(
 					math.Hypot(float64(px)+0.5-capA[0][0], float64(py)+0.5-capA[0][1]),
 					math.Hypot(float64(px)+0.5-capA[1][0], float64(py)+0.5-capA[1][1]),
 				) - half
@@ -208,7 +178,7 @@ func angleIn(a, a0, a1 float64) bool {
 // Line strokes an antialiased line with round caps.
 func (p *Pixels) Line(xa, ya, xb, yb, width float64, c RGB, a float64) {
 	half := width / 2
-	x0, y0, x1, y1 := p.Box(math.Min(xa, xb)-half-1, math.Min(ya, yb)-half-1, math.Max(xa, xb)+half+1, math.Max(ya, yb)+half+1)
+	x0, y0, x1, y1 := p.Box(min(xa, xb)-half-1, min(ya, yb)-half-1, max(xa, xb)+half+1, max(ya, yb)+half+1)
 	dx, dy := xb-xa, yb-ya
 	l2 := dx*dx + dy*dy
 	reach := (half + 0.5) * (half + 0.5) // beyond this distance², coverage is 0
@@ -232,7 +202,7 @@ func (p *Pixels) Line(xa, ya, xb, yb, width float64, c RGB, a float64) {
 // RoundRect fills a rounded rectangle. If stroke > 0, only an outline of
 // that thickness is drawn.
 func (p *Pixels) RoundRect(x, y, w, h, radius, stroke float64, c RGB, a float64) {
-	radius = math.Min(radius, math.Min(w, h)/2)
+	radius = min(radius, w/2, h/2)
 	x0, y0, x1, y1 := p.Box(x-1, y-1, x+w+1, y+h+1)
 	cx, cy := x+w/2, y+h/2
 	hx, hy := w/2-radius, h/2-radius
@@ -241,7 +211,8 @@ func (p *Pixels) RoundRect(x, y, w, h, radius, stroke float64, c RGB, a float64)
 		for px := x0; px <= x1; px++ {
 			qx := math.Abs(float64(px)+0.5-cx) - hx
 			// Signed distance to the rounded box, with the square root only
-			// in the corner regions (big plates are mostly interior).
+			// in the corner regions (big plates are mostly interior). Plain
+			// comparisons: builtin max/min's NaN handling costs ~30% here.
 			ox, oy := qx, qy
 			if ox < 0 {
 				ox = 0
@@ -265,7 +236,7 @@ func (p *Pixels) RoundRect(x, y, w, h, radius, stroke float64, c RGB, a float64)
 			if stroke > 0 {
 				d = math.Abs(d+stroke/2) - stroke/2
 			} else if d <= -0.5 {
-				p.Blend(px, py, c, a) // fully inside
+				p.Blend(px, py, c, a)
 				continue
 			}
 			p.Blend(px, py, c, a*Coverage(d))
