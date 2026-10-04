@@ -12,8 +12,7 @@ import (
 type tickMsg time.Time
 
 // model is the Bubble Tea model of a running deck. With live set, frames go to
-// the terminal writer and View is empty; otherwise (snapshots, tests) View
-// returns them.
+// the terminal writer; tests call frame directly.
 type model struct {
 	slides    []Slide
 	theme     *Theme
@@ -35,8 +34,7 @@ type model struct {
 	showNotes, showHelp bool
 	count               string // numeric prefix for jumps, e.g. "12g"
 
-	dev        *devState // nil unless -dev
-	execOnQuit []string  // set when dev mode wants to restart into a new binary
+	dev *devState // nil unless -dev
 
 	link      *linkServer // nil unless the presenter link is on
 	published [4]int      // slide, step, w, h last sent over the link
@@ -130,7 +128,7 @@ func (m model) handle(msg tea.Msg) (model, tea.Cmd) {
 		if !m.dev.built(msg) {
 			return m, nil
 		}
-		m.execOnQuit = m.dev.restartArgs(m.idx+1, m.step+1, m.fps)
+		m.dev.restart = m.dev.restartArgs(m.idx+1, m.step+1, m.fps)
 		return m, tea.Quit
 
 	case tea.KeyPressMsg:
@@ -274,20 +272,9 @@ func (m model) frame() *grid {
 	return g
 }
 
-// View is the frame as a string, for snapshots and tests; the live deck writes
-// frames itself (termout.go).
-func (m model) View() tea.View {
-	if m.live != nil || m.w == 0 || m.h == 0 {
-		return tea.NewView("")
-	}
-	g := m.frame()
-	v := tea.NewView(g.String())
-	g.release()
-	v.AltScreen = true
-	v.BackgroundColor = m.theme.Background.Color()
-	v.WindowTitle = m.cur().Title
-	return v
-}
+// View is empty: the live deck writes its frames itself (termout.go), so
+// Bubble Tea runs without a renderer and only handles keys.
+func (m model) View() tea.View { return tea.NewView("") }
 
 const chromeHeight = 1
 

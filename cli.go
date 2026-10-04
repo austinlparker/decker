@@ -161,16 +161,16 @@ func runLive(d *Deck, o options) error {
 	p := tea.NewProgram(m, tea.WithoutRenderer())
 	prog.Store(p)
 	live.watchSize(p)
-	final, err := p.Run()
+	_, err = p.Run()
 	live.close()
 	link.close()
 	if err != nil {
 		return err
 	}
-	if m, ok := final.(model); ok && m.execOnQuit != nil {
+	if dev != nil && dev.restart != nil {
 		// Dev mode rebuilt us: exec the new binary on the same slide; a
 		// presenter view reconnects.
-		if err := execRestart(m.execOnQuit, o.socket); err != nil {
+		if err := execRestart(dev.restart, o.socket); err != nil {
 			return fmt.Errorf("restart failed: %w", err)
 		}
 	}

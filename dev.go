@@ -28,6 +28,7 @@ type devState struct {
 	lastChange time.Time
 	building   bool
 	buildErr   string
+	restart    []string // set when a good build wants to replace this process
 }
 
 type fileChangedMsg struct{}

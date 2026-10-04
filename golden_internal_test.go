@@ -544,8 +544,8 @@ func goldenModel(t *testing.T, g *goldenEntries) {
 	send := func(msg tea.Msg) {
 		next, cmd := um.Update(msg)
 		um = next.(model)
-		fmt.Fprintf(&upd, "%T s%d.%d %dx%d cmd=%v from=%v now=%v build=%+v exec=%q\n", msg, um.idx, um.step, um.w, um.h, cmd != nil,
-			um.transFrom != nil, um.now.Sub(goldenBase), *um.dev, um.execOnQuit)
+		fmt.Fprintf(&upd, "%T s%d.%d %dx%d cmd=%v from=%v now=%v build=%+v\n", msg, um.idx, um.step, um.w, um.h, cmd != nil,
+			um.transFrom != nil, um.now.Sub(goldenBase), *um.dev)
 	}
 	send(tea.WindowSizeMsg{Width: 0, Height: 0}) // Bubble Tea's placeholder: ignored
 	send(tea.WindowSizeMsg{Width: 90, Height: 30})
@@ -567,10 +567,8 @@ func goldenModel(t *testing.T, g *goldenEntries) {
 
 	// A zero-size model draws nothing.
 	g.addString("model/empty", view(testModel(d, 0, 0, 0, 0, 0, nil)))
-	// A live model returns an empty view (the writer owns the screen).
-	live := testModel(d, 0, 0, 80, 24, 0, nil)
-	live.live = &termWriter{}
-	g.addString("model/live", live.View().Content)
+	// The view is always empty: the writer owns the screen.
+	g.addString("model/live", testModel(d, 0, 0, 80, 24, 0, nil).View().Content)
 }
 
 // press sends a key to the model.

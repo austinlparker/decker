@@ -85,10 +85,8 @@ func writeVideoFrames(d *Deck, o videoOptions, w io.Writer) error {
 				if step == 0 && i > o.first && t < TransitionDuration {
 					blendTransition(kind, from, frame, o.width, o.height, t/TransitionDuration, d.Theme)
 				}
-				if n, err := w.Write(frame); err != nil {
+				if _, err := w.Write(frame); err != nil {
 					return err
-				} else if n != len(frame) {
-					return io.ErrShortWrite
 				}
 				frames++
 			}
