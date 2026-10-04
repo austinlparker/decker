@@ -139,7 +139,7 @@ func TestPresenterViewFits(t *testing.T) {
 			}
 			if out != "" {
 				name := filepath.Join(out, at.name+"-"+strconv.Itoa(size[0])+"x"+strconv.Itoa(size[1])+".png")
-				if err := writePNG(view, size[0], size[1], name, testTheme); err != nil {
+				if err := writePNG(parseGrid(view, size[0], size[1], testTheme), name); err != nil {
 					t.Fatal(err)
 				}
 			}

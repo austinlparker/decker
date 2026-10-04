@@ -10,6 +10,12 @@ things live") for the file map.
 - **Frame purity.** A frame depends only on its `Ctx`. No `time.Now`, no
   `math/rand`, no globals that change between frames; use `Hash01` for noise.
   Anything stateful breaks replay, `-snapshot`, video and the goldens.
+- **The engine owns the scene.** A slide's `View(c Ctx, sc *Scene)` only
+  draws; `renderSlide` makes the scene, runs `View`, draws `Theme.Overlay`
+  once and catches panics (drawn into the pixels). Cells (`renderSlideGrid`:
+  live, snapshots, transitions, previews) come from `Scene.toGrid`; video
+  reads `sc.Px` directly and has no character layer. Styled strings are
+  parsed only for the engine's own chrome (footer, panels, help box).
 - **Goldens pin every byte.** `gallery_test.go` (`testdata/gallery.golden`) hashes
   every pixel and cell of a deck that exercises each exported drawing API.
   `golden_internal_test.go` (`testdata/internal.golden`) hashes what the gallery
@@ -100,5 +106,6 @@ is generated from `bindings`.
 applies to one). For a mode, add a `case` to the `switch` in `run`, ordered
 before the cases it should win over, and write `runXxx(d *Deck, o options)
 error`. Rendering without a terminal should go through `stillFrame` or
-`renderSlideGrid`/`Deck.Render`, not a live model. Update "Running a deck" in the
+`renderSlideGrid`/`Deck.Render` (cells), or `renderSlide` (pixels), not a live
+model. Update "Running a deck" in the
 README.

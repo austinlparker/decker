@@ -153,8 +153,7 @@ var goldenBase = time.Date(2025, 1, 2, 3, 4, 5, 0, time.UTC)
 // the cell writer have to get right.
 func wideSlide() Slide {
 	return Slide{Title: "Wide", Notes: "wide characters\nand a second line", Steps: 2, Transition: TransitionWipe,
-		View: func(c Ctx) string {
-			sc := c.Scene()
+		View: func(c Ctx, sc *Scene) {
 			sc.Px.VGradient(0, sc.Px.H-1, c.Theme.Panel, c.Theme.Accent2.Scale(0.4))
 			for i := 0; i < 9 && i < c.H; i++ {
 				sc.Text(i%3, 1+i*2, "日本語のテキスト 🎉 wide ✓ 界a界b界", c.Theme.Text.Color())
@@ -172,15 +171,14 @@ func wideSlide() Slide {
 			if c.Step > 0 {
 				sc.Text(2, c.H-4, fmt.Sprintf("step %d t=%.1f", c.Step, math.Min(c.StepT, 9)), c.Theme.Muted.Color())
 			}
-			return sc.Render()
 		}}
 }
 
-// plainSlide draws no Scene: the engine decodes its styled text.
+// plainSlide is styled text and nothing else: no pixels drawn.
 func plainSlide() Slide {
-	return Slide{Title: "Plain", View: func(c Ctx) string {
+	return Slide{Title: "Plain", View: func(c Ctx, sc *Scene) {
 		st := lipgloss.NewStyle().Foreground(c.Theme.Good.Color()).Background(c.Theme.Panel.Color())
-		return st.Render("plain text, no scene") + "\n\x1b[1;4mbold underline\x1b[m\n界 wide\n" + strings.Repeat("x", c.W+10)
+		sc.Put(0, 0, st.Render("plain text, no scene")+"\n\x1b[1;4mbold underline\x1b[m\n界 wide\n"+strings.Repeat("x", c.W+10))
 	}}
 }
 
@@ -189,14 +187,14 @@ func extraSlides() []Slide {
 		wideSlide(),
 		plainSlide(),
 		{Title: "Nil view"},
-		{Title: "Panics", View: func(Ctx) string { panic("on purpose") }},
+		{Title: "Panics", View: func(Ctx, *Scene) { panic("on purpose") }},
 	}
 }
 
 // glyphSlide is a frame of text with every block element, quadrant and
 // box-drawing character the PNG exporter draws by hand, plus ordinary text.
 func glyphSlide() Slide {
-	return Slide{Title: "Glyphs", View: func(c Ctx) string {
+	return Slide{Title: "Glyphs", View: func(c Ctx, sc *Scene) {
 		var box []rune
 		for r := range boxArms {
 			box = append(box, r)
@@ -209,21 +207,40 @@ func glyphSlide() Slide {
 			st.Render("plain text ▁▁▁ ✓ é"),
 			lipgloss.NewStyle().Foreground(c.Theme.Good.Color()).Render("no background, ▀▄█ █▀▄"),
 		}
-		return strings.Join(lines, "\n")
+		sc.Put(0, 0, strings.Join(lines, "\n"))
 	}}
 }
 
-// slideFrame draws a slide as a frame string, as the deck does.
+// slideGrid draws a slide as cells, as the deck does.
+func slideGrid(s Slide, w, h int, t float64, step int) *grid {
+	return renderSlideGrid(s, Ctx{W: w, H: h, T: t, Step: step, StepT: t, Theme: testTheme})
+}
+
+// slideFrame is slideGrid as a frame string.
 func slideFrame(s Slide, w, h int, t float64, step int) string {
-	return renderSlide(s, Ctx{W: w, H: h, T: t, Step: step, StepT: t, Theme: testTheme})
+	g := slideGrid(s, w, h, t, step)
+	defer g.release()
+	return g.String()
+}
+
+// view is the model's screen as a frame string; a model with no size draws
+// nothing.
+func view(m model) string {
+	if m.w == 0 || m.h == 0 {
+		return ""
+	}
+	g := m.frame()
+	defer g.release()
+	return g.String()
 }
 
 // rgbFrame draws a slide through the video pipeline (canvas pixels, then
 // toRGB24), at w×h video pixels.
 func rgbFrame(s Slide, w, h int, t float64, step int) []byte {
 	out := make([]byte, 3*w*h)
-	sink := &frameSink{w: w, h: h / 2, pixels: func(p *Pixels) { toRGB24(p, out) }}
-	renderSlide(s, Ctx{W: w, H: h / 2, T: t, Step: step, StepT: t, Theme: testTheme, sink: sink})
+	sc := renderSlide(s, Ctx{W: w, H: h / 2, T: t, Step: step, StepT: t, Theme: testTheme})
+	toRGB24(sc.Px, out)
+	sc.Release()
 	return out
 }
 
@@ -394,23 +411,23 @@ func goldenPNG(t *testing.T, g *goldenEntries) {
 	slides = append(slides, glyphSlide())
 	for _, size := range [][2]int{{80, 24}, {160, 45}} {
 		w, h := size[0], size[1]
-		var frames []string
+		var frames []*grid
 		for i, s := range slides {
 			steps := s.steps()
-			fr := slideFrame(s, w, h, Settled, steps-1)
+			fr := slideGrid(s, w, h, Settled, steps-1)
 			frames = append(frames, fr)
-			img := frameImage(fr, w, h, testTheme)
+			img := frameImage(fr)
 			g.add(fmt.Sprintf("png/image/%dx%d/%d", w, h, i), img.Pix, []byte(fmt.Sprint(img.Bounds())))
 			path := filepath.Join(dir, fmt.Sprintf("s%d-%dx%d.png", i, w, h))
-			if err := writePNG(fr, w, h, path, testTheme); err != nil {
+			if err := writePNG(fr, path); err != nil {
 				t.Fatal(err)
 			}
 			hashFile(fmt.Sprintf("png/file/%dx%d/%d", w, h, i), path)
-			g.addPix(fmt.Sprintf("png/framePixels/%dx%d/%d", w, h, i), framePixels(fr, w, h, testTheme))
+			g.addPix(fmt.Sprintf("png/framePixels/%dx%d/%d", w, h, i), fr.pixels())
 		}
 		for _, shrink := range []int{1, 4} {
 			path := filepath.Join(dir, fmt.Sprintf("sheet-%dx%d-%d.png", w, h, shrink))
-			if err := writeSheet(frames, w, h, 4, shrink, path, testTheme); err != nil {
+			if err := writeSheet(frames, shrink, path); err != nil {
 				t.Fatal(err)
 			}
 			hashFile(fmt.Sprintf("png/sheet/%dx%d/shrink=%d", w, h, shrink), path)
@@ -418,13 +435,13 @@ func goldenPNG(t *testing.T, g *goldenEntries) {
 	}
 	// A sheet with fewer frames than columns.
 	path := filepath.Join(dir, "sheet2.png")
-	fr := slideFrame(slides[0], 80, 24, Settled, 0)
-	if err := writeSheet([]string{fr, fr}, 80, 24, 4, 2, path, testTheme); err != nil {
+	fr := slideGrid(slides[0], 80, 24, Settled, 0)
+	if err := writeSheet([]*grid{fr, fr}, 2, path); err != nil {
 		t.Fatal(err)
 	}
 	hashFile("png/sheet/two-frames", path)
 	// Errors from an unwritable path are reported, not panicked.
-	g.addString("png/err", fmt.Sprint(writePNG(fr, 80, 24, filepath.Join(dir, "no", "such", "dir.png"), testTheme) != nil))
+	g.addString("png/err", fmt.Sprint(writePNG(fr, filepath.Join(dir, "no", "such", "dir.png")) != nil))
 }
 
 func goldenModel(t *testing.T, g *goldenEntries) {
@@ -437,7 +454,6 @@ func goldenModel(t *testing.T, g *goldenEntries) {
 			return &devState{buildErr: "./main.go:12:3: undefined: nope\n./main.go:13:1: syntax error\n" + strings.Repeat("more output\n", 30)}
 		},
 	}
-	view := func(m model) string { return m.View().Content }
 	key := func(m model, dev string, extra string) string {
 		return fmt.Sprintf("model/%s/%dx%d/s%d.%d/%s", dev, m.w, m.h, m.idx, m.step, extra)
 	}
@@ -554,7 +570,7 @@ func goldenModel(t *testing.T, g *goldenEntries) {
 	// A live model returns an empty view (the writer owns the screen).
 	live := testModel(d, 0, 0, 80, 24, 0, nil)
 	live.live = &termWriter{}
-	g.addString("model/live", view(live))
+	g.addString("model/live", live.View().Content)
 }
 
 // press sends a key to the model.
@@ -595,7 +611,7 @@ func goldenModelTransitions(t *testing.T, g *goldenEntries) {
 					m.transFrom = nil // what the tick does
 				}
 				g.addString(fmt.Sprintf("modelTrans/%dx%d/%s/p=%v", size[0], size[1], tc.name, p),
-					fmt.Sprint(m.trans, m.transFwd, m.transFrom != nil), m.View().Content)
+					fmt.Sprint(m.trans, m.transFwd, m.transFrom != nil), view(m))
 			}
 		}
 	}
@@ -606,7 +622,7 @@ func goldenModelTransitions(t *testing.T, g *goldenEntries) {
 	m.goTo(2, 0, true)
 	m.w, m.h = 100, 30
 	m.now = goldenBase.Add(100 * time.Millisecond)
-	g.addString("modelTrans/resized", m.View().Content)
+	g.addString("modelTrans/resized", view(m))
 }
 
 func goldenTermWriter(t *testing.T, g *goldenEntries) {
@@ -889,28 +905,10 @@ func goldenKitty(t *testing.T, g *goldenEntries) {
 }
 
 // goldenMisc pins the small engine pieces nothing above reaches directly:
-// fit/narrowWidth, the panic screen, grids and the off-screen Render.
+// the panic screen, grids and the off-screen Render.
 func goldenMisc(t *testing.T, g *goldenEntries) {
-	for i, c := range []struct {
-		s    string
-		w, h int
-	}{
-		{"abc\ndef\nghi", 2, 2},
-		{"abc", 5, 3},
-		{"界界界界\nab", 5, 2},
-		{"\x1b[31mred\x1b[m and more text\nx", 6, 1},
-		{"", 3, 3},
-		{"🎉🎉🎉", 3, 1},
-	} {
-		g.addString(fmt.Sprintf("misc/fit/%d", i), fit(c.s, c.w, c.h))
-	}
-	for i, s := range []string{"plain", "\x1b[1mbold\x1b[m", "界", "─│█▀", "\x1b]0;x", "\x1b[31m", "é", "→←"} {
-		n, ok := narrowWidth(s)
-		g.addString(fmt.Sprintf("misc/narrowWidth/%d", i), fmt.Sprint(n, ok))
-	}
-	g.addString("misc/panic", renderSlide(Slide{Title: "boom", View: func(Ctx) string { panic("on purpose") }}, Ctx{W: 60, H: 10, Theme: testTheme}))
-	g.addString("misc/nilview", renderSlide(Slide{Title: "nil"}, Ctx{W: 20, H: 4, Theme: testTheme}))
-	g.addString("misc/opaque", opaque("hi\n界", 10, 3, testTheme))
+	g.addString("misc/panic", slideFrame(Slide{Title: "boom", View: func(Ctx, *Scene) { panic("on purpose") }}, 60, 10, 0, 0))
+	g.addString("misc/nilview", slideFrame(Slide{Title: "nil"}, 20, 4, 0, 0))
 
 	// Off-screen Render, with the character layer.
 	off := NewScene(24, 5, testTheme)

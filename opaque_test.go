@@ -1,6 +1,7 @@
 package decker
 
 import (
+	"strings"
 	"testing"
 
 	"charm.land/lipgloss/v2"
@@ -8,9 +9,8 @@ import (
 )
 
 // TestFramesAreOpaque checks that the footer and a transition frame have an
-// explicit background color in every cell (decktest.Slides checks the
-// slides). Terminals with a translucent background make default-background
-// cells see-through.
+// explicit background color in every cell. Terminals with a translucent
+// background make default-background cells see-through.
 func TestFramesAreOpaque(t *testing.T) {
 	w, h := 120, 36
 	check := func(name, frame string, rows int) {
@@ -26,12 +26,13 @@ func TestFramesAreOpaque(t *testing.T) {
 		}
 	}
 	d := testDeck()
-	prev := renderSlide(d.Slides[0], Ctx{W: w, H: h, T: 5, Theme: testTheme})
-	next := renderSlide(d.Slides[1], Ctx{W: w, H: h, T: 1.5, Step: 2, StepT: 1.5, Theme: testTheme})
+	prev := slideFrame(d.Slides[0], w, h, 5, 0)
+	next := slideFrame(d.Slides[1], w, h, 1.5, 2)
 	for tr := range transitions {
 		check("transition", composeTransition(tr, prev, next, w, h, 0.5, true, testTheme), h)
 	}
-	m := newModel(d, 3, 0, 30, nil)
+	m := newModel(d, 3, 0, 30, &devState{})
 	m.w, m.h = w, h
-	check("footer", opaque(m.chrome(), w, chromeHeight, testTheme), chromeHeight)
+	lines := strings.Split(view(m), "\n")
+	check("footer", lines[len(lines)-chromeHeight], chromeHeight)
 }

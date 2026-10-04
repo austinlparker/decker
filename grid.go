@@ -127,13 +127,33 @@ func colorQ(c color.Color, fallback [3]uint8) [3]uint8 {
 	return toRGB(c).q()
 }
 
-// parseGrid draws a styled string into a fresh w×h grid on the theme's
-// background.
-func parseGrid(s string, w, h int, t *Theme) *grid {
-	g := blankGrid(w, h, t.Background)
-	g.draw(0, 0, s, false, t.Text)
-	return g
+// pixels is the grid as a canvas twice as tall: a half block is its
+// foreground over its background, other characters blend the two.
+func (g *grid) pixels() *Pixels {
+	px := &Pixels{W: g.W, H: 2 * g.H, Pix: make([]RGB, 2*len(g.Cells))}
+	for i := range g.Cells {
+		c := &g.Cells[i]
+		fg, bg := rgbOf(c.fg), rgbOf(c.bg)
+		top, bot := bg, bg
+		switch c.ch {
+		case "", " ":
+		case halfBlock:
+			top = fg
+		case "▄":
+			bot = fg
+		case "█":
+			top, bot = fg, fg
+		default:
+			top = Mix(bg, fg, 0.5)
+			bot = top
+		}
+		y := i / g.W // the cell's pixels are rows 2y and 2y+1
+		px.Pix[i+y*g.W], px.Pix[i+(y+1)*g.W] = top, bot
+	}
+	return px
 }
+
+func rgbOf(q [3]uint8) RGB { return RGB{float32(q[0]), float32(q[1]), float32(q[2])} }
 
 // draw places a styled block at (x, y); fg colors text with none. If
 // transparent, unstyled spaces are skipped.

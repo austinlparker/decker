@@ -24,17 +24,15 @@ type Scene struct {
 	cells []*uv.Cell // character-layer cells; nil where the pixels show
 	used  []int      // indexes of set cells, for clearing on reuse
 
-	ink          RGB           // character-layer text with no color of its own
-	themeOverlay func(*Pixels) // drawn over the pixels by Render (Theme.Overlay)
-	sink         *frameSink    // set by Ctx.Scene while the engine is capturing the slide
+	ink RGB // character-layer text with no color of its own
 }
 
 // A 682×171 scene is ~2.8MB of pixels and one is made every frame: recycle them
-// (Render releases its scene).
+// (the engine releases a slide's scene, and Render its own).
 var scenes = sizedPool[Scene]{max: 4}
 
-// NewScene returns an empty w×h-cell scene on the theme's background. Slides
-// use Ctx.Scene.
+// NewScene returns an empty w×h-cell scene on the theme's background, for
+// drawing off-screen; a slide draws on the scene View is given.
 func NewScene(w, h int, t *Theme) *Scene {
 	w, h = max(w, 1), max(h, 1)
 	if s := scenes.get(func(s *Scene) bool { return s.W == w && s.H == h }); s != nil {
@@ -48,7 +46,6 @@ func NewScene(w, h int, t *Theme) *Scene {
 // Release returns s to the pool without rendering. Don't use s afterwards or
 // after Render, which releases it.
 func (s *Scene) Release() {
-	s.themeOverlay, s.sink = nil, nil
 	for _, i := range s.used {
 		s.cells[i] = nil
 	}
@@ -176,27 +173,11 @@ func (s *Scene) Sprite(x, y int, sp Sprite) {
 }
 
 // Render returns the scene as exactly H lines of W cells, each with an explicit
-// background, and releases it. While the engine is capturing, the slide's own
-// scene (from Ctx.Scene) hands it the frame instead and Render returns "".
+// background, and releases it. Use it on scenes made with NewScene, never on
+// the one a slide's View is given; Theme.Overlay is not applied.
 func (s *Scene) Render() string {
-	if s.themeOverlay != nil {
-		s.themeOverlay(s.Px)
-	}
-	k := s.sink
-	if k != nil && (s.W != k.w || s.H != k.h) {
-		k = nil // a scene from a resized Ctx is not the frame
-	}
-	if k != nil && k.pixels != nil {
-		k.pixels(s.Px)
-		s.Release()
-		return ""
-	}
 	g := s.toGrid()
 	s.Release()
-	if k != nil && k.grid != nil {
-		k.grid(g)
-		return ""
-	}
 	out := g.String()
 	g.release()
 	return out

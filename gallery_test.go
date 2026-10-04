@@ -35,6 +35,12 @@ func TestGalleryGolden(t *testing.T) {
 
 func TestGallerySlides(t *testing.T) { decktest.Slides(t, gallery()) }
 
+// decktest.Hashes and decktest.Hash are API: talks diff them in CI.
+var (
+	_ = decktest.Hashes
+	_ decktest.Hash
+)
+
 // TestGalleryDraw covers Deck.Draw and Deck.Steps, which the golden does
 // not (it goes through Render).
 func TestGalleryDraw(t *testing.T) {
@@ -193,8 +199,7 @@ func galleryImages() fstest.MapFS {
 
 func slideText() Slide {
 	return Slide{Title: "Text fields", Notes: "every Text field", Transition: TransitionDefault,
-		View: func(c Ctx) string {
-			sc := c.Scene()
+		View: func(c Ctx, sc *Scene) {
 			p, th := sc.Px, c.Theme
 			top := heading(c, p, "Text fields")
 			s := max(c.Size(0.075), c.Size(MinText))
@@ -236,14 +241,12 @@ func slideText() Slide {
 			Text{Font: th.Display, Size: s, Color: th.Accent, Align: Right}.DrawMid(p, "DrawMid", c.X(0.97), y+box/2)
 			Text{Font: th.Body, Size: bs, Color: th.Text}.DrawMid(p, "   ", c.X(0.62), y+box/2) // no ink: centered on the cap height
 			Text{Font: th.Body, Size: bs, Color: th.Muted}.DrawMid(p, "-", c.X(0.65), y+box/2)
-			return sc.Render()
 		}}
 }
 
 func slideMetrics() Slide {
 	return Slide{Title: "Font metrics", Transition: TransitionNone,
-		View: func(c Ctx) string {
-			sc := c.Scene()
+		View: func(c Ctx, sc *Scene) {
 			p, th := sc.Px, c.Theme
 			top := heading(c, p, "Font metrics")
 			f := th.Display
@@ -296,14 +299,12 @@ func slideMetrics() Slide {
 				x += w + c.Unit(0.05)
 			}
 			Label(c, p, fmt.Sprintf("drawn %d %d", th.Body.Drawn(c.Size(0.05)), th.Display.Drawn(c.Size(0.05))), c.X(0.03), c.Y(0.9), th.Muted, Left)
-			return sc.Render()
 		}}
 }
 
 func slideLetterFX() Slide {
 	return Slide{Title: "Letter effects", Transition: TransitionPush,
-		View: func(c Ctx) string {
-			sc := c.Scene()
+		View: func(c Ctx, sc *Scene) {
 			p, th := sc.Px, c.Theme
 			top := heading(c, p, "Letter effects")
 			s := max(c.Size(0.06), c.SmallText(th.Display))
@@ -338,14 +339,12 @@ func slideLetterFX() Slide {
 			tag(c, p, "ShineBand", x, y, th.Muted)
 			Text{Font: th.Display, Size: s, Color: th.Accent, To: rgbp(th.Accent2), Shine: ShineBand(c.T-0.2, 1.5, 1)}.
 				Draw(p, word, x, y+float64(c.SmallText(th.Mono))*1.2)
-			return sc.Render()
 		}}
 }
 
 func slideBlockStockA() Slide {
 	return Slide{Title: "Block stock A", Transition: TransitionDissolve,
-		View: func(c Ctx) string {
-			sc := c.Scene()
+		View: func(c Ctx, sc *Scene) {
 			p, th := sc.Px, c.Theme
 			top := heading(c, p, "Block stock A")
 			for i, f := range []*FigFont{BlockShadow, BlockSolid, BlockSmall} {
@@ -355,14 +354,12 @@ func slideBlockStockA() Slide {
 				Block{Font: ff, Scale: scale, Color: th.Accent, FX: BlockFade(c.T, 0.8)}.
 					Draw(p, strings.Join(lines, "\n"), c.X(0.03), y+float64(c.SmallText(th.Mono))*1.2)
 			}
-			return sc.Render()
 		}}
 }
 
 func slideBlockStockB() Slide {
 	return Slide{Title: "Block stock B", Transition: TransitionWipe,
-		View: func(c Ctx) string {
-			sc := c.Scene()
+		View: func(c Ctx, sc *Scene) {
 			p, th := sc.Px, c.Theme
 			top := heading(c, p, "Block stock B")
 			for i, f := range []*FigFont{BlockHuge, BlockFancy} {
@@ -372,14 +369,12 @@ func slideBlockStockB() Slide {
 				Block{Font: ff, Scale: scale, Color: th.Accent2, FX: BlockRain(c.T)}.
 					Draw(p, strings.Join(lines, "\n"), c.X(0.03), y+float64(c.SmallText(th.Mono))*1.2)
 			}
-			return sc.Render()
 		}}
 }
 
 func slideBlockOptions() Slide {
 	return Slide{Title: "Block options", Transition: TransitionPush,
-		View: func(c Ctx) string {
-			sc := c.Scene()
+		View: func(c Ctx, sc *Scene) {
 			p, th := sc.Px, c.Theme
 			top := heading(c, p, "Block options")
 			// Fractional and whole scales, below and above 1.
@@ -412,7 +407,6 @@ func slideBlockOptions() Slide {
 				p.RoundRect(left, y, sw, sh, 1, 1, th.Faint, 1)
 				tag(c, p, fmt.Sprintf("%dx%d %.0fx%.0f %.0fx%.0f", cw, ch, w, h, sw, sh), left, y+h+c.Unit(0.02), th.Muted)
 			}
-			return sc.Render()
 		}}
 }
 
@@ -433,8 +427,7 @@ func blockFXRows(c Ctx, p *Pixels, top float64, rows []struct {
 
 func slideBlockFXA() Slide {
 	return Slide{Title: "Block effects A", Transition: TransitionDissolve,
-		View: func(c Ctx) string {
-			sc := c.Scene()
+		View: func(c Ctx, sc *Scene) {
 			p, th := sc.Px, c.Theme
 			top := heading(c, p, "Block effects A")
 			w := BlockSmall.Width("Effect")
@@ -447,14 +440,12 @@ func slideBlockFXA() Slide {
 				{"BlockBeam", BlockBeam(math.Mod(c.T, 3), 1.2)},
 				{"BlockSlide", BlockSlide(c.T, w)},
 			})
-			return sc.Render()
 		}}
 }
 
 func slideBlockFXB() Slide {
 	return Slide{Title: "Block effects B", Transition: TransitionWipe,
-		View: func(c Ctx) string {
-			sc := c.Scene()
+		View: func(c Ctx, sc *Scene) {
 			p, th := sc.Px, c.Theme
 			top := heading(c, p, "Block effects B")
 			blockFXRows(c, p, top, []struct {
@@ -466,14 +457,12 @@ func slideBlockFXB() Slide {
 				{"BlockFade", BlockFade(c.T, 1)},
 				{"BlockChain", BlockChain(BlockDecrypt(c.T, 1, th.Muted), BlockBeam(math.Mod(c.T, 2.5), 1), BlockFade(c.T, 0.6), BlockGlitch(c.T-3, 0.3))},
 			})
-			return sc.Render()
 		}}
 }
 
 func slideFigFont() Slide {
 	return Slide{Title: "FigFont API", Transition: TransitionNone,
-		View: func(c Ctx) string {
-			sc := c.Scene()
+		View: func(c Ctx, sc *Scene) {
 			p, th := sc.Px, c.Theme
 			top := heading(c, p, "FigFont API")
 			ss := c.SmallText(th.Mono)
@@ -519,14 +508,12 @@ func slideFigFont() Slide {
 			lf := LoadFont(os.DirFS("fonts"), "JetBrainsMono-ExtraBold.ttf")
 			Text{Font: pf, Size: max(c.Size(0.07), 6), Color: th.Text}.Draw(p, "ParseFont", c.X(0.6), c.Y(0.6))
 			Text{Font: lf, Size: max(c.Size(0.07), 6), Color: th.Text}.Draw(p, "LoadFont", c.X(0.6), c.Y(0.75))
-			return sc.Render()
 		}}
 }
 
 func slideComponents() Slide {
 	return Slide{Title: "Components", Transition: TransitionPush,
-		View: func(c Ctx) string {
-			sc := c.Scene()
+		View: func(c Ctx, sc *Scene) {
 			p, th := sc.Px, c.Theme
 			top := heading(c, p, "Components")
 			pw, ph := c.X(0.22), c.Y(0.2)
@@ -568,14 +555,12 @@ func slideComponents() Slide {
 			PlaceholderBox(c, p, c.X(0.45), by, c.X(0.3), c.Y(0.2), "a screenshot goes here")
 			IllustrativeTag(c, p, c.X(0.97), by)
 			IllustrativeTag(c, p, c.X(0.97), by+c.Y(0.1))
-			return sc.Render()
 		}}
 }
 
 func slideCycle() Slide {
 	return Slide{Title: "Cycle", Steps: 5, Transition: TransitionDefault,
-		View: func(c Ctx) string {
-			sc := c.Scene()
+		View: func(c Ctx, sc *Scene) {
 			p, th := sc.Px, c.Theme
 			top := heading(c, p, "Cycle")
 			looping, theta, active, lx := CycleDiagram{
@@ -585,14 +570,12 @@ func slideCycle() Slide {
 			// Pin the return values.
 			Label(c, p, fmt.Sprintf("loop=%v th=%.2f act=%d", looping, theta, active), c.X(0.03), c.Y(0.93), th.Muted, Left)
 			p.Rect(lx, c.Y(0.95), 4, 2, th.Accent, 1)
-			return sc.Render()
 		}}
 }
 
 func slideCycleRing() Slide {
 	return Slide{Title: "Cycle ring", Steps: 4, Transition: TransitionWipe,
-		View: func(c Ctx) string {
-			sc := c.Scene()
+		View: func(c Ctx, sc *Scene) {
 			p, th := sc.Px, c.Theme
 			top := heading(c, p, "Cycle ring")
 			looping, theta, active, lx := CycleDiagram{
@@ -601,14 +584,12 @@ func slideCycleRing() Slide {
 			}.Draw(c, p, top+c.Y(0.02))
 			Label(c, p, fmt.Sprintf("loop=%v th=%.2f act=%d", looping, theta, active), c.X(0.03), c.Y(0.93), th.Muted, Left)
 			p.Rect(lx, c.Y(0.95), 4, 2, th.Accent2, 1)
-			return sc.Render()
 		}}
 }
 
 func slideBullets() Slide {
 	return Slide{Title: "Bullets", Steps: 5, Transition: TransitionPush,
-		View: func(c Ctx) string {
-			sc := c.Scene()
+		View: func(c Ctx, sc *Scene) {
 			p, th := sc.Px, c.Theme
 			top := heading(c, p, "Bullets")
 			BulletList(c, p, []string{"one idea per slide", "put the detail in the notes", "builds reveal a line at a time", "and past lines dim"},
@@ -621,14 +602,12 @@ func slideBullets() Slide {
 			BulletList(c, p, []string{"solo"}, c.X(0.03), c.Y(0.85), c.X(0.3), c.Y(0.1), 0)
 			BulletList(c, p, nil, c.X(0.5), c.Y(0.85), c.X(0.3), c.Y(0.1), 0)
 			_ = th
-			return sc.Render()
 		}}
 }
 
 func slidePixels() Slide {
 	return Slide{Title: "Pixels", Transition: TransitionDissolve,
-		View: func(c Ctx) string {
-			sc := c.Scene()
+		View: func(c Ctx, sc *Scene) {
 			p, th := sc.Px, c.Theme
 			p.Fill(th.Panel)
 			p.VGradient(int(c.Y(0.5)), p.H-1, th.Panel, Mix(th.Panel, th.Accent2, 0.35))
@@ -687,7 +666,6 @@ func slidePixels() Slide {
 			p.Rect(float64(bx0), float64(by1), 3, 1, th.Good, 1)
 			_, _ = by0, bx1
 			_ = y1
-			return sc.Render()
 		}}
 }
 
@@ -708,8 +686,7 @@ func slidePixelArt() Slide {
 	step.Rows[8] = ".r....r."
 	step.Rows[7] = "..r..r.."
 	return Slide{Title: "Pixel art", Transition: TransitionNone,
-		View: func(c Ctx) string {
-			sc := c.Scene()
+		View: func(c Ctx, sc *Scene) {
 			p, th := sc.Px, c.Theme
 			top := heading(c, p, "Pixel art")
 			aw, ah := walk.Size()
@@ -747,14 +724,12 @@ func slidePixelArt() Slide {
 				p.Rect(c.X(0.6)+float64(i)*2, c.Y(0.7), 2, c.Unit(0.05), th.Text, Coverage(d))
 			}
 			Label(c, p, fmt.Sprintf("cov %.3f %.3f %.3f", Coverage(-1), Coverage(0), Coverage(1)), c.X(0.6), c.Y(0.8), th.Muted, Left)
-			return sc.Render()
 		}}
 }
 
 func slideImages(ims *Images) Slide {
 	return Slide{Title: "Images", Transition: TransitionPush,
-		View: func(c Ctx) string {
-			sc := c.Scene()
+		View: func(c Ctx, sc *Scene) {
 			p, th := sc.Px, c.Theme
 			top := heading(c, p, "Images")
 			// The same small image up- and down-scaled, at several alphas.
@@ -785,14 +760,12 @@ func slideImages(ims *Images) Slide {
 				_ = dh
 			}
 			Label(c, p, fmt.Sprintf("has grad=%v missing=%v", ims.Has("grad.png"), ims.Has("missing.png")), c.X(0.3), c.Y(0.9), th.Muted, Left)
-			return sc.Render()
 		}}
 }
 
 func slideMotion() Slide {
 	return Slide{Title: "Motion", Transition: TransitionWipe,
-		View: func(c Ctx) string {
-			sc := c.Scene()
+		View: func(c Ctx, sc *Scene) {
 			p, th := sc.Px, c.Theme
 			top := heading(c, p, "Motion and color")
 			curves := []struct {
@@ -846,14 +819,12 @@ func slideMotion() Slide {
 			col := th.Accent.Color()
 			r, g, bb, _ := col.RGBA()
 			Label(c, p, fmt.Sprintf("hex %d %d %d", r>>8, g>>8, bb>>8), c.X(0.45), y+22, th.Muted, Left)
-			return sc.Render()
 		}}
 }
 
 func slideScene() Slide {
 	return Slide{Title: "Character layer", HideChrome: true, Transition: TransitionNone,
-		View: func(c Ctx) string {
-			sc := c.Scene()
+		View: func(c Ctx, sc *Scene) {
 			th := c.Theme
 			sc.Px.VGradient(0, sc.Px.H-1, th.Background, th.Panel)
 
@@ -911,14 +882,12 @@ func slideScene() Slide {
 				}
 			}
 			off2.Release()
-			return sc.Render()
 		}}
 }
 
 func slideBuilds() Slide {
 	return Slide{Title: "Builds", Steps: 4, Notes: "four builds: panel, arrow, chip", Hold: 2, Transition: TransitionPush,
-		View: func(c Ctx) string {
-			sc := c.Scene()
+		View: func(c Ctx, sc *Scene) {
 			p, th := sc.Px, c.Theme
 			top := heading(c, p, "Builds")
 			Label(c, p, fmt.Sprintf("step %d  since0 %.2f  since1 %.2f  since3 %.2f  stepT %.2f  tdur %.2f",
@@ -938,6 +907,5 @@ func slideBuilds() Slide {
 				p.Glow(c.X(0.6), y+c.Y(0.12), c.Unit(0.2)*s, th.Good, 0.5*Pulse(c.StepT, 1.5))
 			}
 			p.Arc(c.X(0.9), c.Y(0.85), c.Unit(0.08), 3, 0, 2*math.Pi*Progress(c.StepT, 0, 2), th.Accent, 1)
-			return sc.Render()
 		}}
 }

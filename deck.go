@@ -20,7 +20,9 @@ type Deck struct {
 // as -snapshot prints it. A nil c.Theme uses the deck's; a panic renders as its
 // error.
 func (d *Deck) Render(i int, c Ctx) string {
-	return renderSlide(d.Slides[i], d.withTheme(c))
+	g := renderSlideGrid(d.Slides[i], d.withTheme(c))
+	defer g.release()
+	return g.String()
 }
 
 // Steps returns how many build steps slide i (0-based) has.

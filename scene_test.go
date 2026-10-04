@@ -1,7 +1,6 @@
 package decker
 
 import (
-	"bytes"
 	"strings"
 	"testing"
 )
@@ -44,41 +43,16 @@ func TestTransitionsKeepSize(t *testing.T) {
 	}
 }
 
-// Only a slide's own scene (Ctx.Scene) is captured by the engine: an
-// off-screen scene of the same size still renders to a string.
+// A slide may render off-screen scenes to strings and Put them on its own.
 func TestOffscreenSceneRenders(t *testing.T) {
-	s := Slide{Title: "x", View: func(c Ctx) string {
+	s := Slide{Title: "x", View: func(c Ctx, sc *Scene) {
 		off := NewScene(c.W, c.H, c.Theme)
 		off.Text(0, 0, "hi", c.Theme.Text.Color())
-		sc := c.Scene()
 		sc.Put(0, 0, off.Render())
-		return sc.Render()
 	}}
 	g := renderSlideGrid(s, Ctx{W: 10, H: 2, Theme: testTheme})
 	defer g.release()
 	if g.at(0, 0).ch != "h" || g.at(1, 0).ch != "i" {
-		t.Fatalf("off-screen scene was swallowed: %q %q", g.at(0, 0).ch, g.at(1, 0).ch)
-	}
-}
-
-func TestResizedCtxSceneIsNotTheFrame(t *testing.T) {
-	s := Slide{Title: "x", View: func(c Ctx) string {
-		half := c
-		half.W /= 2
-		sub := half.Scene()
-		sub.Text(0, 0, "hi", c.Theme.Text.Color())
-		sc := c.Scene()
-		sc.Put(0, 0, sub.Render())
-		return sc.Render()
-	}}
-	g := renderSlideGrid(s, Ctx{W: 10, H: 2, Theme: testTheme})
-	defer g.release()
-	if g.W != 10 || g.H != 2 || g.at(0, 0).ch != "h" {
-		t.Fatalf("got a %dx%d frame starting %q, want 10x2 starting \"h\"", g.W, g.H, g.at(0, 0).ch)
-	}
-	var buf bytes.Buffer
-	o := videoOptions{width: 20, height: 4, fps: 1, hold: 1, first: 0, last: 0}
-	if err := writeVideoFrames(&Deck{Theme: testTheme, Slides: []Slide{s}}, o, &buf); err != nil {
-		t.Fatal(err)
+		t.Fatalf("off-screen scene was lost: %q %q", g.at(0, 0).ch, g.at(1, 0).ch)
 	}
 }

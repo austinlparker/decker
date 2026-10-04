@@ -2,8 +2,8 @@
 // every slide is a function that draws each frame onto a pixel canvas.
 //
 // A [Deck] holds a [Theme] and a list of slides. Each [Slide] has a View, a
-// function from [Ctx] to a string of terminal cells, and [Main] gives the
-// deck its command line: present, presenter view, dev reload, snapshots,
+// function that draws one frame from a [Ctx] onto a [Scene], and [Main] gives
+// the deck its command line: present, presenter view, dev reload, snapshots,
 // contact sheets and video.
 //
 //	func main() { decker.Main(talk()) }
@@ -29,7 +29,8 @@
 //     [Transition].
 //   - [Ctx]: what changes between frames (T, Step, StepT), plus layout helpers.
 //   - [Theme]: colors, typefaces and an optional overlay the engine uses.
-//   - [Scene], [Pixels]: the canvas a View draws on, and the cells above it.
+//   - [Scene], [Pixels]: what a View draws on (the engine makes the scene and
+//     draws the theme's overlay on it), and the cells above the pixels.
 //   - [Text], [Font]: smooth antialiased type, fitted and wrapped to a box.
 //   - [Block], [FigFont]: FIGlet block letters scaled to fill a box ([FitBlock]).
 //   - [GlyphEffect], [BlockEffect]: per-letter and per-cell animations,

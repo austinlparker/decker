@@ -1,7 +1,6 @@
 // Package decktest is the test suite every deck wants: every slide renders at
-// every step, size and moment without panicking, in exact-size, fully opaque
-// frames; golden hashes catch unintended changes; and a per-slide benchmark
-// measures frame time. A talk's test file is a few lines:
+// every step, size and moment without panicking; golden hashes catch
+// unintended changes; and a per-slide benchmark measures frame time. A talk's test file is a few lines:
 //
 //	func TestSlides(t *testing.T)      { decktest.Slides(t, talk()) }
 //	func TestGolden(t *testing.T)      { decktest.Golden(t, talk(), "testdata/golden.txt") }
@@ -18,64 +17,38 @@ import (
 	"strings"
 	"testing"
 
-	"charm.land/lipgloss/v2"
-	uv "github.com/charmbracelet/ultraviolet"
-
 	"github.com/austinlparker/decker"
 )
 
 // Slides renders every slide at every step, at three sizes and four moments
-// (appearing, mid-entrance, entered, settled), failing on panics, wrong-size
-// frames, and cells without a background color (a translucent terminal shows
-// through them).
+// (appearing, mid-entrance, entered, settled), failing on panics.
 func Slides(t *testing.T, d decker.Deck) {
 	t.Helper()
 	for i, s := range d.Slides {
 		for _, size := range [][2]int{{80, 24}, {120, 36}, {200, 50}} {
 			for step := 0; step < d.Steps(i); step++ {
 				for _, at := range []float64{0, 0.3, 1.5, decker.Settled} {
-					c := decker.Ctx{W: size[0], H: size[1], T: at, Step: step, StepT: at, Theme: d.Theme}
-					out := view(t, s, c)
-					if n := strings.Count(out, "\n") + 1; n != c.H {
-						t.Errorf("slide %d %q: %d lines at %dx%d, want %d", i+1, s.Title, n, c.W, c.H, c.H)
-					}
+					view(t, s, decker.Ctx{W: size[0], H: size[1], T: at, Step: step, StepT: at, Theme: d.Theme})
 				}
 			}
 		}
-		const w, h = 120, 36
-		frame := d.Render(i, decker.Ctx{W: w, H: h, T: 1.5, Step: d.Steps(i) - 1, StepT: 1.5})
-		if x, y, ok := unpainted(frame, w, h); ok {
-			t.Errorf("slide %d %q: cell (%d,%d) has no background color", i+1, s.Title, x, y)
-		}
 	}
-}
-
-func unpainted(frame string, w, h int) (x, y int, found bool) {
-	cv := lipgloss.NewCanvas(w, h)
-	uv.NewStyledString(frame).Draw(cv, cv.Bounds())
-	for y := range h {
-		for x := range w {
-			if c := cv.CellAt(x, y); c == nil || (c.Width > 0 && c.Style.Bg == nil) {
-				return x, y, true
-			}
-		}
-	}
-	return 0, 0, false
 }
 
 // view draws one frame straight from the slide so a panic fails the test
 // instead of being drawn.
-func view(t *testing.T, s decker.Slide, c decker.Ctx) string {
+func view(t *testing.T, s decker.Slide, c decker.Ctx) {
 	t.Helper()
+	sc := decker.NewScene(c.W, c.H, c.Theme)
+	defer sc.Release()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Fatalf("slide %q panicked at %dx%d step %d t=%v: %v", s.Title, c.W, c.H, c.Step, c.T, r)
 		}
 	}()
-	if s.View == nil {
-		return strings.Repeat("\n", c.H-1)
+	if s.View != nil {
+		s.View(c, sc)
 	}
-	return s.View(c)
 }
 
 // Golden compares every frame with the hashes recorded in path: one per slide

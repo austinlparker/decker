@@ -68,11 +68,6 @@ func writeVideoFrames(d *Deck, o videoOptions, w io.Writer) error {
 	cw, ch := o.width, o.height/2 // canvas size in cells
 	frame := make([]byte, 3*o.width*o.height)
 	from := make([]byte, len(frame)) // the previous slide's last frame, for transitions
-	drew := false
-	sink := &frameSink{w: cw, h: ch, pixels: func(p *Pixels) {
-		toRGB24(p, frame)
-		drew = true
-	}}
 
 	dt := 1 / float64(o.fps)
 	start, frames := time.Now(), 0
@@ -84,13 +79,9 @@ func writeVideoFrames(d *Deck, o videoOptions, w io.Writer) error {
 		for step := 0; step < s.steps(); step++ {
 			dur := videoTiming(s, step, o.hold)
 			for t := 0.0; t < dur-dt/2; t += dt {
-				drew = false
-				out := renderSlide(s, Ctx{W: cw, H: ch, T: slideT + t, Step: step, StepT: t, Theme: d.Theme, sink: sink})
-				if !drew {
-					// The slide drew without a scene (or panicked): decode its
-					// text.
-					toRGB24(framePixels(out, cw, ch, d.Theme), frame)
-				}
+				sc := renderSlide(s, Ctx{W: cw, H: ch, T: slideT + t, Step: step, StepT: t, Theme: d.Theme})
+				toRGB24(sc.Px, frame)
+				sc.Release()
 				if step == 0 && i > o.first && t < TransitionDuration {
 					blendTransition(kind, from, frame, o.width, o.height, t/TransitionDuration, d.Theme)
 				}

@@ -210,8 +210,7 @@ func mySlide() decker.Slide {
 		Steps:      2,                     // "next" presses before moving on (build steps)
 		Notes:      "say the thing",       // shown in the presenter view
 		Transition: decker.TransitionWipe, // Push (default), Dissolve, Wipe, None
-		View: func(c decker.Ctx) string {
-			sc := c.Scene()
+		View: func(c decker.Ctx, sc *decker.Scene) {
 			p := sc.Px // the pixel canvas; c.PW() × c.PH() pixels
 
 			top := title(c, sc, "Something") // the talk's title template; returns the y below it
@@ -226,14 +225,15 @@ func mySlide() decker.Slide {
 				r := c.Unit(0.05) * decker.EaseOutBack(decker.Progress(c.Since(1), 0, 0.4))
 				p.Disc(c.X(0.8), c.Y(0.7), r, c.Theme.Accent2, 1)
 			}
-			return sc.Render()
 		},
 	}
 }
 ```
 
-`View` runs about 60 times per second. The `Ctx` it receives holds everything
-that changes between frames:
+`View` runs about 60 times per second. It draws onto `sc`, a scene the engine
+has already filled with the theme's background and will show (and release)
+when `View` returns, with the theme's `Overlay` on top; a nil `View` is a blank
+slide. The `Ctx` it receives holds everything that changes between frames:
 
 - `c.T`: seconds since the slide appeared.
 - `c.Step`, `c.StepT`: the current build step, and seconds since it began.
@@ -247,8 +247,8 @@ that changes between frames:
 
 A frame depends only on `Ctx`, so any moment can be replayed, snapshotted, or
 resumed. Never use the clock or `math/rand` in a slide; `decker.Hash01` gives
-repeatable noise. If a slide panics, the deck shows the error in place of the
-slide.
+repeatable noise. If a slide panics, the deck draws the error in place of the
+slide, in the pixels, so a video or PNG shows it too.
 
 ### Toolbox
 
@@ -270,8 +270,8 @@ Everything here is in package `decker`.
 | Images | `NewImages(fsys, dir)` over the talk's embedded files, then `images.Draw(p, "shot.png", x, y, w, h, alpha)` |
 | Motion | `Ease`, `EaseOutBack`, `EaseInOutCubic`, `Spring` (Harmonica), `Pulse`, `Lerp`, `Progress` |
 | Color | `Hex("#FFB000")`, `Mix`, `RGB.Scale` |
-| Off-screen drawing | `NewScene(w, h, theme)`, then `Release` it when you've copied what you need |
-| Small native terminal text (rarely) | `sc.Text`, `sc.Put`, `sc.Sprite` draw on top of the pixels |
+| Off-screen drawing | `NewScene(w, h, theme)`, then `Render` it to a string (to `sc.Put` on the slide's own scene) or `Release` it when you've copied what you need |
+| Small native terminal text (rarely) | `sc.Text`, `sc.Put`, `sc.Sprite` draw on top of the pixels; videos only have the pixels |
 
 ### Tests
 
@@ -284,8 +284,7 @@ func BenchmarkFrames(b *testing.B) { decktest.Frames(b, talk()) }
 ```
 
 `Slides` renders every slide at every build step, at three sizes and four
-moments, and fails on panics, frames of the wrong size, and cells without a
-background. `Golden` hashes every frame of every step at eight moments and
+moments, and fails on panics. `Golden` hashes every frame of every step at eight moments and
 three sizes, and fails if any of them changed: after changing a slide on
 purpose, record it with `UPDATE_GOLDEN=1 go test -run Golden`. That makes
 the engine safe to change: an engine change that moves one pixel of any
@@ -308,11 +307,11 @@ invariants, the golden tests, and a recipe for each kind of addition.
 | `pixels.go`, `pixelart.go`, `image.go` | the pixel canvas and shapes, pixel art, images |
 | `anim.go` | easing, springs, noise |
 | `scene.go`, `grid.go`, `pool.go` | combine the pixel canvas and character layer into terminal cells; reused frame buffers |
-| `render.go` | a slide's frame: `View` to cells, with panics caught |
+| `render.go` | a slide's frame: the scene `View` draws on, the overlay, panics caught |
 | `transition.go` | slide transitions and the registry of their cell and video versions |
 | `model.go`, `keys.go`, `termout.go`, `dev.go` | the app: navigation, the key table, writing frames, dev reload |
 | `presenter.go`, `link.go`, `preview.go`, `kitty.go` | the presenter view, the socket link to the deck, slide previews, the kitty image protocol |
-| `png.go` | PNG snapshots and contact sheets |
+| `png.go` | PNG snapshots and contact sheets, painted from cell grids |
 | `video.go` | rendering a deck to a video |
 | `decktest/` | the test suite for decks |
 

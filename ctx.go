@@ -12,19 +12,6 @@ type Ctx struct {
 
 	// Theme is the deck's theme; never nil inside View.
 	Theme *Theme
-
-	sink *frameSink // where Scene.Render sends its frame, if the engine is capturing
-}
-
-// Scene returns an empty Scene sized to the drawable area on the theme's
-// background; Render draws the theme's Overlay on top.
-func (c Ctx) Scene() *Scene {
-	sc := NewScene(c.W, c.H, c.Theme)
-	sc.sink = c.sink
-	if o := c.Theme.Overlay; o != nil {
-		sc.themeOverlay = func(p *Pixels) { o(c, p) }
-	}
-	return sc
 }
 
 // Reached reports whether the slide is at or past step.

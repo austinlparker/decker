@@ -109,28 +109,24 @@ func listSlides(d *Deck) {
 }
 
 // stillFrame renders slide idx at step, secs after it appeared, at w×h cells.
-func stillFrame(d *Deck, idx, step int, secs float64, w, h int) string {
-	m := newModel(d, idx, step, 60, nil)
-	m.w, m.h = w, h
-	back := m.now.Add(-time.Duration(secs * float64(time.Second)))
-	m.enter, m.stepStart = back, back
-	return m.View().Content
+func stillFrame(d *Deck, idx, step int, secs float64, w, h int) *grid {
+	return renderSlideGrid(d.Slides[idx], Ctx{W: w, H: h, T: secs, Step: step, StepT: secs, Theme: d.Theme})
 }
 
 func runSheet(d *Deck, o options) error {
-	var frames []string
+	var frames []*grid
 	for i, s := range d.Slides {
 		frames = append(frames, stillFrame(d, i, s.steps()-1, o.at, o.width, o.height))
 	}
-	return writeSheet(frames, o.width, o.height, 4, o.shrink, o.sheet, d.Theme)
+	return writeSheet(frames, o.shrink, o.sheet)
 }
 
 func runSnapshot(d *Deck, o options) error {
-	frame := stillFrame(d, o.slide-1, o.step-1, o.at, o.width, o.height)
+	g := stillFrame(d, o.slide-1, o.step-1, o.at, o.width, o.height)
 	if o.png != "" {
-		return writePNG(frame, o.width, o.height, o.png, d.Theme)
+		return writePNG(g, o.png)
 	}
-	fmt.Println(frame)
+	fmt.Println(g.String())
 	return nil
 }
 

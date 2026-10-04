@@ -17,49 +17,33 @@ import (
 const cellW, cellH = 8, 16
 
 // writePNG saves frameImage's rendering to path (-snapshot -png).
-func writePNG(frame string, w, h int, path string, t *Theme) error {
-	return savePNG(frameImage(frame, w, h, t), path)
-}
+func writePNG(g *grid, path string) error { return savePNG(frameImage(g), path) }
 
-// frameImage paints a rendered frame as a terminal would, to preview slides
-// without one: block and box-drawing characters by hand, the rest in a bitmap
-// font.
-func frameImage(frame string, w, h int, t *Theme) *image.RGBA {
-	cv := frameCanvas(frame, w, h)
-	img := image.NewRGBA(image.Rect(0, 0, w*cellW, h*cellH))
-	bgDefault := t.Background.Color()
-	fgDefault := t.Text.Color()
-	fillRect(img, img.Bounds(), bgDefault)
-
+// frameImage paints a frame as a terminal would, to preview slides without
+// one: block and box-drawing characters by hand, the rest in a bitmap font.
+func frameImage(g *grid) *image.RGBA {
+	img := image.NewRGBA(image.Rect(0, 0, g.W*cellW, g.H*cellH))
 	d := &font.Drawer{Dst: img, Face: basicfont.Face7x13}
-	for y := 0; y < h; y++ {
-		for x := 0; x < w; x++ {
-			cell := cv.CellAt(x, y)
-			if cell == nil || cell.Width == 0 {
-				continue
-			}
-			fg, bg := cell.Style.Fg, cell.Style.Bg
-			if fg == nil {
-				fg = fgDefault
-			}
-			if bg == nil {
-				bg = bgDefault
-			}
-			r := image.Rect(x*cellW, y*cellH, (x+1)*cellW, (y+1)*cellH)
-			fillRect(img, r, bg)
-			if cell.Content == "" || cell.Content == " " {
-				continue
-			}
-			r0, _ := utf8.DecodeRuneInString(cell.Content)
-			if !drawBlockRune(img, r0, r, fg, bg) {
-				d.Src = &image.Uniform{fg}
-				d.Dot = fixed.P(r.Min.X, r.Min.Y+12)
-				d.DrawString(cell.Content)
-			}
+	for i := range g.Cells {
+		c := &g.Cells[i]
+		x, y := i%g.W, i/g.W
+		fg, bg := rgba(c.fg), rgba(c.bg)
+		r := image.Rect(x*cellW, y*cellH, (x+1)*cellW, (y+1)*cellH)
+		fillRect(img, r, bg)
+		if c.ch == "" || c.ch == " " {
+			continue
+		}
+		r0, _ := utf8.DecodeRuneInString(c.ch)
+		if !drawBlockRune(img, r0, r, fg, bg) {
+			d.Src = &image.Uniform{fg}
+			d.Dot = fixed.P(r.Min.X, r.Min.Y+12)
+			d.DrawString(c.ch)
 		}
 	}
 	return img
 }
+
+func rgba(q [3]uint8) color.RGBA { return color.RGBA{q[0], q[1], q[2], 255} }
 
 func fillRect(img *image.RGBA, r image.Rectangle, c color.Color) {
 	draw.Draw(img, r, &image.Uniform{c}, image.Point{}, draw.Src)
@@ -120,17 +104,20 @@ func drawBlockRune(img *image.RGBA, r rune, cell image.Rectangle, fg, bg color.C
 	return true
 }
 
-// writeSheet renders frames into one contact-sheet image, cols across,
+// sheetCols is how many frames a contact sheet puts in a row.
+const sheetCols = 4
+
+// writeSheet renders frames into one contact-sheet image, sheetCols across,
 // each shrunk by an integer factor.
-func writeSheet(frames []string, w, h, cols, shrink int, path string, t *Theme) error {
+func writeSheet(frames []*grid, shrink int, path string) error {
 	const gap = 6
-	fw, fh := w*cellW/shrink, h*cellH/shrink
-	rows := (len(frames) + cols - 1) / cols
-	sheet := image.NewRGBA(image.Rect(0, 0, cols*(fw+gap)+gap, rows*(fh+gap)+gap))
+	fw, fh := frames[0].W*cellW/shrink, frames[0].H*cellH/shrink
+	rows := (len(frames) + sheetCols - 1) / sheetCols
+	sheet := image.NewRGBA(image.Rect(0, 0, sheetCols*(fw+gap)+gap, rows*(fh+gap)+gap))
 	fillRect(sheet, sheet.Bounds(), color.Black)
 	for i, fr := range frames {
-		src := frameImage(fr, w, h, t)
-		ox, oy := gap+(i%cols)*(fw+gap), gap+(i/cols)*(fh+gap)
+		src := frameImage(fr)
+		ox, oy := gap+(i%sheetCols)*(fw+gap), gap+(i/sheetCols)*(fh+gap)
 		for y := 0; y < fh; y++ {
 			for x := 0; x < fw; x++ {
 				var r, g, b uint32

@@ -24,9 +24,11 @@ type Slide struct {
 
 	HideChrome bool
 
-	// View draws one frame as a string of any size, clipped or padded to
-	// Ctx.W x Ctx.H. A panic is caught and shown on screen.
-	View func(c Ctx) string
+	// View draws one frame onto sc, a Ctx.W x Ctx.H scene already filled
+	// with the theme's background; the engine draws Theme.Overlay after it
+	// returns; View must not Render or Release sc. A nil View is a blank
+	// slide, and a panic is caught and drawn on screen.
+	View func(c Ctx, sc *Scene)
 }
 
 func (s Slide) steps() int { return max(s.Steps, 1) }
