@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 )
 
 // testTheme and testDeck stand in for a talk in the engine's tests: a few
@@ -28,6 +29,10 @@ var testTheme = &Theme{
 		p.Disc(float64(p.W)-4, float64(p.H)-4, 2, Hex("#FF7A00"), 1)
 	},
 }
+
+// SampleDeck is testDeck for the external test package, which can use
+// decktest.
+var SampleDeck = testDeck
 
 func testDeck() *Deck {
 	return &Deck{Name: "deck-test", Theme: testTheme, Slides: []Slide{
@@ -92,8 +97,8 @@ func testDeck() *Deck {
 func TestPanickingSlideShowsError(t *testing.T) {
 	s := Slide{Title: "boom", View: func(Ctx) string { panic("on purpose") }}
 	out := renderSlide(s, Ctx{W: 60, H: 10, Theme: testTheme})
-	if !strings.Contains(frameText(out), "on purpose") {
-		t.Fatalf("the panic isn't on screen:\n%s", frameText(out))
+	if !strings.Contains(ansi.Strip(out), "on purpose") {
+		t.Fatalf("the panic isn't on screen:\n%s", ansi.Strip(out))
 	}
 }
 
@@ -126,4 +131,4 @@ func TestDeckCheck(t *testing.T) {
 	}
 }
 
-func frameText(s string) string { return strings.Join(frameLines(s), "\n") }
+func frameLines(s string) []string { return strings.Split(ansi.Strip(s), "\n") }

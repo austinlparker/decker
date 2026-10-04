@@ -45,18 +45,24 @@ func Slides(t *testing.T, d decker.Deck) {
 		}
 		const w, h = 120, 36
 		frame := d.Render(i, decker.Ctx{W: w, H: h, T: 1.5, Step: d.Steps(i) - 1, StepT: 1.5})
-		cv := lipgloss.NewCanvas(w, h)
-		uv.NewStyledString(frame).Draw(cv, cv.Bounds())
-	opaque:
-		for y := 0; y < h; y++ {
-			for x := 0; x < w; x++ {
-				if c := cv.CellAt(x, y); c == nil || (c.Width > 0 && c.Style.Bg == nil) {
-					t.Errorf("slide %d %q: cell (%d,%d) has no background color", i+1, s.Title, x, y)
-					break opaque
-				}
+		if x, y, ok := unpainted(frame, w, h); ok {
+			t.Errorf("slide %d %q: cell (%d,%d) has no background color", i+1, s.Title, x, y)
+		}
+	}
+}
+
+// unpainted returns the first cell of a w×h frame without a background color.
+func unpainted(frame string, w, h int) (x, y int, found bool) {
+	cv := lipgloss.NewCanvas(w, h)
+	uv.NewStyledString(frame).Draw(cv, cv.Bounds())
+	for y := range h {
+		for x := range w {
+			if c := cv.CellAt(x, y); c == nil || (c.Width > 0 && c.Style.Bg == nil) {
+				return x, y, true
 			}
 		}
 	}
+	return 0, 0, false
 }
 
 // view draws one frame straight from the slide, so a panic fails the test
@@ -184,7 +190,7 @@ func Frames(b *testing.B, d decker.Deck) {
 		for i := range d.Slides {
 			b.Run(fmt.Sprintf("%dx%d/%d", size[0], size[1], i+1), func(b *testing.B) {
 				c := decker.Ctx{W: size[0], H: size[1], T: 1.3, Step: d.Steps(i) - 1, StepT: 1.3}
-				for n := 0; n < b.N; n++ {
+				for b.Loop() {
 					c.T += 1.0 / 60
 					c.StepT += 1.0 / 60
 					d.Draw(i, c)
