@@ -45,7 +45,7 @@ func TestFigHasAndDropQuotes(t *testing.T) {
 	}
 }
 
-func TestFigWrapIsGreedy(t *testing.T) {
+func TestFigWrapKeepsBreaks(t *testing.T) {
 	const s = "one two three four\nfive six seven eight nine"
 	lines := BlockSmall.Wrap(s, 30)
 	for _, l := range lines {

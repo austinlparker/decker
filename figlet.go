@@ -246,10 +246,11 @@ func (f *FigFont) widest(lines []string) int {
 // with ascenders, descenders and capitals so it is the same for every line.
 func (f *FigFont) Rows() int { return len(f.render("AgjM")) }
 
-// Wrap breaks s greedily into lines no wider than maxW cells, at spaces,
-// keeping "\n". Unlike Font.Wrap it does not balance the lines.
+// Wrap breaks s into lines no wider than maxW cells, at spaces, keeping "\n".
+// Like Font.Wrap it balances the lines: each paragraph uses the narrowest
+// width needing no more lines than maxW does.
 func (f *FigFont) Wrap(s string, maxW int) []string {
-	return wrapGreedy(s, float64(maxW), func(l string) float64 { return float64(f.Width(l)) })
+	return wrapBalanced(s, float64(maxW), func(l string) float64 { return float64(f.Width(l)) })
 }
 
 // Has reports whether the font has a visible glyph for each non-space rune of

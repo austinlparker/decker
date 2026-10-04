@@ -72,7 +72,7 @@ func fitBlock(s string, maxW, maxH float64, maxLines, gap int, fonts []*FigFont)
 func fitFont(f *FigFont, text string, maxW, maxH float64, maxLines, gap int) (best []string, bestScale float64) {
 	bestWidest := 0
 	for tw := f.widest(strings.Split(text, "\n")); tw > 0; tw = tw * 94 / 100 {
-		lines := balancedWrap(f, text, tw)
+		lines := f.Wrap(text, tw)
 		if maxLines > 0 && len(lines) > maxLines {
 			break
 		}
@@ -89,26 +89,6 @@ func fitFont(f *FigFont, text string, maxW, maxH float64, maxLines, gap int) (be
 		}
 	}
 	return best, bestScale
-}
-
-// balancedWrap wraps each paragraph to at most maxW cells in as few lines as
-// greedy wrapping needs, using the narrowest width that still takes that many.
-func balancedWrap(f *FigFont, s string, maxW int) []string {
-	var out []string
-	for _, para := range strings.Split(s, "\n") {
-		n := len(f.Wrap(para, maxW))
-		lo, hi := 1, maxW // narrowest width that keeps n lines is in [lo, hi]
-		for lo < hi {
-			mid := (lo + hi) / 2
-			if len(f.Wrap(para, mid)) <= n {
-				hi = mid
-			} else {
-				lo = mid + 1
-			}
-		}
-		out = append(out, f.Wrap(para, hi)...)
-	}
-	return out
 }
 
 // snapScale rounds down to half pixels (whole from 4 up) so edges stay nearly

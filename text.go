@@ -58,14 +58,12 @@ type Text struct {
 	FX GlyphEffect
 }
 
-func (t Text) font() *Font {
+func (t Text) resolved() (*Font, int) {
 	if t.Font == nil {
 		panic("decker.Text: Font is required")
 	}
-	return t.Font
+	return t.Font.resolve(t.Size)
 }
-
-func (t Text) resolved() (*Font, int) { return t.font().resolve(t.Size) }
 
 // DrawMid draws one line of s with its ink centered vertically on cy (x as for
 // Draw). Centering the line box instead leaves lowercase text low and
@@ -98,10 +96,10 @@ func (t Text) baseOff(f *Font, size int) float64 {
 // spaces included, plus one per line break.
 func (t Text) Draw(p *Pixels, s string, x, y float64) (w, h float64) {
 	f, size := t.resolved()
-	if t.MaxW > 0 {
-		s = strings.Join(f.Wrap(s, size, t.MaxW), "\n")
-	}
 	lines := strings.Split(s, "\n")
+	if t.MaxW > 0 {
+		lines = f.Wrap(s, size, t.MaxW)
+	}
 	lineH := float64(size) * leadingOr(t.Leading)
 	widths := make([]float64, len(lines))
 	for i, l := range lines {

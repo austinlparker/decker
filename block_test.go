@@ -29,8 +29,8 @@ func TestFitBlockResultIsACopy(t *testing.T) {
 	}
 }
 
-func TestBalancedWrap(t *testing.T) {
-	lines := balancedWrap(BlockShadow, "What Your MCP Server Does", BlockShadow.Width("What Your MCP Server"))
+func TestFigWrapBalances(t *testing.T) {
+	lines := BlockShadow.Wrap("What Your MCP Server Does", BlockShadow.Width("What Your MCP Server"))
 	if len(lines) != 2 || len(strings.Fields(lines[0])) != 3 || len(strings.Fields(lines[1])) != 2 {
 		t.Errorf("got %q, want What Your MCP / Server Does", lines)
 	}
