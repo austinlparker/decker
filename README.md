@@ -132,11 +132,6 @@ The presenter view shows:
   build steps, so a slide with four builds gets four times a section
   opener's share of the time.
 
-In Ghostty or kitty, the previews are real images of the slides at full
-resolution, drawn with the kitty graphics protocol. Other terminals, and
-Ghostty inside tmux or zellij, get blurrier previews made of half-block
-characters. To choose yourself, pass `-previews image` or `-previews cells`.
-
 For a different talk length, pass `-length 45m` to the presenter view.
 
 The two windows talk over a Unix socket in the temp directory, named after
@@ -310,7 +305,7 @@ invariants, the golden tests, and a recipe for each kind of addition.
 | `render.go` | a slide's frame: the scene `View` draws on, the overlay, panics caught |
 | `transition.go` | slide transitions and the registry of their cell and video versions |
 | `model.go`, `keys.go`, `termout.go`, `dev.go` | the app: navigation, the key table, writing frames, dev reload |
-| `presenter.go`, `link.go`, `preview.go`, `kitty.go` | the presenter view, the socket link to the deck, slide previews, the kitty image protocol |
+| `presenter.go`, `link.go`, `preview.go` | the presenter view, the socket link to the deck, slide previews |
 | `png.go` | PNG snapshots and contact sheets, painted from cell grids |
 | `video.go` | rendering a deck to a video |
 | `decktest/` | the test suite for decks |

@@ -1,17 +1,8 @@
 package decker
 
-import (
-	"image"
-	"sync"
-)
-
 // previewKey names one preview: a slide at a step in a pw×ph box, drawn for a
 // dw×dh deck.
 type previewKey struct{ slide, step, pw, ph, dw, dh int }
-
-// previewMu serializes slide drawing: slides are written for one caller at a
-// time, and image previews draw in the background.
-var previewMu sync.Mutex
 
 // previewBox is the inside size of each preview frame: the deck's shape,
 // leaving a few lines for notes. It is 0, 0 when previews don't fit.
@@ -32,38 +23,17 @@ func (p presenter) previewBox() (pw, ph int) {
 	return pw, ph
 }
 
-// settledGrid draws s at its last moment of step, as cells.
-func settledGrid(s Slide, step, w, h int, t *Theme) *grid {
-	previewMu.Lock()
-	defer previewMu.Unlock()
-	return renderSlideGrid(s, Ctx{W: w, H: h, T: Settled, Step: step, StepT: Settled, Theme: t})
-}
-
 // renderPreview draws s at a size it's designed for (240 cells wide, in the
 // deck's shape), then shrinks it into pw×ph cells; drawing at preview size
 // would lay the slide out for a tiny screen instead.
 func renderPreview(s Slide, step, dw, dh, pw, ph int, t *Theme) string {
 	const rw = 240
 	rh := max(rw*dh/dw, 20)
-	g := settledGrid(s, step, rw, rh, t)
+	g := renderSlideGrid(s, Ctx{W: rw, H: rh, T: Settled, Step: step, StepT: Settled, Theme: t})
 	defer g.release()
 	sc := NewScene(pw, ph, t)
 	shrinkInto(g.pixels(), sc.Px)
 	return sc.Render()
-}
-
-// slideImage draws s settled at the deck's size, one image pixel per canvas
-// pixel.
-func slideImage(s Slide, step, dw, dh int, t *Theme) *image.RGBA {
-	g := settledGrid(s, step, dw, dh, t)
-	defer g.release()
-	px := g.pixels()
-	img := image.NewRGBA(image.Rect(0, 0, px.W, px.H))
-	for i, c := range px.Pix {
-		q := c.q()
-		img.Pix[4*i], img.Pix[4*i+1], img.Pix[4*i+2], img.Pix[4*i+3] = q[0], q[1], q[2], 255
-	}
-	return img
 }
 
 func shrinkInto(src, dst *Pixels) {

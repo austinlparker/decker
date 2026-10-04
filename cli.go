@@ -23,7 +23,6 @@ type options struct {
 	presenter        bool
 	socket           string
 	length           time.Duration
-	previews         string
 	video, size      string
 	hold             float64
 	until            int
@@ -48,7 +47,7 @@ func run(d *Deck) error {
 	case o.video != "":
 		return runVideo(d, o)
 	case o.presenter:
-		return runPresenter(d, o.socket, o.length, imagePreviews(o.previews))
+		return runPresenter(d, o.socket, o.length)
 	case o.list:
 		listSlides(d)
 		return nil
@@ -77,7 +76,6 @@ func parseFlags(name string) options {
 	flag.BoolVar(&o.presenter, "presenter", false, "run the presenter view (notes, timer, next slide) and drive a deck running in another window")
 	flag.StringVar(&o.socket, "socket", defaultSocket(name), "Unix socket linking the deck and the presenter view")
 	flag.DurationVar(&o.length, "length", 30*time.Minute, "with -presenter: the talk's length, for the timer and pace")
-	flag.StringVar(&o.previews, "previews", "auto", "with -presenter: draw slide previews as images (Ghostty, kitty) or cells; auto picks images when the terminal supports them")
 	flag.StringVar(&o.video, "video", "", "render the deck to this video file (MP4, needs ffmpeg) and exit; starts at -slide")
 	flag.StringVar(&o.size, "size", "1920x1080", "with -video: the video's size in pixels")
 	flag.Float64Var(&o.hold, "hold", 4, "with -video: seconds each build step stays on screen")

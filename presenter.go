@@ -13,12 +13,8 @@ import (
 // runPresenter runs the presenter view (-presenter) until the user quits:
 // notes, previews and a timer in a window of its own, linked to the deck over
 // socket. Its keys drive the deck, so a clicker aimed here runs the show.
-// images selects image previews over cells.
-func runPresenter(d *Deck, socket string, length time.Duration, images bool) error {
+func runPresenter(d *Deck, socket string, length time.Duration) error {
 	p := newPresenter(d, socket, length)
-	if images {
-		p.images = newKittyImages()
-	}
 	_, err := tea.NewProgram(p).Run()
 	p.link.close()
 	return err
@@ -38,8 +34,7 @@ type presenter struct {
 	socket   string
 	length   time.Duration
 	link     *linkClient
-	previews map[previewKey]string // cell previews, drawn with half blocks
-	images   *kittyImages          // nil unless previews are images (see kitty.go)
+	previews map[previewKey]string // drawn with half blocks
 
 	st     linkState // the deck's last report; Outline is nil until the first
 	linked bool
@@ -93,10 +88,6 @@ func (p presenter) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		p.w, p.h = msg.Width, msg.Height
-		if p.images != nil {
-			// Images are uploaded at their preview size; start over.
-			return p, tea.Sequence(tea.Raw(p.images.clear()), p.upload())
-		}
 	case presTickMsg:
 		p.now = time.Time(msg)
 		return p, p.tick()
@@ -112,13 +103,7 @@ func (p presenter) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if !p.running && p.banked == 0 && p.st.Slide > 0 {
 			p.running, p.since = true, time.Now()
 		}
-		return p, tea.Batch(p.listen(), p.upload())
-	case kittyUploadMsg:
-		if p.images != nil {
-			if seq := p.images.finish(msg); seq != "" {
-				return p, tea.Raw(seq)
-			}
-		}
+		return p, p.listen()
 	case tea.KeyPressMsg:
 		return p.handleKey(msg.String())
 	}
@@ -134,9 +119,6 @@ func (p presenter) handleKey(k string) (tea.Model, tea.Cmd) {
 	}
 	switch {
 	case k == "q" || k == "ctrl+c":
-		if p.images != nil {
-			return p, tea.Sequence(tea.Raw(p.images.clear()), tea.Quit)
-		}
 		return p, tea.Quit
 	case k == "t":
 		if p.running {
@@ -301,40 +283,6 @@ func (p presenter) matches(i int) bool {
 	return i < len(p.slides) && i < len(p.st.Outline) && p.slides[i].Title == p.st.Outline[i].Title
 }
 
-// upload sends the terminal any image previews it lacks; drawing and encoding
-// run off the event loop.
-func (p presenter) upload() tea.Cmd {
-	if p.images == nil || p.st.Outline == nil {
-		return nil
-	}
-	pw, ph := p.previewBox()
-	if ph == 0 {
-		return nil
-	}
-	targets := [][2]int{{p.st.Slide, p.st.Step}}
-	if next, _, ok := p.nextTarget(); ok {
-		targets = append(targets, next)
-	}
-	dw, dh := p.deckSize()
-	var cmds []tea.Cmd
-	for _, t := range targets {
-		key := previewKey{t[0], t[1], pw, ph, dw, dh}
-		if _, ok := p.images.id(key); ok || !p.matches(t[0]) {
-			continue
-		}
-		id, free := p.images.add(key)
-		s, step, gen := p.slides[t[0]], t[1], p.images.gen
-		if free != "" {
-			cmds = append(cmds, tea.Raw(free))
-		}
-		cmds = append(cmds, func() tea.Msg {
-			seq := kittyTransmit(id, slideImage(s, step, dw, dh, p.theme), pw, ph)
-			return kittyUploadMsg{gen: gen, key: key, seq: seq}
-		})
-	}
-	return tea.Batch(cmds...)
-}
-
 // preview draws slide i at step, settled, into a pw×ph box. A slide whose
 // title no longer matches the deck's (dev mode) is left out.
 func (p presenter) preview(i, step, pw, ph int) string {
@@ -343,11 +291,6 @@ func (p presenter) preview(i, step, pw, ph int) string {
 	}
 	dw, dh := p.deckSize()
 	key := previewKey{i, step, pw, ph, dw, dh}
-	if p.images != nil {
-		if id, ok := p.images.id(key); ok {
-			return kittyPlaceholders(id, pw, ph)
-		}
-	}
 	if s, ok := p.previews[key]; ok {
 		return s
 	}

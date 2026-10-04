@@ -20,7 +20,7 @@ things live") for the file map.
   every pixel and cell of a deck that exercises each exported drawing API.
   `golden_internal_test.go` (`testdata/internal.golden`) hashes what the gallery
   can't reach: cell and video transitions, PNG export, the live model's screen,
-  the terminal writer's escape sequences, the presenter view, kitty previews.
+  the terminal writer's escape sequences, the presenter view.
 - **Keep float operation order.** Reordering or fusing arithmetic (`a*b+c`,
   summing in a different order, changing a constant's type) moves pixels and
   fails goldens. A refactor must leave every hash unchanged.
@@ -41,7 +41,7 @@ things live") for the file map.
 
 ```sh
 go test ./...                       # everything, including goldens (a few seconds)
-go test -short ./...                # skips the slow golden and kitty tests
+go test -short ./...                # skips the slow golden tests
 go vet ./...
 gofmt -l .                          # must print nothing
 go test -run '^$' -bench Live       # the engine's share of a live frame

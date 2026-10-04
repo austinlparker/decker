@@ -3,7 +3,7 @@ package decker
 // Golden hashes for the engine paths the deck-level golden (gallery_test.go)
 // cannot reach, because they are unexported: cell and video transitions,
 // the video frame loop, PNG export, the live model's screen, the terminal
-// writer's escape sequences, the presenter view and kitty previews.
+// writer's escape sequences, the presenter view.
 //
 // Each entry is "key sha256-hex" in testdata/internal.golden. Record with
 //
@@ -11,7 +11,7 @@ package decker
 //
 // and only when a change in output is intended. Everything here is
 // deterministic: fixed times, no clock, no rand, no ffmpeg, no sockets.
-// (PNG and kitty hashes depend on the Go standard library's image/png
+// (PNG hashes depend on the Go standard library's image/png
 // encoder, so a toolchain upgrade that changes its output re-records them.)
 
 import (
@@ -294,7 +294,6 @@ func TestInternalGolden(t *testing.T) {
 		{"modelTransitions", goldenModelTransitions},
 		{"termWriter", goldenTermWriter},
 		{"presenter", goldenPresenter},
-		{"kitty", goldenKitty},
 		{"misc", goldenMisc},
 	} {
 		t.Run(part.name, func(t *testing.T) { part.run(t, g) })
@@ -770,19 +769,6 @@ func goldenPresenter(t *testing.T, g *goldenEntries) {
 		p = presenterFor(d, w, h, true, 0, 0, previews)
 		p.st.Notes = strings.Repeat("a long line of speaker notes, which wraps over several lines\n", 20)
 		g.addString(key("long-notes"), p.View().Content)
-		// Image previews: placeholders for uploaded images, and the same
-		// view when only some are uploaded.
-		p = presenterFor(d, w, h, true, 1, 1, previews)
-		p.images = newKittyImages()
-		if pw, ph := p.previewBox(); ph > 0 {
-			dw, dh := p.deckSize()
-			p.images.add(previewKey{1, 1, pw, ph, dw, dh})
-			g.addString(key("image-one"), p.View().Content)
-			p.images.add(previewKey{1, 2, pw, ph, dw, dh})
-			g.addString(key("image-both"), p.View().Content)
-		} else {
-			g.addString(key("image-none"), p.View().Content)
-		}
 	}
 	// Messages through the presenter's Update: size, tick, report, keys.
 	var pm tea.Model = presenterFor(d, 0, 0, false, -1, 0, previews)
@@ -804,7 +790,6 @@ func goldenPresenter(t *testing.T, g *goldenEntries) {
 	psend(tea.KeyPressMsg{Code: tea.KeyRight})
 	psend(tea.KeyPressMsg{Code: 'q', Text: "q"})
 	psend(linkDownMsg{})
-	psend(kittyUploadMsg{})
 	psend(struct{}{})
 	g.addString("presenter/update", pu.String(), pm.View().Content)
 
@@ -848,58 +833,6 @@ func goldenPresenter(t *testing.T, g *goldenEntries) {
 		pw, ph := p.previewBox()
 		g.addString(fmt.Sprintf("presenter/previewBox/%dx%d/%dx%d", sz[0], sz[1], sz[2], sz[3]), fmt.Sprint(pw, ph))
 	}
-	for _, s := range []string{"image", "cells", "auto", "bogus"} {
-		for ei, env := range []map[string]string{{}, {"TMUX": "x"}, {"TERM_PROGRAM": "ghostty"}, {"TERM": "xterm-kitty"}, {"ZELLIJ": "0", "KITTY_WINDOW_ID": "3"}, {"KITTY_WINDOW_ID": "3"}} {
-			for _, k := range []string{"TMUX", "ZELLIJ", "TERM_PROGRAM", "TERM", "KITTY_WINDOW_ID"} {
-				t.Setenv(k, "")
-			}
-			for k, v := range env {
-				t.Setenv(k, v)
-			}
-			g.addString(fmt.Sprintf("presenter/imagePreviews/%s/env%d", s, ei), fmt.Sprint(imagePreviews(s)))
-		}
-	}
-}
-
-func goldenKitty(t *testing.T, g *goldenEntries) {
-	d := testDeck()
-	for i, s := range d.Slides {
-		img := slideImage(s, s.steps()-1, 120, 36, testTheme)
-		g.add(fmt.Sprintf("kitty/slideImage/%d", i), img.Pix, []byte(fmt.Sprint(img.Bounds())))
-		g.addString(fmt.Sprintf("kitty/transmit/%d", i), kittyTransmit(i+1, img, 30, 8))
-	}
-	img := slideImage(wideSlide(), 1, 240, 67, testTheme)
-	g.add("kitty/slideImage/wide-240x67", img.Pix)
-	g.addString("kitty/transmit/wide-240x67", kittyTransmit(255, img, 60, 17))
-	for _, sz := range [][3]int{{7, 40, 12}, {1, 1, 1}, {255, 5, 3}, {3, 300, 300}} {
-		g.addString(fmt.Sprintf("kitty/placeholders/%d/%dx%d", sz[0], sz[1], sz[2]), kittyPlaceholders(sz[0], sz[1], sz[2]))
-	}
-	g.addString("kitty/delete", kittyDelete(1), kittyDelete(255))
-
-	ki := newKittyImages()
-	var trace strings.Builder
-	for i := 0; i < 258; i++ {
-		id, free := ki.add(previewKey{slide: i})
-		if i < 3 || i > 252 {
-			fmt.Fprintf(&trace, "add %d -> %d %q\n", i, id, free)
-		}
-	}
-	_, ok := ki.id(previewKey{slide: 0})
-	id3, ok3 := ki.id(previewKey{slide: 3})
-	fmt.Fprintln(&trace, ok, id3, ok3, ki.finish(kittyUploadMsg{gen: 0, key: previewKey{slide: 3}, seq: "S"}),
-		ki.finish(kittyUploadMsg{gen: 1, key: previewKey{slide: 3}, seq: "S"}),
-		ki.finish(kittyUploadMsg{gen: 0, key: previewKey{slide: 4}, seq: ""}),
-		ki.finish(kittyUploadMsg{gen: 0, key: previewKey{slide: 999}, seq: "S"}))
-	_, ok4 := ki.id(previewKey{slide: 4})
-	fmt.Fprintln(&trace, ok4)
-	clear := ki.clear()
-	fmt.Fprintln(&trace, len(clear), ki.gen, len(ki.ids))
-	g.addString("kitty/images", trace.String(), clear)
-
-	// Presenter upload: the commands it would run, as targets (not run).
-	p := presenterFor(d, 120, 36, true, 1, 0, map[previewKey]string{})
-	p.images = newKittyImages()
-	g.addString("kitty/upload-cmds", fmt.Sprint(p.upload() == nil, presenterFor(d, 120, 36, true, -1, 0, nil).upload() == nil))
 }
 
 // goldenMisc pins the small engine pieces nothing above reaches directly:
