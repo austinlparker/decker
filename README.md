@@ -149,19 +149,20 @@ These work in the deck and in the presenter view:
 
 | Key | Action |
 | --- | --- |
-| `→` `l` `space` `pgdn` `enter` | next step / slide |
-| `←` `h` `pgup` | previous |
+| `→` `l` `space` `pgdn` `j` `↓` `enter` | next step / slide |
+| `←` `h` `pgup` `k` `↑` `backspace` | previous |
 | `]` `[` | next / previous slide, skipping steps |
-| `g` `G` | first / last slide |
+| `g` `home` / `G` `end` | first / last slide |
 | `12g` or `12⏎` | jump to slide 12 |
 | `r` | replay the current slide's animations |
-| `q` | quit (that window only) |
+| `q` `ctrl+c` | quit (that window only) |
 
 Only in the presenter view: `t` starts or pauses the timer, `T` resets it.
 
 Only in the deck: `n` shows the notes on the projector (a fallback if the
-presenter view isn't running) and `?` shows help. In dev mode the deck also
-has a one-line footer with the build status and slide counter.
+presenter view isn't running), `?` shows help (`esc` closes it) and
+`ctrl+l` redraws the screen. In dev mode the deck also has a one-line
+footer with the build status and slide counter. The key table is `keys.go`.
 
 ## Anatomy of a deck
 
@@ -258,10 +259,10 @@ Everything here is in package `decker`.
 | Big type | `Text{Font, Size, Color, To (gradient), Glow, Shine, FX, MaxW}.Draw(p, s, x, y)` with `Align`; returns width and height. `DrawMid` centers a line's ink on a y |
 | Sizing text to a box | `font.Fit(...)`, `FitAll(...)` for several lines at one size |
 | Small labels | `c.SmallText(font)`: the smallest readable size; `Label`, `Chip`, `LineLabel` (text sitting on an arrow) |
-| Block letters | `f, lines, scale := FitBlock(s, maxW, maxH, maxLines, gap, fonts...)` picks a font and scale for a pixel box; `Block{Font, Scale, Color, To, Shadow, Drop, Align, Glow, FX}.Draw(p, s, x, y)`; effects `BlockDecrypt`, `BlockRain`, `BlockBeam`, `BlockSlide`, `BlockType`, `BlockGlitch`, `BlockFade`, combined with `BlockChain` |
+| Block letters | `f, lines, scale := FitBlock(s, maxW, maxH, maxLines, gap, fonts...)` picks a font and scale for a pixel box; `Block{Font, Scale, Color, To, Shadow, Drop, Align, Glow, FX}.Draw(p, s, x, y)`; `BlockEffect`s for `Block.FX`: `BlockDecrypt`, `BlockRain`, `BlockBeam`, `BlockSlide`, `BlockType`, `BlockGlitch`, `BlockFade`, combined with `BlockChain` |
 | Diagrams | `Panel`, `Arrow`, `CycleDiagram` (numbered ring with a legend), `BulletList`, `SpeechBubble` |
 | Unfinished material | `PlaceholderBox` (dashed frame) and `IllustrativeTag` (made-up data) mark what to replace before the talk |
-| Letter animations | `RiseIn`, `DropIn`, `Decode` (scramble), `TypeOn`, `FadeUp`, `Wave`, `Jitter`, combined with `Chain` |
+| Letter animations | `GlyphEffect`s for `Text.FX`: `RiseIn`, `DropIn`, `Decode` (scramble), `TypeOn`, `FadeUp`, `Wave`, `Jitter`, combined with `Chain` |
 | A moving highlight | `Shine: ShineBand(t, dur, strength)` |
 | Shapes | `p.Disc`, `p.Arc` (rings, gauges), `p.Line`, `p.Rect`, `p.RoundRect` (fill or outline), `p.Glow`, `p.VGradient`; `p.Box` and `Coverage` for shapes of your own |
 | Pixel art | `p.Art(PixelArt{Rows, Colors}, x, y, scale, alpha, flip)`; return a different frame for a different `t` to animate |
@@ -292,21 +293,26 @@ talk fails that talk's test.
 
 ## Where things live
 
+Changing the engine itself? Read [AGENTS.md](AGENTS.md) first: the
+invariants, the golden tests, and a recipe for each kind of addition.
+
 | File | What's in it |
 | --- | --- |
-| `deck.go`, `main.go` | `Deck`, and `Main`: the command line (live, dev, presenter, snapshot, sheet, video) |
-| `slide.go`, `layout.go` | `Slide`, `Ctx`, transitions, and layout in screen fractions |
-| `theme.go` | `Theme`, `Hex` |
+| `deck.go`, `slide.go`, `ctx.go` | `Deck`, `Slide`, and `Ctx` with its layout in screen fractions |
+| `cli.go` | `Main`: the command line (live, dev, presenter, list, snapshot, sheet, video) |
+| `theme.go`, `color.go` | `Theme`; `RGB`, `Hex`, `Mix` |
 | `draw.go` | stock components: `Panel`, `Arrow`, `Label`, `Chip`, `CycleDiagram`, `BulletList`… |
-| `text.go`, `fonts/` | smooth type: fonts, fitting and wrapping, glow, gradients |
-| `figlet.go`, `block.go`, `blockfx.go`, `fonts/figlet/` | block letters: FIGlet font loading, drawing, and effects |
-| `effects.go` | letter animations |
-| `pixels.go`, `sprites.go`, `image.go` | the pixel canvas, shapes, pixel art, images |
+| `font.go`, `fit.go`, `text.go`, `coverage.go`, `memo.go`, `fonts/` | smooth type: font loading and glyphs, fitting and wrapping, drawing with glow and gradients, coverage masks, cached fits |
+| `figlet.go`, `block.go`, `blockfit.go`, `blockglyph.go`, `fonts/figlet/` | block letters: FIGlet font loading, drawing, fitting to a box, block-character glyphs |
+| `effects.go`, `blockfx.go` | letter animations: `GlyphEffect` for `Text`, `BlockEffect` for `Block` |
+| `pixels.go`, `pixelart.go`, `image.go` | the pixel canvas and shapes, pixel art, images |
 | `anim.go` | easing, springs, noise |
-| `scene.go`, `grid.go` | combine the pixel canvas and character layer into terminal cells |
-| `transition.go` | slide transitions |
-| `model.go`, `termout.go`, `dev.go`, `preview.go` | the app: navigation, writing frames, dev reload, PNG snapshots |
-| `presenter.go`, `link.go`, `kitty.go` | the presenter view, the socket link to the deck, image previews |
+| `scene.go`, `grid.go`, `pool.go` | combine the pixel canvas and character layer into terminal cells; reused frame buffers |
+| `render.go` | a slide's frame: `View` to cells, with panics caught |
+| `transition.go` | slide transitions and the registry of their cell and video versions |
+| `model.go`, `keys.go`, `termout.go`, `dev.go` | the app: navigation, the key table, writing frames, dev reload |
+| `presenter.go`, `link.go`, `preview.go`, `kitty.go` | the presenter view, the socket link to the deck, slide previews, the kitty image protocol |
+| `png.go` | PNG snapshots and contact sheets |
 | `video.go` | rendering a deck to a video |
 | `decktest/` | the test suite for decks |
 
