@@ -32,24 +32,7 @@ func renderPreview(s Slide, k previewKey, t *Theme) string {
 	g := renderSlideGrid(s, Ctx{W: rw, H: rh, T: Settled, Step: k.step, StepT: Settled, Theme: t})
 	defer g.release()
 	sc := NewScene(k.pw, k.ph, t)
-	shrinkInto(g.pixels(), sc.Px)
+	px := g.pixels()
+	boxScale(sc.Px.Pix, sc.Px.W, sc.Px.H, px.Pix, px.W, px.H)
 	return sc.Render()
-}
-
-func shrinkInto(src, dst *Pixels) {
-	for y := 0; y < dst.H; y++ {
-		y0, y1 := y*src.H/dst.H, max((y+1)*src.H/dst.H, y*src.H/dst.H+1)
-		for x := 0; x < dst.W; x++ {
-			x0, x1 := x*src.W/dst.W, max((x+1)*src.W/dst.W, x*src.W/dst.W+1)
-			var r, g, b float32
-			for yy := y0; yy < y1; yy++ {
-				for xx := x0; xx < x1; xx++ {
-					c := src.At(xx, yy)
-					r, g, b = r+c.R, g+c.G, b+c.B
-				}
-			}
-			n := float32((y1 - y0) * (x1 - x0))
-			dst.Set(x, y, RGB{r / n, g / n, b / n})
-		}
-	}
 }

@@ -62,7 +62,7 @@ func (ims *Images) Has(name string) bool { return ims.load(name).pix != nil }
 
 // Draw paints the image called name into the box (x, y, w, h), aspect kept,
 // centered, at opacity alpha. Source pixels are averaged per canvas pixel and
-// the shrunk copy is cached per size. It returns the drawn rectangle, or
+// the resampled copy is cached per size. It returns the drawn rectangle, or
 // ok=false (drawing nothing) if the image is missing.
 func (ims *Images) Draw(p *Pixels, name string, x, y, w, h, alpha float64) (dx, dy, dw, dh float64, ok bool) {
 	im := ims.load(name)
@@ -81,7 +81,7 @@ func (ims *Images) Draw(p *Pixels, name string, x, y, w, h, alpha float64) (dx, 
 	return float64(ix), float64(iy), float64(sw), float64(sh), true
 }
 
-// scaled returns the image box-filtered down (or stretched up) to w×h.
+// scaled returns the image resampled to w×h.
 func (im *decodedImage) scaled(w, h int) []RGB {
 	im.mu.Lock()
 	defer im.mu.Unlock()
@@ -89,25 +89,31 @@ func (im *decodedImage) scaled(w, h int) []RGB {
 		return out
 	}
 	out := make([]RGB, w*h)
-	fx, fy := float64(im.w)/float64(w), float64(im.h)/float64(h)
-	for y := 0; y < h; y++ {
-		sy0 := int(float64(y) * fy)
-		sy1 := max(int(float64(y+1)*fy), sy0+1)
-		for x := 0; x < w; x++ {
-			sx0 := int(float64(x) * fx)
-			sx1 := max(int(float64(x+1)*fx), sx0+1)
-			var r, g, b, n float32
-			for sy := sy0; sy < min(sy1, im.h); sy++ {
-				for sx := sx0; sx < min(sx1, im.w); sx++ {
-					c := im.pix[sy*im.w+sx]
-					r, g, b, n = r+c.R, g+c.G, b+c.B, n+1
-				}
-			}
-			if n > 0 {
-				out[y*w+x] = RGB{r / n, g / n, b / n}
-			}
-		}
-	}
+	boxScale(out, w, h, im.pix, im.w, im.h)
 	im.cache[[2]int{w, h}] = out
 	return out
+}
+
+// boxScale resamples src (sw×sh) into dst (dw×dh): each dst pixel is the mean
+// of the src pixels it covers, which is the nearest one when enlarging, so
+// enlarged images stay crisp. It is the one shrinking filter for images,
+// presenter previews and contact sheets.
+func boxScale(dst []RGB, dw, dh int, src []RGB, sw, sh int) {
+	for y := 0; y < dh; y++ {
+		y0 := y * sh / dh
+		y1 := max((y+1)*sh/dh, y0+1)
+		for x := 0; x < dw; x++ {
+			x0 := x * sw / dw
+			x1 := max((x+1)*sw/dw, x0+1)
+			var r, g, b float32
+			for sy := y0; sy < y1; sy++ {
+				for sx := x0; sx < x1; sx++ {
+					c := src[sy*sw+sx]
+					r, g, b = r+c.R, g+c.G, b+c.B
+				}
+			}
+			n := float32((y1 - y0) * (x1 - x0))
+			dst[y*dw+x] = RGB{r / n, g / n, b / n}
+		}
+	}
 }

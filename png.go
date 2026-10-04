@@ -56,21 +56,17 @@ func writeSheet(frames []*grid, shrink int, path string) error {
 	rows := (len(frames) + sheetCols - 1) / sheetCols
 	sheet := image.NewRGBA(image.Rect(0, 0, sheetCols*(fw+gap)+gap, rows*(fh+gap)+gap))
 	fillRect(sheet, sheet.Bounds(), color.Black)
+	tile := make([]RGB, fw*fh)
 	for i, fr := range frames {
 		src := frameImage(fr)
+		full := make([]RGB, len(src.Pix)/4)
+		for j := range full {
+			full[j] = RGB{float32(src.Pix[4*j]), float32(src.Pix[4*j+1]), float32(src.Pix[4*j+2])}
+		}
+		boxScale(tile, fw, fh, full, src.Rect.Dx(), src.Rect.Dy())
 		ox, oy := gap+(i%sheetCols)*(fw+gap), gap+(i/sheetCols)*(fh+gap)
-		for y := 0; y < fh; y++ {
-			for x := 0; x < fw; x++ {
-				var r, g, b uint32
-				for yy := 0; yy < shrink; yy++ {
-					for xx := 0; xx < shrink; xx++ {
-						c := src.RGBAAt(x*shrink+xx, y*shrink+yy)
-						r, g, b = r+uint32(c.R), g+uint32(c.G), b+uint32(c.B)
-					}
-				}
-				n := uint32(shrink * shrink)
-				sheet.Set(ox+x, oy+y, RGB{float32(r / n), float32(g / n), float32(b / n)}.Color())
-			}
+		for j, c := range tile {
+			sheet.Set(ox+j%fw, oy+j/fw, c.Color())
 		}
 	}
 	return savePNG(sheet, path)
