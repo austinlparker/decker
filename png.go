@@ -16,15 +16,13 @@ import (
 // A snapshot cell is cellW×cellH pixels.
 const cellW, cellH = 8, 16
 
-// writePNG saves frameImage's rendering of a frame to path, for
-// `-snapshot -png file.png`.
+// writePNG saves frameImage's rendering to path (-snapshot -png).
 func writePNG(frame string, w, h int, path string, t *Theme) error {
 	return savePNG(frameImage(frame, w, h, t), path)
 }
 
-// frameImage paints a rendered frame the way a terminal would show it, to
-// preview slides without one: block and box-drawing characters are drawn by
-// hand, and others with a small bitmap font.
+// frameImage paints a rendered frame as a terminal would, to preview slides
+// without one: block and box-drawing characters by hand, the rest in a bitmap font.
 func frameImage(frame string, w, h int, t *Theme) *image.RGBA {
 	cv := frameCanvas(frame, w, h)
 	img := image.NewRGBA(image.Rect(0, 0, w*cellW, h*cellH))
@@ -66,12 +64,10 @@ func fillRect(img *image.RGBA, r image.Rectangle, c color.Color) {
 	draw.Draw(img, r, &image.Uniform{c}, image.Point{}, draw.Src)
 }
 
-// previewShades are the opacities snapshots give the shade characters.
 var previewShades = map[rune]float64{'░': 0.25, '▒': 0.5, '▓': 0.75}
 
 // drawBlockRune paints block elements and box-drawing characters into a
-// snapshot cell the way a terminal draws them (the bitmap font has none of
-// them). It reports whether it handled the rune.
+// snapshot cell (the bitmap font has none); it reports whether it handled r.
 func drawBlockRune(img *image.RGBA, r rune, cell image.Rectangle, fg, bg color.Color) bool {
 	w, h := cell.Dx(), cell.Dy()
 	fill := func(x0, y0, x1, y1 int, c color.Color) {

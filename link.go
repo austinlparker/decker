@@ -12,7 +12,6 @@ import (
 	"time"
 )
 
-// linkState is what the deck tells the presenter view.
 type linkState struct {
 	Slide   int           `json:"slide"` // 0-based
 	Step    int           `json:"step"`  // 0-based
@@ -30,22 +29,18 @@ type linkOutline struct {
 	Steps int    `json:"steps"`
 }
 
-// linkCmd is what the presenter view asks the deck to do: press Key (one of
-// the navigation keys in keyActs) or jump to Slide.
+// linkCmd is a presenter request: press Key (a navigation key in keyActs) or jump to Slide.
 type linkCmd struct {
 	Key   string `json:"key,omitempty"`
 	Slide int    `json:"slide,omitempty"` // 1-based
 }
 
-// defaultSocket is in the per-user temp directory, named for the deck, so
-// both processes find it without configuration.
+// defaultSocket is in the per-user temp dir, named for the deck, so both processes find it.
 func defaultSocket(name string) string { return filepath.Join(os.TempDir(), name+".sock") }
 
-// linkServer is the deck's end of the link. The deck and the presenter view
-// are two processes talking over a Unix socket, one JSON object per line:
-// the deck sends a linkState whenever the position changes, the presenter
-// sends linkCmds. Either window's keys work, so the deck runs on without
-// the presenter view.
+// linkServer is the deck's end of the link: a Unix socket, one JSON object per
+// line. The deck sends a linkState on each position change, the presenter sends
+// linkCmds. Either window's keys work, and the deck runs without the presenter.
 type linkServer struct {
 	ln    net.Listener
 	path  string
@@ -92,7 +87,6 @@ func (s *linkServer) accept() {
 	}
 }
 
-// write drains out to c until it closes; a write error drops the connection.
 func (s *linkServer) write(c net.Conn, out chan []byte) {
 	for b := range out {
 		c.SetWriteDeadline(time.Now().Add(2 * time.Second))
@@ -156,7 +150,6 @@ func (s *linkServer) close() {
 	os.Remove(s.path)
 }
 
-// linkClient is the presenter view's end of the link.
 type linkClient struct {
 	mu   sync.Mutex
 	conn net.Conn
@@ -164,7 +157,6 @@ type linkClient struct {
 	dec  *json.Decoder
 }
 
-// dial connects to the deck, replacing any earlier connection.
 func (l *linkClient) dial(path string) error {
 	c, err := net.DialTimeout("unix", path, time.Second)
 	if err != nil {
@@ -191,8 +183,7 @@ func (l *linkClient) next() (st linkState, err error) {
 	return st, err
 }
 
-// send asks the deck to do something. It fails quietly when not connected;
-// the presenter view shows the link status.
+// send asks the deck to act; it fails quietly when not connected.
 func (l *linkClient) send(cmd linkCmd) {
 	l.mu.Lock()
 	defer l.mu.Unlock()

@@ -32,10 +32,9 @@ func imagePreviews(mode string) bool {
 		os.Getenv("TERM") == "xterm-kitty" || os.Getenv("KITTY_WINDOW_ID") != ""
 }
 
-// kittyTransmit returns the escape sequences that upload img as image id
-// and make it displayable in a cols×rows area of placeholders, or "" if it
-// can't be encoded. q=2 keeps the terminal from replying, which would
-// otherwise arrive as keypresses.
+// kittyTransmit returns the escape sequences that upload img as image id,
+// displayable in a cols×rows area of placeholders, or "" if encoding fails.
+// q=2 stops the terminal replying, which would arrive as keypresses.
 func kittyTransmit(id int, img image.Image, cols, rows int) string {
 	var buf bytes.Buffer
 	if err := (&png.Encoder{CompressionLevel: png.BestSpeed}).Encode(&buf, img); err != nil {
@@ -63,12 +62,11 @@ func kittyDelete(id int) string {
 // kittyMaxCells is how many row or column numbers kitty defines marks for.
 const kittyMaxCells = 297
 
-// kittyPlaceholders returns cols×rows cells that show image id, using
-// kitty's Unicode placeholders: the terminal draws the matching piece of
-// the image in each cell, so images are ordinary text to Bubble Tea. Each
-// cell is U+10EEEE plus marks for its row and column. The id is the
-// 256-color foreground, which survives Bubble Tea's color handling
-// unchanged; that's why ids stay between 1 and 255.
+// kittyPlaceholders returns cols×rows cells showing image id via kitty's
+// Unicode placeholders: each cell is U+10EEEE plus marks for its row and
+// column, and the terminal draws the matching piece of the image, so images are
+// ordinary text to Bubble Tea. The id rides in the 256-color foreground, which
+// survives Bubble Tea's color handling; hence ids 1 to 255.
 func kittyPlaceholders(id, cols, rows int) string {
 	cols, rows = min(cols, kittyMaxCells), min(rows, kittyMaxCells)
 	var b strings.Builder
@@ -87,7 +85,6 @@ func kittyPlaceholders(id, cols, rows int) string {
 	return b.String()
 }
 
-// kittyImages tracks which previews have been uploaded to the terminal.
 type kittyImages struct {
 	ids  map[previewKey]int
 	byID map[int]previewKey // to reuse an id's slot
@@ -99,17 +96,15 @@ func newKittyImages() *kittyImages {
 	return &kittyImages{ids: map[previewKey]int{}, byID: map[int]previewKey{}, next: 1}
 }
 
-// kittyUploadMsg is a finished preview upload. seq is empty if encoding
-// failed.
+// kittyUploadMsg is a finished preview upload; seq is empty if encoding failed.
 type kittyUploadMsg struct {
 	gen int
 	key previewKey
 	seq string
 }
 
-// finish handles a finished upload: the sequence to send the terminal, or
-// "" if the upload is stale (the images were cleared since it started) or
-// failed, in which case the key is forgotten so it's tried again.
+// finish returns the sequence to send for a finished upload, or "" if it is
+// stale (cleared since) or failed; a failed key is forgotten so it's retried.
 func (ki *kittyImages) finish(m kittyUploadMsg) string {
 	id, ok := ki.ids[m.key]
 	if m.gen != ki.gen || !ok {

@@ -10,10 +10,10 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
-// runPresenter runs the presenter view (-presenter) until the user quits: speaker
-// notes, position, next-slide preview and a talk timer in a window of its own,
-// linked to the deck over socket. Its keys drive the deck, so a clicker aimed
-// at this window runs the show. images selects image previews over cells.
+// runPresenter runs the presenter view (-presenter) until the user quits:
+// notes, previews and a timer in a window of its own, linked to the deck over
+// socket. Its keys drive the deck, so a clicker aimed here runs the show.
+// images selects image previews over cells.
 func runPresenter(d *Deck, socket string, length time.Duration, images bool) error {
 	p := newPresenter(d, socket, length)
 	if images {
@@ -47,8 +47,7 @@ type presenter struct {
 	now    time.Time
 	count  string // numeric prefix for jumps, e.g. "12g"
 
-	// The talk timer starts itself when the deck first leaves slide 1, or
-	// with t.
+	// The talk timer starts when the deck first leaves slide 1, or with t.
 	running bool
 	since   time.Time     // when it last started
 	banked  time.Duration // time counted before the last pause
@@ -69,8 +68,7 @@ func (p presenter) tick() tea.Cmd {
 	return tea.Tick(250*time.Millisecond, func(t time.Time) tea.Msg { return presTickMsg(t) })
 }
 
-// connect dials the deck after wait. On failure it reports linkDownMsg,
-// which schedules the next try.
+// connect dials the deck after wait; failure yields linkDownMsg, which retries.
 func (p presenter) connect(wait time.Duration) tea.Cmd {
 	return func() tea.Msg {
 		time.Sleep(wait)
@@ -163,8 +161,8 @@ func (p presenter) elapsed() time.Duration {
 }
 
 // pace is how far ahead (positive) or behind (negative) of an even pace the
-// talk is: the share of build steps shown against the share of time used.
-// Steps, because a slide with four builds takes longer than a section opener.
+// talk is: share of build steps shown against share of time used. Steps, not
+// slides, because a slide with four builds takes longer than a section opener.
 func pace(outline []linkOutline, slide, step int, elapsed, length time.Duration) time.Duration {
 	total, done := 0, step
 	for i, o := range outline {
@@ -213,14 +211,12 @@ func (p presenter) waitingView() string {
 	return mid + "\n" + p.footer()
 }
 
-// Layout constants for mainView, in cells.
 const (
 	presMargin = 2 // left and right edges
 	presGutter = 3 // between the two previews
 	presHeader = 2 // the header and the blank line under it
 )
 
-// inner is the width between the margins.
 func (p presenter) inner() int { return max(p.w-2*presMargin, 10) }
 
 func (p presenter) curOutline() linkOutline {
@@ -244,8 +240,7 @@ func (p presenter) mainView() string {
 	header := spread(left, strings.Join(right, "   "), inner)
 	rest := p.h - presHeader - footerLines
 
-	// Previews of what the audience sees now and what comes next, if
-	// there's room for them and still some notes.
+	// Previews of now and next, if they fit and leave room for notes.
 	var previews string
 	if pw, ph := p.previewBox(); ph > 0 {
 		nextLabel, nextBox := "END OF DECK", p.placeholder(pw, ph, "that's the last slide")
@@ -300,15 +295,14 @@ func (p presenter) deckSize() (int, int) {
 	return p.st.W, p.st.H
 }
 
-// matches reports whether this build's slide i is the deck's slide i. In
-// dev mode the deck rebuilds and the presenter view doesn't, so they can
-// drift apart.
+// matches reports whether this build's slide i is the deck's slide i; in dev
+// mode the deck rebuilds and the presenter view doesn't, so they can drift.
 func (p presenter) matches(i int) bool {
 	return i < len(p.slides) && i < len(p.st.Outline) && p.slides[i].Title == p.st.Outline[i].Title
 }
 
-// upload sends the terminal any image previews the screen needs that it
-// doesn't have yet. Drawing and encoding happen off the event loop.
+// upload sends the terminal any image previews it lacks; drawing and encoding
+// run off the event loop.
 func (p presenter) upload() tea.Cmd {
 	if p.images == nil || p.st.Outline == nil {
 		return nil
@@ -341,9 +335,8 @@ func (p presenter) upload() tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-// preview draws slide i at the given step, settled, into a pw×ph box. It
-// uses this build's slides, so after the deck changes shape (in dev mode) a
-// preview whose title no longer matches is left out.
+// preview draws slide i at step, settled, into a pw×ph box. A slide whose
+// title no longer matches the deck's (dev mode) is left out.
 func (p presenter) preview(i, step, pw, ph int) string {
 	if !p.matches(i) {
 		return p.placeholder(pw, ph, "preview out of date: restart the presenter view")
@@ -411,7 +404,6 @@ func (p presenter) footer() string {
 	return indent(rule+"\n"+line1+"\n"+truncate(keys, inner), strings.Repeat(" ", presMargin))
 }
 
-// spread puts left and right at either end of a line w cells wide.
 func spread(left, right string, w int) string {
 	gap := w - lipgloss.Width(left) - lipgloss.Width(right)
 	if gap < 1 {
@@ -425,12 +417,9 @@ func cutAt(line string, pos int, mark string) string {
 	return truncate(line, pos) + mark + truncateLeft(line, pos+1)
 }
 
-// truncate keeps the first w cells of a styled line; truncateLeft drops
-// the first n.
 func truncate(s string, w int) string     { return ansi.Truncate(s, max(w, 0), "") }
 func truncateLeft(s string, n int) string { return ansi.TruncateLeft(s, max(n, 0), "") }
 
-// indent prefixes every line of s with pad.
 func indent(s, pad string) string {
 	return pad + strings.ReplaceAll(s, "\n", "\n"+pad)
 }

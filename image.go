@@ -11,9 +11,8 @@ import (
 	"sync"
 )
 
-// Images are screenshots and other raster images (PNG or JPEG), usually
-// embedded in the deck's binary. They're decoded on first use, and each
-// size they're drawn at is cached.
+// Images is a set of raster images (PNG or JPEG), usually embedded in the
+// binary. Each is decoded on first use, and each drawn size is cached.
 type Images struct {
 	fsys fs.FS
 	dir  string
@@ -61,12 +60,10 @@ func (ims *Images) load(name string) *decodedImage {
 // Has reports whether the image called name exists and decodes.
 func (ims *Images) Has(name string) bool { return ims.load(name).pix != nil }
 
-// Draw paints the image called name into the box (x, y, w, h), keeping its
-// aspect ratio, centered, at opacity alpha. The source pixels under each
-// canvas pixel are averaged, so a big screenshot shrinks cleanly; the
-// shrunk copy is cached per size, so later frames only copy it. It returns
-// the drawn rectangle, and ok=false (drawing nothing) if the image is
-// missing.
+// Draw paints the image called name into the box (x, y, w, h), aspect kept,
+// centered, at opacity alpha. Source pixels are averaged per canvas pixel and
+// the shrunk copy is cached per size. It returns the drawn rectangle, or
+// ok=false (drawing nothing) if the image is missing.
 func (ims *Images) Draw(p *Pixels, name string, x, y, w, h, alpha float64) (dx, dy, dw, dh float64, ok bool) {
 	im := ims.load(name)
 	if im.pix == nil || w < 1 || h < 1 {

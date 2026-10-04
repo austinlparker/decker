@@ -8,18 +8,15 @@ import (
 	uv "github.com/charmbracelet/ultraviolet"
 )
 
-// previewKey names one presenter preview: a slide at a step, shown in a
-// pw×ph box, drawn for a dw×dh deck.
+// previewKey names one preview: a slide at a step in a pw×ph box, drawn for a dw×dh deck.
 type previewKey struct{ slide, step, pw, ph, dw, dh int }
 
-// previewMu keeps slide drawing on one goroutine at a time: slides were
-// written to be drawn by one caller, and image previews draw in the
-// background.
+// previewMu serializes slide drawing: slides are written for one caller at a
+// time, and image previews draw in the background.
 var previewMu sync.Mutex
 
-// previewBox is the inside size of each preview frame on this screen: the
-// deck's shape, leaving at least a few lines for notes. It is 0, 0 when
-// previews don't fit.
+// previewBox is the inside size of each preview frame: the deck's shape,
+// leaving a few lines for notes. It is 0, 0 when previews don't fit.
 func (p presenter) previewBox() (pw, ph int) {
 	inner, rest := max(p.w-2*presMargin, 10), p.h-2-footerLines // 2: header and blank line
 	dw, dh := p.deckSize()
@@ -37,17 +34,15 @@ func (p presenter) previewBox() (pw, ph int) {
 	return pw, ph
 }
 
-// settledPixels draws a slide at a step, settled, at w×h cells.
 func settledPixels(s Slide, step, w, h int, t *Theme) *Pixels {
 	previewMu.Lock()
 	defer previewMu.Unlock()
 	return framePixels(renderSlide(s, Ctx{W: w, H: h, T: Settled, Step: step, StepT: Settled, Theme: t}), w, h, t)
 }
 
-// renderPreview draws a slide at a size it's designed for (240 cells wide,
-// in the deck's shape), then shrinks the picture into pw×ph cells.
-// Drawing straight at preview size would lay the slide out for a tiny
-// screen instead of shrinking the real thing.
+// renderPreview draws s at a size it's designed for (240 cells wide, in the
+// deck's shape), then shrinks it into pw×ph cells; drawing at preview size
+// would lay the slide out for a tiny screen instead.
 func renderPreview(s Slide, step, dw, dh, pw, ph int, t *Theme) string {
 	const rw = 240
 	rh := max(rw*dh/dw, 20)
@@ -57,8 +52,7 @@ func renderPreview(s Slide, step, dw, dh, pw, ph int, t *Theme) string {
 	return sc.Render()
 }
 
-// slideImage draws a slide, settled at the given step, at the deck's size:
-// one image pixel per canvas pixel, exactly what the projector shows.
+// slideImage draws s settled at the deck's size, one image pixel per canvas pixel.
 func slideImage(s Slide, step, dw, dh int, t *Theme) *image.RGBA {
 	px := settledPixels(s, step, dw, dh, t)
 	img := image.NewRGBA(image.Rect(0, 0, px.W, px.H))
@@ -76,8 +70,7 @@ func frameCanvas(frame string, w, h int) *lipgloss.Canvas {
 }
 
 // framePixels turns a rendered frame back into pixels: a "▀" cell is its
-// foreground color over its background. Other characters (rare on slides)
-// are approximated by blending the two.
+// foreground over its background; other characters blend the two.
 func framePixels(frame string, w, h int, t *Theme) *Pixels {
 	cv := frameCanvas(frame, w, h)
 	bgDefault, fgDefault := t.Background, t.Text
@@ -115,7 +108,6 @@ func framePixels(frame string, w, h int, t *Theme) *Pixels {
 	return px
 }
 
-// shrinkInto scales src down into dst, averaging each block of pixels.
 func shrinkInto(src, dst *Pixels) {
 	for y := 0; y < dst.H; y++ {
 		y0, y1 := y*src.H/dst.H, max((y+1)*src.H/dst.H, y*src.H/dst.H+1)
