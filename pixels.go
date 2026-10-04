@@ -102,13 +102,7 @@ func (p *Pixels) VGradient(y0, y1 int, top, bottom RGB) {
 
 // Disc fills an antialiased circle.
 func (p *Pixels) Disc(cx, cy, r float64, c RGB, a float64) {
-	x0, y0, x1, y1 := p.Box(cx-r-1, cy-r-1, cx+r+1, cy+r+1)
-	for py := y0; py <= y1; py++ {
-		for px := x0; px <= x1; px++ {
-			d := math.Hypot(float64(px)+0.5-cx, float64(py)+0.5-cy) - r
-			p.Blend(px, py, c, a*Coverage(d))
-		}
-	}
+	p.RoundRect(cx-r, cy-r, 2*r, 2*r, r, 0, c, a)
 }
 
 // Glow adds soft light around (cx, cy), fading to zero at radius r.
