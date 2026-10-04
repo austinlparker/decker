@@ -920,7 +920,7 @@ func goldenMisc(t *testing.T, g *goldenEntries) {
 	g.addString("misc/nilview", renderSlide(Slide{Title: "nil"}, Ctx{W: 20, H: 4, Theme: testTheme}))
 	g.addString("misc/opaque", opaque("hi\n界", 10, 3, testTheme))
 
-	// Off-screen Render (outside any capture hook), with the character layer.
+	// Off-screen Render, with the character layer.
 	off := NewScene(24, 5, testTheme)
 	off.Px.Disc(8, 5, 6, testTheme.Accent, 1)
 	off.Px.Glow(30, 5, 10, testTheme.Accent2, 0.8)
