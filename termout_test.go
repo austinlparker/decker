@@ -11,13 +11,18 @@ import (
 
 // vterm is just enough of a terminal to replay what termWriter writes:
 // cursor moves, 24-bit colors, attribute resets, clears, and text, with
-// autowrap off.
+// autowrap off. In attrs, bit 0 is bold and 0x80 marks any other attribute.
 type vterm struct {
 	w, h   int
 	cells  []gcell
 	cx, cy int
 	fg, bg [3]uint8
 	attrs  uint8
+}
+
+// clone returns a copy of g that is not from the pool.
+func (g *Grid) clone() *Grid {
+	return &Grid{W: g.W, H: g.H, Cells: append([]gcell(nil), g.Cells...)}
 }
 
 func newVterm(w, h int) *vterm { return &vterm{w: w, h: h, cells: make([]gcell, w*h)} }
@@ -70,9 +75,7 @@ func (v *vterm) csi(t *testing.T, params string, final byte) {
 		x, _ := strconv.Atoi(p[1])
 		v.cx, v.cy = x-1, y-1
 	case 'J':
-		for i := range v.cells {
-			v.cells[i] = gcell{}
-		}
+		clear(v.cells)
 	case 'h', 'l': // modes
 	case 'm':
 		p := strings.Split(params, ";")
@@ -84,7 +87,7 @@ func (v *vterm) csi(t *testing.T, params string, final byte) {
 				v.attrs |= 1
 			case "38", "48":
 				var c [3]uint8
-				for n := 0; n < 3; n++ {
+				for n := range 3 {
 					x, _ := strconv.Atoi(p[k+2+n])
 					c[n] = uint8(x)
 				}
@@ -131,7 +134,7 @@ func TestTermWriter(t *testing.T) {
 	m := newModel(d, 0, 0, 60, nil)
 	m.w, m.h = w, h
 	start := m.now
-	for f := 0; f < 150; f++ {
+	for f := range 150 {
 		m.now = start.Add(time.Duration(f) * time.Second / 60)
 		if f == 60 {
 			m.goTo(1, 0, true) // a Push transition to slide 2

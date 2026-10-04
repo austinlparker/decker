@@ -687,7 +687,7 @@ func goldenTermWriter(t *testing.T, g *goldenEntries) {
 	lw := newTermWriter(&life, testTheme.Background)
 	lw.close()
 	g.add("termwriter/lifecycle", life.Bytes())
-	g.addString("termwriter/hex2", hex2(0), hex2(15), hex2(16), hex2(255))
+	g.addString("termwriter/hex2", fmt.Sprintf("%02x", 0), fmt.Sprintf("%02x", 15), fmt.Sprintf("%02x", 16), fmt.Sprintf("%02x", 255))
 	g.addString("termwriter/moveTo", string(moveTo(nil, 0, 0)), string(moveTo(nil, 681, 170)))
 }
 

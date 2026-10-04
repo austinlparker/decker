@@ -3,7 +3,6 @@ package decker
 import (
 	"image/color"
 	"strings"
-	"sync"
 
 	"charm.land/lipgloss/v2"
 	uv "github.com/charmbracelet/ultraviolet"
@@ -18,12 +17,12 @@ import (
 //
 // A scene has two layers:
 //
-//   - Px, a pixel framebuffer twice as tall as the scene (see pixels.go).
-//     Big type, shapes, glows, and pixel-art characters go here.
-//   - Character cells on top: Put, Overlay, Text, Cell, and Sprite. Use
-//     these for small native-terminal text. A cell drawn here replaces the
-//     two pixels beneath it; if it has no background color of its own, it
-//     takes the average color of those pixels so it blends in.
+//   - Px, a pixel framebuffer twice as tall as the scene. Big type, shapes,
+//     glows, and pixel-art characters go here.
+//   - Character cells on top: Put, PutCenter, Overlay, Text, Cell, Fill and
+//     Sprite. Use these for small native-terminal text. A cell drawn here
+//     replaces the two pixels beneath it; if it has no background color of
+//     its own, it takes the average color of those pixels so it blends in.
 type Scene struct {
 	W, H  int
 	Px    *Pixels
@@ -37,48 +36,31 @@ type Scene struct {
 // Scenes are big (a 682×171 scene is ~2.8MB of pixels) and a slide makes a
 // new one every frame, so they're recycled: Render returns its scene to
 // the pool once the frame is encoded.
-var (
-	scenePoolMu sync.Mutex
-	scenePool   []*Scene
-)
+var scenes = sizedPool[Scene]{max: 4}
 
 // NewScene returns an empty scene of the given size in cells, on the
 // theme's background. Slides get theirs from Ctx.Scene, which also adds the
 // theme's overlay; use NewScene to draw something off screen.
 func NewScene(w, h int, t *Theme) *Scene {
 	w, h = max(w, 1), max(h, 1)
-	bg := t.Background
-	scenePoolMu.Lock()
-	for i, s := range scenePool {
-		if s.W == w && s.H == h {
-			scenePool = append(scenePool[:i], scenePool[i+1:]...)
-			scenePoolMu.Unlock()
-			for j := range s.Px.Pix {
-				s.Px.Pix[j] = bg
-			}
-			s.Px.BG, s.ink = bg, t.Text
-			return s
-		}
+	if s := scenes.get(func(s *Scene) bool { return s.W == w && s.H == h }); s != nil {
+		s.Px.Fill(t.Background)
+		s.Px.BG, s.ink = t.Background, t.Text
+		return s
 	}
-	scenePoolMu.Unlock()
-	return &Scene{W: w, H: h, Px: NewPixels(w, 2*h, bg), ink: t.Text}
+	return &Scene{W: w, H: h, Px: NewPixels(w, 2*h, t.Background), ink: t.Text}
 }
 
 // Release returns a scene to the pool without rendering it, once you've
-// taken what you need from its pixels. Don't use it afterwards.
-func (s *Scene) Release() { s.recycle() }
-
-func (s *Scene) recycle() {
+// taken what you need from its pixels. Don't use it afterwards, or after
+// Render, which already releases the scene.
+func (s *Scene) Release() {
 	s.overlay = nil
 	for _, i := range s.used {
 		s.cells[i] = nil
 	}
 	s.used = s.used[:0]
-	scenePoolMu.Lock()
-	if len(scenePool) < 4 {
-		scenePool = append(scenePool, s)
-	}
-	scenePoolMu.Unlock()
+	scenes.put(s)
 }
 
 func (s *Scene) setCell(x, y int, c *uv.Cell) {
@@ -107,6 +89,10 @@ func (s *Scene) PutCenter(dx, dy int, block string) {
 	s.Put((s.W-w)/2+dx, (s.H-h)/2+dy, block)
 }
 
+func (s *Scene) put(x, y int, block string, transparent bool) {
+	blit(block, x, y, s.W, s.H, transparent, func(tx, ty int, c *uv.Cell) { s.setCell(tx, ty, c.Clone()) })
+}
+
 // Text draws plain text in one color with transparent spaces. Optional attrs
 // are uv.AttrBold, uv.AttrItalic, uv.AttrFaint, etc., OR'd together.
 func (s *Scene) Text(x, y int, text string, fg color.Color, attrs ...uint8) {
@@ -116,15 +102,20 @@ func (s *Scene) Text(x, y int, text string, fg color.Color, attrs ...uint8) {
 	}
 	st := uv.Style{Fg: fg, Attrs: a}
 	for row, line := range strings.Split(text, "\n") {
-		cx := x
-		for _, r := range line {
-			ch := string(r)
-			w := ansi.StringWidth(ch)
-			if r != ' ' {
-				s.Cell(cx, y+row, ch, st)
-			}
-			cx += max(w, 1)
+		s.runes(x, y+row, line, func(int) uv.Style { return st })
+	}
+}
+
+// runes draws the non-space runes of line from (x, y), one cell each, styled
+// by style(i) for the i-th rune.
+func (s *Scene) runes(x, y int, line string, style func(i int) uv.Style) {
+	col := 0
+	for i, r := range []rune(line) {
+		ch := string(r)
+		if r != ' ' {
+			s.Cell(x+col, y, ch, style(i))
 		}
+		col += max(ansi.StringWidth(ch), 1)
 	}
 }
 
@@ -145,89 +136,11 @@ func (s *Scene) Fill(x, y, w, h int, bg color.Color) {
 	}
 }
 
-// Render returns the scene as a styled string of exactly H lines, each
-// exactly W cells wide, and recycles the scene: don't use it afterwards.
-//
-// Each cell is a half block (▀) whose foreground is the top pixel and
-// background the bottom one, or a space when both match. Every cell gets an
-// explicit background color: terminals with a translucent background only
-// make the *default* background see-through, and the deck should be opaque.
-// Colors are only written when they change, to keep frames small: at
-// 682×171 a frame is 117k cells, and the terminal has to parse all of it.
-func (s *Scene) Render() string {
-	if s.overlay != nil {
-		s.overlay(s.Px)
-	}
-	if captureFrame != nil {
-		// Rendering a video: hand over the pixels, and skip encoding.
-		captureFrame(s.Px)
-		s.recycle()
-		return ""
-	}
-	g := s.grid()
-	s.recycle()
-	if captureGrid != nil {
-		// The live deck: hand over the cells, and skip encoding.
-		captureGrid(g)
-		return ""
-	}
-	out := g.String()
-	g.release()
-	return out
-}
-
-// captureFrame, when set, receives each scene's pixels in place of Render
-// encoding them, before the scene is reused. Video rendering sets it; it
-// isn't safe to use from more than one goroutine.
-var captureFrame func(*Pixels)
-
-// captureGrid, when set, receives each scene's cells in place of Render
-// encoding them, and owns the grid. renderSlideGrid sets it; it isn't safe
-// to use from more than one goroutine.
-var captureGrid func(*Grid)
-
-// opaque redraws a styled string (the footer, panels, an error message) as
-// a w×h scene on the theme's background, so it gets an explicit background
-// color everywhere, like the slides.
-func opaque(s string, w, h int, t *Theme) string {
-	sc := NewScene(w, h, t)
-	sc.Put(0, 0, s)
-	return sc.Render()
-}
-
-func (s *Scene) put(x, y int, block string, transparent bool) {
-	w, h := lipgloss.Size(block)
-	if w == 0 || h == 0 {
-		return
-	}
-	tmp := lipgloss.NewCanvas(w, h)
-	uv.NewStyledString(block).Draw(tmp, tmp.Bounds())
-	for yy := 0; yy < h; yy++ {
-		ty := y + yy
-		if ty < 0 || ty >= s.H {
-			continue
-		}
-		for xx := 0; xx < w; xx++ {
-			tx := x + xx
-			if tx < 0 || tx >= s.W {
-				continue
-			}
-			cell := tmp.CellAt(xx, yy)
-			if cell == nil || cell.Width == 0 {
-				continue // continuation of a wide character
-			}
-			if transparent && (cell.Content == " " || cell.Content == "") && cell.Style.Bg == nil {
-				continue
-			}
-			s.setCell(tx, ty, cell.Clone())
-		}
-	}
-}
-
 // Sprite is multi-line ASCII art with per-character colors. Spaces are
 // transparent. Paint (optional) has the same shape as Art; each character
 // in Paint selects a color from Colors for the matching Art character.
-// Characters in Paint that are not in Colors (e.g. ' ') use Default.
+// Characters in Paint that are not in Colors (e.g. ' ') use Default. For
+// pixel-art characters, see PixelArt.
 //
 //	bee := Sprite{
 //	    Art:    []string{`(o)##>`},
@@ -261,18 +174,56 @@ func (s *Scene) Sprite(x, y int, sp Sprite) {
 		if row < len(sp.Paint) {
 			paint = []rune(sp.Paint[row])
 		}
-		col := 0
-		for i, r := range []rune(line) {
-			if r != ' ' {
-				fg := sp.Default
-				if i < len(paint) {
-					if pc, ok := sp.Colors[paint[i]]; ok {
-						fg = pc
-					}
+		s.runes(x, y+row, line, func(i int) uv.Style {
+			fg := sp.Default
+			if i < len(paint) {
+				if pc, ok := sp.Colors[paint[i]]; ok {
+					fg = pc
 				}
-				s.Cell(x+col, y+row, string(r), uv.Style{Fg: fg, Attrs: attrs})
 			}
-			col += max(ansi.StringWidth(string(r)), 1)
-		}
+			return uv.Style{Fg: fg, Attrs: attrs}
+		})
 	}
+}
+
+// Render returns the scene as a string of exactly H lines of W cells, with
+// every cell's background explicit (see Grid.String), and releases the
+// scene: don't use it afterwards. It returns "" while a capture hook is set.
+func (s *Scene) Render() string {
+	if s.overlay != nil {
+		s.overlay(s.Px)
+	}
+	if captureFrame != nil {
+		captureFrame(s.Px)
+		s.Release()
+		return ""
+	}
+	g := s.grid()
+	s.Release()
+	if captureGrid != nil {
+		captureGrid(g)
+		return ""
+	}
+	out := g.String()
+	g.release()
+	return out
+}
+
+// captureFrame, when set, receives each scene's pixels in place of Render
+// encoding them, before the scene is reused. Video rendering sets it; it
+// isn't safe to use from more than one goroutine.
+var captureFrame func(*Pixels)
+
+// captureGrid, when set, receives each scene's cells in place of Render
+// encoding them, and owns the grid. renderSlideGrid sets it; it isn't safe
+// to use from more than one goroutine.
+var captureGrid func(*Grid)
+
+// opaque redraws a styled string (the footer, panels, an error message) as
+// a w×h scene on the theme's background, so it gets an explicit background
+// color everywhere, like the slides.
+func opaque(s string, w, h int, t *Theme) string {
+	sc := NewScene(w, h, t)
+	sc.Put(0, 0, s)
+	return sc.Render()
 }
