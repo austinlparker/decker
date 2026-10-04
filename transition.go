@@ -30,11 +30,9 @@ func (k Transition) resolve() Transition {
 // pixels. In both, p is linear progress from 0 (all old) to 1 (all new);
 // implementations apply their own easing.
 type transitionImpl struct {
-	// cells fills out, which is the size of from and to. forward is false
-	// when navigating backwards, which mirrors directional transitions.
-	cells func(out, from, to *Grid, p float64, forward bool, t *Theme)
-	// pixels mixes from into to in place, as packed RGB w×h frames. Videos
-	// always move forward.
+	// cells fills out; forward is false when navigating backwards.
+	cells func(out, from, to *grid, p float64, forward bool, t *Theme)
+	// pixels mixes from into to in place, as packed RGB w×h frames.
 	pixels func(from, to []byte, w, h int, p float64, t *Theme)
 }
 
@@ -44,10 +42,9 @@ var transitions = map[Transition]transitionImpl{
 	TransitionWipe:     {wipeCells, wipePixels},
 }
 
-// composeGrid mixes two full frames of the same size cell by cell into a new
-// grid. Kinds without an implementation cut straight to `to`. The wipe's
-// edge is the theme's accent.
-func composeGrid(kind Transition, from, to *Grid, p float64, forward bool, t *Theme) *Grid {
+// composeGrid mixes two frames of the same size into a new grid. Kinds
+// without an implementation cut straight to `to`.
+func composeGrid(kind Transition, from, to *grid, p float64, forward bool, t *Theme) *grid {
 	out := newGrid(to.W, to.H)
 	if impl, ok := transitions[kind]; ok {
 		impl.cells(out, from, to, p, forward, t)
@@ -67,7 +64,7 @@ func blendTransition(kind Transition, from, to []byte, w, h int, p float64, t *T
 
 // pushCells pushes the old frame out to the left, or to the right when
 // going backwards.
-func pushCells(out, from, to *Grid, p float64, forward bool, _ *Theme) {
+func pushCells(out, from, to *grid, p float64, forward bool, _ *Theme) {
 	w, h := to.W, to.H
 	off := LerpInt(0, w, EaseInOutCubic(p))
 	for y := 0; y < h; y++ {
@@ -83,7 +80,7 @@ func pushCells(out, from, to *Grid, p float64, forward bool, _ *Theme) {
 	}
 }
 
-func dissolveCells(out, from, to *Grid, p float64, _ bool, _ *Theme) {
+func dissolveCells(out, from, to *grid, p float64, _ bool, _ *Theme) {
 	w, h := to.W, to.H
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
@@ -98,7 +95,7 @@ func dissolveCells(out, from, to *Grid, p float64, _ bool, _ *Theme) {
 	}
 }
 
-func wipeCells(out, from, to *Grid, p float64, forward bool, t *Theme) {
+func wipeCells(out, from, to *grid, p float64, forward bool, t *Theme) {
 	const glow = 6
 	w, h := to.W, to.H
 	edge := LerpInt(-glow, w+glow, EaseInOutCubic(p))

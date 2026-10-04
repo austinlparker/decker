@@ -17,23 +17,20 @@ import (
 )
 
 // termWriter draws the live deck, replacing Bubble Tea's renderer, which
-// re-parses each frame string and then updates the terminal with every
-// shortcut it claims to support (scrolling regions, repeated and inserted
-// characters, erases). At 682×171 that costs ~8ms a frame, and when a
-// shortcut lands differently than the renderer expects, stripes come out
-// shifted or the wrong color until the whole screen is redrawn.
+// re-parses each frame and updates the terminal with shortcuts (scrolling
+// regions, repeated and inserted characters) that can land wrong, leaving
+// shifted or mis-colored stripes; at 682×171 it costs ~8ms a frame.
 //
-// termWriter takes each frame as a Grid, compares it with the last frame it
-// wrote, and sends only the changed cells, using nothing but cursor moves,
-// colors and text. Each frame is wrapped in synchronized output, so the
-// terminal shows it whole or not at all. Writing happens on its own
-// goroutine: if the terminal falls behind, frames are dropped rather than
-// queued, and the deck keeps responding to keys.
+// termWriter diffs each grid against the last one it wrote and sends only the
+// changed cells, using nothing but cursor moves, colors and text, in
+// synchronized output so the terminal shows a frame whole or not at all. It
+// writes on its own goroutine: if the terminal falls behind, frames are
+// dropped rather than queued.
 type termWriter struct {
 	out io.Writer
 
 	mu       sync.Mutex
-	pending  *Grid
+	pending  *grid
 	title    string
 	full     bool // redraw every cell next frame
 	notify   chan struct{}
@@ -41,7 +38,7 @@ type termWriter struct {
 	finished chan struct{}
 
 	// Owned by the writing goroutine.
-	prev      *Grid
+	prev      *grid
 	lastTitle string
 	buf       []byte
 }
@@ -68,7 +65,7 @@ func newTermWriter(out io.Writer, bg RGB) *termWriter {
 
 // submit hands a frame to the writer, which owns it from now on. A frame
 // that hasn't been written yet is dropped in favor of the new one.
-func (w *termWriter) submit(g *Grid, title string) {
+func (w *termWriter) submit(g *grid, title string) {
 	w.mu.Lock()
 	w.pending.release()
 	w.pending, w.title = g, title
@@ -115,7 +112,7 @@ func (w *termWriter) loop() {
 
 // write encodes g as a diff against the previous frame, or in full when full
 // is set or the size changed, and takes ownership of g.
-func (w *termWriter) write(g *Grid, title string, full bool) {
+func (w *termWriter) write(g *grid, title string, full bool) {
 	prev := w.prev
 	full = full || prev == nil || prev.W != g.W || prev.H != g.H
 	b := append(w.buf[:0], ansi.SetModeSynchronizedOutput...)
@@ -185,14 +182,11 @@ func moveTo(b []byte, x, y int) []byte {
 	return append(b, 'H')
 }
 
-// String encodes the grid as exactly H lines of exactly W cells. Each cell is
-// a half block (▀) whose foreground is the top pixel and background the
-// bottom one, or a space when both match. Every cell gets an explicit
-// background color: terminals with a translucent background only make the
-// default background see-through, and the deck should be opaque. Colors are
-// only written when they change, to keep frames small: at 682×171 a frame is
-// 117k cells, and the terminal has to parse all of it.
-func (g *Grid) String() string {
+// String encodes the grid as exactly H lines of W cells. Every cell gets an
+// explicit background, since a translucent terminal only makes the default
+// background see-through. Colors are written only when they change, to keep
+// frames small: at 682×171 the terminal parses 117k cells.
+func (g *grid) String() string {
 	var b strings.Builder
 	b.Grow(g.W * g.H * 6)
 	var buf []byte
@@ -267,18 +261,16 @@ func (p *pen) run(b []byte, row []gcell, first, last int) []byte {
 // sgrColor appends a 24-bit color: kind '3' for foreground, '4' background.
 func sgrColor(buf []byte, kind byte, c [3]uint8) []byte {
 	buf = append(buf, "\x1b["...)
-	buf = append(buf, kind, '8', ';', '2', ';')
-	buf = strconv.AppendUint(buf, uint64(c[0]), 10)
-	buf = append(buf, ';')
-	buf = strconv.AppendUint(buf, uint64(c[1]), 10)
-	buf = append(buf, ';')
-	buf = strconv.AppendUint(buf, uint64(c[2]), 10)
+	buf = append(buf, kind, '8', ';', '2')
+	for _, v := range c {
+		buf = strconv.AppendUint(append(buf, ';'), uint64(v), 10)
+	}
 	return append(buf, 'm')
 }
 
-// liveTerminal sets up the terminal for the live deck: raw keyboard input,
-// window size reports and the frame writer. Bubble Tea runs without its
-// renderer, which also means it leaves the keyboard and resizing to us.
+// liveTerminal sets up the terminal for the live deck: raw input, window
+// size reports and the frame writer, which Bubble Tea leaves to us when it
+// runs without its renderer.
 type liveTerminal struct {
 	writer  *termWriter
 	restore func()
@@ -316,10 +308,8 @@ func (lt *liveTerminal) watchSize(p *tea.Program) {
 }
 
 func (lt *liveTerminal) close() {
-	if lt.sigs != nil {
-		signal.Stop(lt.sigs)
-		close(lt.sigs)
-	}
+	signal.Stop(lt.sigs)
+	close(lt.sigs)
 	lt.writer.close()
 	lt.restore()
 }

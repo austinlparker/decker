@@ -12,23 +12,25 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
-// The presenter view (-presenter) runs in its own window at a normal font
-// size: speaker notes, where you are, what's next, and a talk timer. Its
-// keys drive the deck over the link (see link.go), so a clicker aimed at
-// this window runs the show.
-
+// runPresenter runs the presenter view (-presenter) until the user quits: speaker
+// notes, position, next-slide preview and a talk timer in a window of its own,
+// linked to the deck over socket. Its keys drive the deck, so a clicker aimed
+// at this window runs the show. images selects image previews over cells.
 func runPresenter(d *Deck, socket string, length time.Duration, images bool) error {
-	p := presenter{
-		slides: d.Slides, theme: d.Theme, sty: d.Theme.styles(), socket: socket, length: length,
-		link: &linkClient{}, previews: map[previewKey]string{},
-		now: time.Now(),
-	}
+	p := newPresenter(d, socket, length)
 	if images {
 		p.images = newKittyImages()
 	}
 	_, err := tea.NewProgram(p).Run()
 	p.link.close()
 	return err
+}
+
+func newPresenter(d *Deck, socket string, length time.Duration) presenter {
+	return presenter{
+		slides: d.Slides, theme: d.Theme, sty: d.Theme.styles(), socket: socket, length: length,
+		link: &linkClient{}, previews: map[previewKey]string{}, now: time.Now(),
+	}
 }
 
 type presenter struct {
@@ -61,7 +63,6 @@ type (
 	linkStateMsg linkState
 )
 
-// reconnectEvery is how often the presenter view retries the deck.
 const reconnectEvery = 500 * time.Millisecond
 
 func (p presenter) Init() tea.Cmd { return tea.Batch(p.tick(), p.connect(0)) }
@@ -82,7 +83,6 @@ func (p presenter) connect(wait time.Duration) tea.Cmd {
 	}
 }
 
-// listen waits for the deck's next report.
 func (p presenter) listen() tea.Cmd {
 	return func() tea.Msg {
 		st, err := p.link.next()
@@ -130,56 +130,33 @@ func (p presenter) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (p presenter) handleKey(k string) (tea.Model, tea.Cmd) {
-	if len(k) == 1 && k[0] >= '0' && k[0] <= '9' {
-		p.count += k
+	if n, done := countKey(&p.count, k); done {
+		if n > 0 {
+			p.link.send(linkCmd{Slide: n})
+		}
 		return p, nil
 	}
-	count := p.count
-	p.count = ""
-	send := func(cmd string) { p.link.send(linkCmd{Cmd: cmd}) }
-
-	switch k {
-	case "q", "ctrl+c":
+	switch {
+	case k == "q" || k == "ctrl+c":
 		if p.images != nil {
 			return p, tea.Sequence(tea.Raw(p.images.clear()), tea.Quit)
 		}
 		return p, tea.Quit
-	case "t": // start or pause the timer
+	case k == "t":
 		if p.running {
 			p.banked += time.Since(p.since)
 			p.running = false
 		} else {
 			p.running, p.since = true, time.Now()
 		}
-	case "T": // reset the timer
+	case k == "T":
 		p.running, p.banked = false, 0
-	case "right", "l", "space", "pgdown", "j", "down", "enter", "g":
-		if count != "" && (k == "enter" || k == "g") {
-			var n int
-			fmt.Sscan(count, &n)
-			p.link.send(linkCmd{Cmd: "goto", Slide: n})
-		} else if k == "g" {
-			send("first")
-		} else {
-			send("next")
-		}
-	case "left", "h", "pgup", "k", "up", "backspace":
-		send("prev")
-	case "]":
-		send("nextSlide")
-	case "[":
-		send("prevSlide")
-	case "home":
-		send("first")
-	case "G", "end":
-		send("last")
-	case "r":
-		send("replay")
+	case keyActs[k].nav:
+		p.link.send(linkCmd{Key: k})
 	}
 	return p, nil
 }
 
-// elapsed is the talk timer's reading.
 func (p presenter) elapsed() time.Duration {
 	if p.running {
 		return p.banked + p.now.Sub(p.since)
@@ -188,9 +165,8 @@ func (p presenter) elapsed() time.Duration {
 }
 
 // pace is how far ahead (positive) or behind (negative) of an even pace the
-// talk is: the share of build steps shown so far against the share of the
-// talk's time used. Steps are the unit because a slide with four builds
-// takes longer to talk through than a section opener.
+// talk is: the share of build steps shown against the share of time used.
+// Steps, because a slide with four builds takes longer than a section opener.
 func pace(outline []linkOutline, slide, step int, elapsed, length time.Duration) time.Duration {
 	total, done := 0, step
 	for i, o := range outline {
@@ -220,43 +196,42 @@ func (p presenter) View() tea.View {
 	if p.w == 0 || p.h == 0 {
 		return tea.NewView("")
 	}
-	var body string
+	view := p.mainView
 	if p.st.Outline == nil {
-		body = p.waitingView()
-	} else {
-		body = p.mainView()
+		view = p.waitingView
 	}
-	v := tea.NewView(body)
+	v := tea.NewView(view())
 	v.AltScreen = true
 	v.BackgroundColor = p.theme.Background.Color()
 	v.WindowTitle = "presenter"
 	return v
 }
 
-// waitingView is shown until the deck first reports in.
 func (p presenter) waitingView() string {
 	msg := p.sty.accent.Render("Waiting for the deck…") + "\n\n" +
-		p.sty.text.Render("Start it in another window: ") + p.sty.accent2.Render("mise run present") + "\n" +
+		p.sty.text.Render("Run the deck in another window.") + "\n" +
 		p.sty.faint.Render(p.socket)
-	footer := p.footer()
-	mid := lipgloss.Place(p.w, max(p.h-lipgloss.Height(footer), 1), lipgloss.Center, lipgloss.Center, msg)
-	return mid + "\n" + footer
+	mid := lipgloss.Place(p.w, max(p.h-footerLines, 1), lipgloss.Center, lipgloss.Center, msg)
+	return mid + "\n" + p.footer()
 }
 
 // Layout constants for mainView, in cells.
 const (
 	presMargin = 2 // left and right edges
 	presGutter = 3 // between the two previews
+	presHeader = 2 // the header and the blank line under it
 )
 
-func (p presenter) mainView() string {
-	n := len(p.st.Outline)
-	cur := p.st.Outline[min(p.st.Slide, n-1)]
-	inner := max(p.w-2*presMargin, 10)
-	pad := strings.Repeat(" ", presMargin)
+// inner is the width between the margins.
+func (p presenter) inner() int { return max(p.w-2*presMargin, 10) }
 
-	// Header: where we are.
-	left := p.sty.accent.Render(fmt.Sprintf("%d/%d", p.st.Slide+1, n)) + "  " + p.sty.text.Bold(true).Render(cur.Title)
+func (p presenter) curOutline() linkOutline {
+	return p.st.Outline[min(p.st.Slide, len(p.st.Outline)-1)]
+}
+
+func (p presenter) mainView() string {
+	cur, inner := p.curOutline(), p.inner()
+	left := p.sty.accent.Render(fmt.Sprintf("%d/%d", p.st.Slide+1, len(p.st.Outline))) + "  " + p.sty.text.Bold(true).Render(cur.Title)
 	var right []string
 	if !p.linked {
 		right = append(right, p.sty.warn.Render("○ reconnecting to the deck…"))
@@ -269,9 +244,7 @@ func (p presenter) mainView() string {
 			p.sty.accent.Render(strings.Repeat("●", p.st.Step+1))+p.sty.faint.Render(strings.Repeat("○", cur.Steps-p.st.Step-1)))
 	}
 	header := spread(left, strings.Join(right, "   "), inner)
-
-	footer := p.footer()
-	rest := p.h - 2 - lipgloss.Height(footer) // header and the blank line under it
+	rest := p.h - presHeader - footerLines
 
 	// Previews of what the audience sees now and what comes next, if
 	// there's room for them and still some notes.
@@ -287,7 +260,6 @@ func (p presenter) mainView() string {
 		rest -= lipgloss.Height(previews) + 1
 	}
 
-	// Notes fill what's left.
 	notes := p.st.Notes
 	if notes == "" {
 		notes = p.sty.faint.Render("(no notes for this slide)")
@@ -303,9 +275,9 @@ func (p presenter) mainView() string {
 		parts = append(parts, previews, "")
 	}
 	parts = append(parts, noteBlock)
-	top := indent(strings.Join(parts, "\n"), pad)
-	gap := max(p.h-lipgloss.Height(top)-lipgloss.Height(footer), 0)
-	return top + strings.Repeat("\n", gap) + "\n" + footer
+	top := indent(strings.Join(parts, "\n"), strings.Repeat(" ", presMargin))
+	gap := max(p.h-lipgloss.Height(top)-footerLines, 0)
+	return top + strings.Repeat("\n", gap) + "\n" + p.footer()
 }
 
 // footerLines is the footer's height: a rule, the timer line, and keys.
@@ -320,17 +292,15 @@ func (p presenter) previewBox() (pw, ph int) {
 // nextTarget is the slide and step the "next" preview shows, with its
 // label. ok is false on the last step of the last slide.
 func (p presenter) nextTarget() (next [2]int, label string, ok bool) {
-	n := len(p.st.Outline)
-	switch cur := p.st.Outline[min(p.st.Slide, n-1)]; {
+	switch cur := p.curOutline(); {
 	case p.st.Step < cur.Steps-1:
-		return [2]int{p.st.Slide, p.st.Step + 1}, "NEXT · step " + fmt.Sprint(p.st.Step+2), true
-	case p.st.Slide < n-1:
+		return [2]int{p.st.Slide, p.st.Step + 1}, fmt.Sprintf("NEXT · step %d", p.st.Step+2), true
+	case p.st.Slide < len(p.st.Outline)-1:
 		return [2]int{p.st.Slide + 1, 0}, "NEXT · " + p.st.Outline[p.st.Slide+1].Title, true
 	}
 	return next, "", false
 }
 
-// deckSize is the deck's size in cells, as last reported.
 func (p presenter) deckSize() (int, int) {
 	if p.st.W <= 0 || p.st.H <= 0 {
 		return 682, 171 // a typical presenting terminal: 4pt font, full screen
@@ -509,9 +479,8 @@ func shrinkInto(src, dst *Pixels) {
 	}
 }
 
-// footer is the timer, pace, and key reminder.
 func (p presenter) footer() string {
-	inner := max(p.w-2*presMargin, 10)
+	inner := p.inner()
 	el := p.elapsed()
 
 	timer := p.sty.text.Bold(true).Render(clock(el)) + p.sty.muted.Render(" / "+clock(p.length))
@@ -543,19 +512,19 @@ func (p presenter) footer() string {
 
 	// A bar of time used, with a marker for how far through the deck you are.
 	barW := max(inner/4, 10)
-	used := min(int(float64(barW)*float64(el)/float64(max(p.length, 1))), barW)
+	cells := func(d time.Duration) int { return int(float64(barW) * float64(d) / float64(max(p.length, 1))) }
+	used := min(cells(el), barW)
 	bar := p.sty.accent.Render(strings.Repeat("━", used)) + p.sty.faint.Render(strings.Repeat("━", barW-used))
 	if p.st.Outline != nil {
 		at := pace(p.st.Outline, p.st.Slide, p.st.Step, 0, p.length) // share of the deck shown, as time
-		pos := min(int(float64(barW)*float64(at)/float64(max(p.length, 1))), barW-1)
-		bar = cutAt(bar, barW, pos, p.sty.text.Bold(true).Render("┃"))
+		pos := min(cells(at), barW-1)
+		bar = cutAt(bar, pos, p.sty.text.Bold(true).Render("┃"))
 	}
 
 	line1 := spread(timer+"   "+bar+"   "+status, p.sty.muted.Render(p.now.Format("15:04")), inner)
 	keys := p.sty.faint.Render("→ ← step   ] [ slide   12g jump   r replay   t timer   T reset   q quit")
 	rule := p.sty.faint.Render(strings.Repeat("─", inner))
-	pad := strings.Repeat(" ", presMargin)
-	return indent(rule+"\n"+line1+"\n"+truncate(keys, inner), pad)
+	return indent(rule+"\n"+line1+"\n"+truncate(keys, inner), strings.Repeat(" ", presMargin))
 }
 
 // spread puts left and right at either end of a line w cells wide.
@@ -567,8 +536,8 @@ func spread(left, right string, w int) string {
 	return left + strings.Repeat(" ", gap) + right
 }
 
-// cutAt replaces the cell at pos in a w-wide styled line with mark.
-func cutAt(line string, w, pos int, mark string) string {
+// cutAt replaces the cell at pos in a styled line with mark.
+func cutAt(line string, pos int, mark string) string {
 	return truncate(line, pos) + mark + truncateLeft(line, pos+1)
 }
 
@@ -577,16 +546,15 @@ func cutAt(line string, w, pos int, mark string) string {
 func truncate(s string, w int) string     { return ansi.Truncate(s, max(w, 0), "") }
 func truncateLeft(s string, n int) string { return ansi.TruncateLeft(s, max(n, 0), "") }
 
+// indent prefixes every line of s with pad.
 func indent(s, pad string) string {
 	return pad + strings.ReplaceAll(s, "\n", "\n"+pad)
 }
 
-// frame draws a thin border around a preview.
 func frame(s string, c RGB) string {
 	return lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(c.Color()).Render(s)
 }
 
-// placeholder is a blank preview-sized box with a short message.
 func (p presenter) placeholder(w, h int, msg string) string {
 	return lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center, p.sty.faint.Render(msg))
 }

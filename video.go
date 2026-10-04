@@ -29,11 +29,10 @@ func videoTiming(s Slide, step int, hold float64) float64 {
 	return hold
 }
 
-// renderVideo draws every slide and build step in order, each held for a
-// fixed time, with entrance animations and slide transitions, and pipes the
-// raw rgb24 frames into ffmpeg, which must be on PATH. Frames come straight
-// from the pixel canvas at one video pixel per canvas pixel, so a 1920×1080
-// video is drawn on a 1920×540-cell canvas.
+// renderVideo draws every slide and build step in order, with entrance
+// animations and slide transitions, and pipes the rgb24 frames into ffmpeg
+// (on PATH). Frames come straight from the pixel canvas, one video pixel per
+// canvas pixel: a 1920×1080 video is a 1920×540-cell canvas.
 func renderVideo(d *Deck, o videoOptions) error {
 	if o.width <= 0 || o.height <= 0 || o.height%2 != 0 {
 		return fmt.Errorf("video size must be positive with an even height, got %dx%d", o.width, o.height)
@@ -72,13 +71,10 @@ func writeVideoFrames(d *Deck, o videoOptions, w io.Writer) error {
 	frame := make([]byte, 3*o.width*o.height)
 	from := make([]byte, len(frame)) // the previous slide's last frame, for transitions
 	drew := false
-	captureFrame = func(p *Pixels) {
-		if p.W == o.width && p.H == o.height {
-			toRGB24(p, frame)
-			drew = true
-		}
-	}
-	defer func() { captureFrame = nil }()
+	sink := &frameSink{pixels: func(p *Pixels) {
+		toRGB24(p, frame)
+		drew = true
+	}}
 
 	dt := 1 / float64(o.fps)
 	start, frames := time.Now(), 0
@@ -91,7 +87,7 @@ func writeVideoFrames(d *Deck, o videoOptions, w io.Writer) error {
 			dur := videoTiming(s, step, o.hold)
 			for t := 0.0; t < dur-dt/2; t += dt {
 				drew = false
-				out := renderSlide(s, Ctx{W: cw, H: ch, T: slideT + t, Step: step, StepT: t, Theme: d.Theme})
+				out := renderSlide(s, Ctx{W: cw, H: ch, T: slideT + t, Step: step, StepT: t, Theme: d.Theme, sink: sink})
 				if !drew {
 					// The slide drew without a scene (or panicked): decode its text.
 					toRGB24(framePixels(out, cw, ch, d.Theme), frame)

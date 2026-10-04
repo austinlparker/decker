@@ -7,18 +7,15 @@ import (
 	uv "github.com/charmbracelet/ultraviolet"
 )
 
-// Grid is one finished frame as terminal cells: what the live deck writes to
-// the terminal (see termout.go), and what the string output is encoded
-// from. Slides build it straight from their pixel canvas, so the deck never
-// has to turn a frame into escape codes and parse it back.
-type Grid struct {
+// grid is one finished frame as terminal cells: what the live deck writes to
+// the terminal, and what frame strings are encoded from.
+type grid struct {
 	W, H  int
 	Cells []gcell
 }
 
-// gcell is one terminal cell. Most cells are a space or a half block (▀)
-// with explicit colors; rich cells (help, notes, the footer) can carry text
-// attributes.
+// gcell is one terminal cell: a space or half block (▀) with explicit colors,
+// or a rich cell (help, notes, footer) with text attributes.
 type gcell struct {
 	ch     string // one grapheme; "" for the second half of a wide character
 	fg, bg [3]uint8
@@ -29,22 +26,20 @@ type gcell struct {
 
 const halfBlock = "▀"
 
-// Grids are big (a 682×171 frame is ~117k cells) and one is made every
-// frame, so they're recycled.
-var grids = sizedPool[Grid]{max: 6}
+// A 682×171 frame is ~117k cells and one is made every frame: recycle them.
+var grids = sizedPool[grid]{max: 6}
 
 // newGrid returns a w×h grid. Its cells are not cleared: callers fill every
 // cell.
-func newGrid(w, h int) *Grid {
+func newGrid(w, h int) *grid {
 	w, h = max(w, 1), max(h, 1)
-	if g := grids.get(func(g *Grid) bool { return g.W == w && g.H == h }); g != nil {
+	if g := grids.get(func(g *grid) bool { return g.W == w && g.H == h }); g != nil {
 		return g
 	}
-	return &Grid{W: w, H: h, Cells: make([]gcell, w*h)}
+	return &grid{W: w, H: h, Cells: make([]gcell, w*h)}
 }
 
-// blankGrid returns a grid filled with bg.
-func blankGrid(w, h int, bg RGB) *Grid {
+func blankGrid(w, h int, bg RGB) *grid {
 	g := newGrid(w, h)
 	q := bg.q()
 	for i := range g.Cells {
@@ -54,13 +49,13 @@ func blankGrid(w, h int, bg RGB) *Grid {
 }
 
 // release returns g to the pool. Don't use it afterwards.
-func (g *Grid) release() {
+func (g *grid) release() {
 	if g != nil {
 		grids.put(g)
 	}
 }
 
-func (g *Grid) at(x, y int) *gcell { return &g.Cells[y*g.W+x] }
+func (g *grid) at(x, y int) *gcell { return &g.Cells[y*g.W+x] }
 
 // pixelCell is the cell showing two stacked pixels.
 func pixelCell(top, bot RGB) gcell {
@@ -71,9 +66,9 @@ func pixelCell(top, bot RGB) gcell {
 	return gcell{ch: halfBlock, fg: qt, bg: qb}
 }
 
-// grid converts the scene into cells: pixels as half blocks, with the
+// toGrid converts the scene into cells: pixels as half blocks, with the
 // character layer on top.
-func (s *Scene) grid() *Grid {
+func (s *Scene) toGrid() *grid {
 	g := newGrid(s.W, s.H)
 	w := s.W
 	for y := range s.H {
@@ -100,7 +95,7 @@ func (s *Scene) grid() *Grid {
 // setUV stores a Lip Gloss / Ultraviolet cell at (x, y), which the caller
 // has already clipped. A cell without a foreground takes fg; without a
 // background, bg.
-func (g *Grid) setUV(x, y int, cell *uv.Cell, fg, bg [3]uint8) {
+func (g *grid) setUV(x, y int, cell *uv.Cell, fg, bg [3]uint8) {
 	c := gcell{ch: cell.Content, attrs: cell.Style.Attrs, ul: uint8(cell.Style.Underline)}
 	if c.ch == "" {
 		c.ch = " "
@@ -133,7 +128,7 @@ func colorQ(c color.Color, fallback [3]uint8) [3]uint8 {
 
 // parseGrid draws a styled string (Lip Gloss output, or a frame string)
 // into a fresh w×h grid on the theme's background.
-func parseGrid(s string, w, h int, t *Theme) *Grid {
+func parseGrid(s string, w, h int, t *Theme) *grid {
 	g := blankGrid(w, h, t.Background)
 	g.draw(0, 0, s, false, t.Text)
 	return g
@@ -142,7 +137,7 @@ func parseGrid(s string, w, h int, t *Theme) *Grid {
 // draw places a styled block with its top-left corner at (x, y), with fg
 // for text that has no color of its own. If transparent, unstyled spaces
 // are skipped.
-func (g *Grid) draw(x, y int, block string, transparent bool, fg RGB) {
+func (g *grid) draw(x, y int, block string, transparent bool, fg RGB) {
 	q := fg.q()
 	blit(block, x, y, g.W, g.H, transparent, func(tx, ty int, c *uv.Cell) {
 		g.setUV(tx, ty, c, q, g.at(tx, ty).bg)

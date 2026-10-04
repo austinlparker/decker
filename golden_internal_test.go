@@ -222,13 +222,8 @@ func slideFrame(s Slide, w, h int, t float64, step int) string {
 // toRGB24), at w×h video pixels.
 func rgbFrame(s Slide, w, h int, t float64, step int) []byte {
 	out := make([]byte, 3*w*h)
-	captureFrame = func(p *Pixels) {
-		if p.W == w && p.H == h {
-			toRGB24(p, out)
-		}
-	}
-	defer func() { captureFrame = nil }()
-	renderSlide(s, Ctx{W: w, H: h / 2, T: t, Step: step, StepT: t, Theme: testTheme})
+	sink := &frameSink{pixels: func(p *Pixels) { toRGB24(p, out) }}
+	renderSlide(s, Ctx{W: w, H: h / 2, T: t, Step: step, StepT: t, Theme: testTheme, sink: sink})
 	return out
 }
 
@@ -364,9 +359,6 @@ func goldenVideoFrames(t *testing.T, g *goldenEntries) {
 		hw := &hashWriter{h: sha256.New(), size: 3 * o.width * o.height}
 		if err := writeVideoFrames(d, o, hw); err != nil {
 			t.Fatal(err)
-		}
-		if captureFrame != nil {
-			t.Fatal("video rendering left the capture hook on")
 		}
 		g.addString("videoloop/"+name+"/frames", fmt.Sprint(hw.frames))
 		g.add("videoloop/"+name+"/stream", hw.h.Sum(nil))
@@ -510,7 +502,7 @@ func goldenModel(t *testing.T, g *goldenEntries) {
 	g.addString("model/keys", trail.String())
 	st, _ := json.Marshal(m.linkState())
 	g.add("model/linkState", st)
-	for _, cmd := range []linkCmd{{Cmd: "next"}, {Cmd: "goto", Slide: 4}, {Cmd: "prevSlide"}, {Cmd: "bogus"}, {Cmd: "last"}, {Cmd: "replay"}} {
+	for _, cmd := range []linkCmd{{Key: "right"}, {Slide: 4}, {Key: "["}, {Key: "bogus"}, {Key: "q"}, {Key: "end"}, {Key: "r"}} {
 		next, _ := m.Update(cmd)
 		m = next.(model)
 		b, _ := json.Marshal(cmd)
@@ -519,11 +511,16 @@ func goldenModel(t *testing.T, g *goldenEntries) {
 	b, _ := json.Marshal(linkOutline{"t", 2})
 	g.add("link/outline", b)
 	var keys []string
-	for k, v := range linkKeys {
-		keys = append(keys, k+"="+v)
+	for k, v := range keyActs {
+		keys = append(keys, fmt.Sprint(k, "=", v.act, v.nav))
 	}
 	sort.Strings(keys)
-	g.addString("link/keys", strings.Join(keys, ","))
+	g.addString("keys/table", strings.Join(keys, ","))
+	var help strings.Builder
+	for _, b := range bindings {
+		fmt.Fprintf(&help, "%q %q\n", b.help, b.what)
+	}
+	g.addString("keys/help", help.String())
 
 	// Messages through Update: sizes, ticks, link commands, builds.
 	um := testModel(d, 0, 0, 0, 0, 0, &devState{})
@@ -542,14 +539,15 @@ func goldenModel(t *testing.T, g *goldenEntries) {
 	send(tickMsg(um.transStart.Add(600 * time.Millisecond))) // the transition is over
 	send(tea.KeyPressMsg{Code: 'l', Text: "l"})
 	send(tea.KeyPressMsg{Code: tea.KeyRight})
-	send(linkCmd{Cmd: "goto", Slide: 1})
-	send(linkCmd{Cmd: "bogus"})
+	send(linkCmd{Slide: 1})
+	send(linkCmd{Key: "bogus"})
 	send(buildDoneMsg{out: "  oops \n", err: fmt.Errorf("exit 1")})
 	send(buildDoneMsg{err: fmt.Errorf("exit 2")})
 	send(buildDoneMsg{})
 	send(struct{}{})
 	g.addString("model/update", upd.String(), view(um))
-	g.addString("model/cur", um.cur().Title, fmt.Sprint(um.bodyHeight(), um.showChrome()))
+	bodyH, _ := um.layout()
+	g.addString("model/cur", um.cur().Title, fmt.Sprint(bodyH, um.showChrome()))
 
 	// A zero-size model draws nothing.
 	g.addString("model/empty", view(testModel(d, 0, 0, 0, 0, 0, nil)))
@@ -561,8 +559,8 @@ func goldenModel(t *testing.T, g *goldenEntries) {
 
 // press sends a key to the model.
 func press(m model, k string) model {
-	next, _ := m.handleKey(k)
-	return next.(model)
+	m, _ = m.handleKey(k)
+	return m
 }
 
 func goldenModelTransitions(t *testing.T, g *goldenEntries) {
@@ -697,8 +695,8 @@ func presenterFor(d *Deck, w, h int, linked bool, slide, step int, previews map[
 	for i, s := range slides {
 		outline[i] = linkOutline{s.Title, s.steps()}
 	}
-	p := presenter{slides: slides, theme: testTheme, sty: testTheme.styles(), socket: "/tmp/x.sock", length: 30 * time.Minute,
-		link: &linkClient{}, previews: previews, now: goldenBase, w: w, h: h, linked: linked}
+	p := newPresenter(d, "/tmp/x.sock", 30*time.Minute)
+	p.previews, p.now, p.w, p.h, p.linked = previews, goldenBase, w, h, linked
 	if slide >= 0 {
 		p.st = linkState{Slide: slide, Step: step, Outline: outline, Notes: slides[slide].Notes, W: 682, H: 171}
 	}
@@ -809,7 +807,7 @@ func goldenPresenter(t *testing.T, g *goldenEntries) {
 	}
 	g.addString("presenter/pace/degenerate", fmt.Sprint(pace(nil, 0, 0, time.Minute, time.Minute), pace(outline, 0, 0, time.Minute, 0)))
 	g.addString("presenter/clock", clock(0), clock(59*time.Second), clock(61*time.Second), clock(-90*time.Second), clock(3601*time.Second), clock(1499*time.Millisecond), clock(1500*time.Millisecond))
-	g.addString("presenter/text", spread("left", "right", 20), spread("left", "right", 8), cutAt("abcdefghij", 10, 3, "X"), indent("a\nb", "  "), truncate("abcdef", 3), truncateLeft("abcdef", 3), truncate("abc", -1))
+	g.addString("presenter/text", spread("left", "right", 20), spread("left", "right", 8), cutAt("abcdefghij", 3, "X"), indent("a\nb", "  "), truncate("abcdef", 3), truncateLeft("abcdef", 3), truncate("abc", -1))
 	p := presenterFor(d, 100, 30, true, 1, 1, previews)
 	g.addString("presenter/placeholder", p.placeholder(20, 5, "message"))
 	g.addString("presenter/frame", frame("a\nb", testTheme.Accent))
@@ -933,7 +931,7 @@ func goldenMisc(t *testing.T, g *goldenEntries) {
 	sc.Overlay(4, 3, "over")
 	g.addString("misc/scene", sc.Render())
 
-	// Grid helpers: blank, clone, pixelCell, setUV clipping a wide char.
+	// grid helpers: blank, clone, pixelCell, setUV clipping a wide char.
 	bg := blankGrid(6, 2, testTheme.Background)
 	bg.draw(4, 0, "界界", false, testTheme.Text) // the second one doesn't fit
 	bg.draw(-1, 1, "界x", true, testTheme.Text)

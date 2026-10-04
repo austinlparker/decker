@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 	"unicode/utf8"
+
+	"github.com/charmbracelet/x/ansi"
 )
 
 // vterm is just enough of a terminal to replay what termWriter writes:
@@ -21,8 +23,8 @@ type vterm struct {
 }
 
 // clone returns a copy of g that is not from the pool.
-func (g *Grid) clone() *Grid {
-	return &Grid{W: g.W, H: g.H, Cells: append([]gcell(nil), g.Cells...)}
+func (g *grid) clone() *grid {
+	return &grid{W: g.W, H: g.H, Cells: append([]gcell(nil), g.Cells...)}
 }
 
 func newVterm(w, h int) *vterm { return &vterm{w: w, h: h, cells: make([]gcell, w*h)} }
@@ -51,7 +53,7 @@ func (v *vterm) feed(t *testing.T, b []byte) {
 		default:
 			r, n := utf8.DecodeRuneInString(s[i:])
 			ch := string(r)
-			wide := r >= 0x1100 && (r < 0x2000 || r > 0x2bff)
+			wide := ansi.StringWidth(ch) > 1
 			if v.cx < v.w {
 				v.cells[v.cy*v.w+v.cx] = gcell{ch: ch, fg: v.fg, bg: v.bg, attrs: v.attrs, wide: wide}
 				if wide && v.cx+1 < v.w {
@@ -108,7 +110,7 @@ func (v *vterm) csi(t *testing.T, params string, final byte) {
 
 // check compares the terminal with g. A plain space's foreground color
 // isn't visible, so it isn't compared.
-func (v *vterm) check(t *testing.T, g *Grid, what string) {
+func (v *vterm) check(t *testing.T, g *grid, what string) {
 	t.Helper()
 	for i, want := range g.Cells {
 		got := v.cells[i]
@@ -135,12 +137,9 @@ func TestTermWriter(t *testing.T) {
 	m.w, m.h = w, h
 	start := m.now
 	for f := range 150 {
-		m.now = start.Add(time.Duration(f) * time.Second / 60)
+		m.advance(start.Add(time.Duration(f) * time.Second / 60))
 		if f == 60 {
 			m.goTo(1, 0, true) // a Push transition to slide 2
-		}
-		if m.transFrom != nil && m.now.Sub(m.transStart).Seconds() >= TransitionDuration {
-			m.transFrom = nil
 		}
 		g := m.frame()
 		out.Reset()

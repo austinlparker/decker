@@ -28,7 +28,7 @@ func TestSceneLayering(t *testing.T) {
 func TestTransitionsKeepSize(t *testing.T) {
 	a := strings.Repeat(strings.Repeat("a", 20)+"\n", 4) + strings.Repeat("a", 20)
 	b := strings.Repeat(strings.Repeat("b", 20)+"\n", 4) + strings.Repeat("b", 20)
-	for _, k := range []Transition{TransitionPush, TransitionDissolve, TransitionWipe} {
+	for k := range transitions {
 		for _, p := range []float64{0, 0.5, 1} {
 			for _, fwd := range []bool{true, false} {
 				out := frameLines(composeTransition(k, a, b, 20, 5, p, fwd, testTheme))
@@ -40,5 +40,22 @@ func TestTransitionsKeepSize(t *testing.T) {
 		if got := frameLines(composeTransition(k, a, b, 20, 5, 1, true, testTheme)); got[0] != strings.Repeat("b", 20) {
 			t.Errorf("transition %d at p=1 should be fully new, got %q", k, got[0])
 		}
+	}
+}
+
+// Only a slide's own scene (Ctx.Scene) is captured by the engine: an
+// off-screen scene of the same size still renders to a string.
+func TestOffscreenSceneRenders(t *testing.T) {
+	s := Slide{Title: "x", View: func(c Ctx) string {
+		off := NewScene(c.W, c.H, c.Theme)
+		off.Text(0, 0, "hi", c.Theme.Text.Color())
+		sc := c.Scene()
+		sc.Put(0, 0, off.Render())
+		return sc.Render()
+	}}
+	g := renderSlideGrid(s, Ctx{W: 10, H: 2, Theme: testTheme})
+	defer g.release()
+	if g.at(0, 0).ch != "h" || g.at(1, 0).ch != "i" {
+		t.Fatalf("off-screen scene was swallowed: %q %q", g.at(0, 0).ch, g.at(1, 0).ch)
 	}
 }

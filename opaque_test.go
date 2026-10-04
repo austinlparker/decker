@@ -28,7 +28,7 @@ func TestFramesAreOpaque(t *testing.T) {
 	d := testDeck()
 	prev := renderSlide(d.Slides[0], Ctx{W: w, H: h, T: 5, Theme: testTheme})
 	next := renderSlide(d.Slides[1], Ctx{W: w, H: h, T: 1.5, Step: 2, StepT: 1.5, Theme: testTheme})
-	for _, tr := range []Transition{TransitionPush, TransitionDissolve, TransitionWipe} {
+	for tr := range transitions {
 		check("transition", composeTransition(tr, prev, next, w, h, 0.5, true, testTheme), h)
 	}
 	m := newModel(d, 3, 0, 30, nil)

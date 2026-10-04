@@ -1,21 +1,16 @@
 package decker
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync"
 	"time"
 )
-
-// The deck and the presenter view (-presenter) run as two processes, in
-// separate windows, and talk over a Unix socket: one JSON object per line.
-// The deck owns the position. It sends a linkState whenever the position
-// changes, and the presenter sends linkCmds to move it. Either window's keys
-// work, so the deck keeps going if the presenter view goes away.
 
 // linkState is what the deck tells the presenter view.
 type linkState struct {
@@ -35,25 +30,22 @@ type linkOutline struct {
 	Steps int    `json:"steps"`
 }
 
-// linkCmd is what the presenter view asks the deck to do.
+// linkCmd is what the presenter view asks the deck to do: press Key (one of
+// the navigation keys in keyActs) or jump to Slide.
 type linkCmd struct {
-	Cmd   string `json:"cmd"`             // next, prev, nextSlide, prevSlide, first, last, goto, replay
-	Slide int    `json:"slide,omitempty"` // 1-based, for goto
-}
-
-// linkKeys maps each command to the deck key that does the same thing.
-var linkKeys = map[string]string{
-	"next": "right", "prev": "left",
-	"nextSlide": "]", "prevSlide": "[",
-	"first": "home", "last": "end",
-	"replay": "r",
+	Key   string `json:"key,omitempty"`
+	Slide int    `json:"slide,omitempty"` // 1-based
 }
 
 // defaultSocket is in the per-user temp directory, named for the deck, so
 // both processes find it without configuration.
 func defaultSocket(name string) string { return filepath.Join(os.TempDir(), name+".sock") }
 
-// linkServer is the deck's end of the link.
+// linkServer is the deck's end of the link. The deck and the presenter view
+// are two processes talking over a Unix socket, one JSON object per line:
+// the deck sends a linkState whenever the position changes, the presenter
+// sends linkCmds. Either window's keys work, so the deck runs on without
+// the presenter view.
 type linkServer struct {
 	ln    net.Listener
 	path  string
@@ -100,6 +92,7 @@ func (s *linkServer) accept() {
 	}
 }
 
+// write drains out to c until it closes; a write error drops the connection.
 func (s *linkServer) write(c net.Conn, out chan []byte) {
 	for b := range out {
 		c.SetWriteDeadline(time.Now().Add(2 * time.Second))
@@ -111,16 +104,19 @@ func (s *linkServer) write(c net.Conn, out chan []byte) {
 }
 
 func (s *linkServer) read(c net.Conn) {
-	sc := bufio.NewScanner(c)
-	for sc.Scan() {
+	for dec := json.NewDecoder(c); ; {
 		var cmd linkCmd
-		if json.Unmarshal(sc.Bytes(), &cmd) == nil && s.onCmd != nil {
+		if dec.Decode(&cmd) != nil {
+			break
+		}
+		if s.onCmd != nil {
 			s.onCmd(cmd)
 		}
 	}
 	s.drop(c)
 }
 
+// drop forgets c and closes it; safe to call twice.
 func (s *linkServer) drop(c net.Conn) {
 	s.mu.Lock()
 	if out, ok := s.conns[c]; ok {
@@ -131,13 +127,10 @@ func (s *linkServer) drop(c net.Conn) {
 	c.Close()
 }
 
-// Publish sends st to every connected presenter view, and to any that
+// publish sends st to every connected presenter view, and to any that
 // connect later. A slow reader gets only the newest state.
-func (s *linkServer) Publish(st linkState) {
-	b, err := json.Marshal(st)
-	if err != nil {
-		return
-	}
+func (s *linkServer) publish(st linkState) {
+	b, _ := json.Marshal(st) // plain data: can't fail
 	b = append(b, '\n')
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -151,16 +144,15 @@ func (s *linkServer) Publish(st linkState) {
 	}
 }
 
-// Close stops serving and removes the socket file.
-func (s *linkServer) Close() {
+// close stops serving and removes the socket file.
+func (s *linkServer) close() {
 	s.ln.Close()
 	s.mu.Lock()
-	for c, out := range s.conns {
-		delete(s.conns, c)
-		close(out)
-		c.Close()
-	}
+	conns := slices.Collect(maps.Keys(s.conns))
 	s.mu.Unlock()
+	for _, c := range conns {
+		s.drop(c)
+	}
 	os.Remove(s.path)
 }
 
@@ -168,7 +160,8 @@ func (s *linkServer) Close() {
 type linkClient struct {
 	mu   sync.Mutex
 	conn net.Conn
-	r    *bufio.Reader
+	enc  *json.Encoder
+	dec  *json.Decoder
 }
 
 // dial connects to the deck, replacing any earlier connection.
@@ -178,51 +171,43 @@ func (l *linkClient) dial(path string) error {
 		return err
 	}
 	l.mu.Lock()
+	defer l.mu.Unlock()
 	if l.conn != nil {
 		l.conn.Close()
 	}
-	l.conn, l.r = c, bufio.NewReader(c)
-	l.mu.Unlock()
+	l.conn, l.enc, l.dec = c, json.NewEncoder(c), json.NewDecoder(c)
 	return nil
 }
 
 // next blocks until the deck sends its next state.
-func (l *linkClient) next() (linkState, error) {
+func (l *linkClient) next() (st linkState, err error) {
 	l.mu.Lock()
-	r := l.r
+	dec := l.dec
 	l.mu.Unlock()
-	var st linkState
-	if r == nil {
+	if dec == nil {
 		return st, net.ErrClosed
 	}
-	line, err := r.ReadBytes('\n')
-	if err != nil {
-		return st, err
-	}
-	return st, json.Unmarshal(line, &st)
+	err = dec.Decode(&st)
+	return st, err
 }
 
 // send asks the deck to do something. It fails quietly when not connected;
 // the presenter view shows the link status.
 func (l *linkClient) send(cmd linkCmd) {
-	b, err := json.Marshal(cmd)
-	if err != nil {
-		return
-	}
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.conn == nil {
 		return
 	}
 	l.conn.SetWriteDeadline(time.Now().Add(time.Second))
-	l.conn.Write(append(b, '\n'))
+	l.enc.Encode(cmd)
 }
 
 func (l *linkClient) close() {
 	l.mu.Lock()
+	defer l.mu.Unlock()
 	if l.conn != nil {
 		l.conn.Close()
-		l.conn, l.r = nil, nil
+		l.conn, l.enc, l.dec = nil, nil, nil
 	}
-	l.mu.Unlock()
 }

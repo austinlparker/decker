@@ -7,14 +7,10 @@ import (
 	"os"
 	"path/filepath"
 	"sync/atomic"
-	"syscall"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
 )
-
-// sheetCols is how many frames a contact sheet has per row.
-const sheetCols = 4
 
 // options are the command-line flags of Main.
 type options struct {
@@ -130,7 +126,7 @@ func runSheet(d *Deck, o options) error {
 	for i, s := range d.Slides {
 		frames = append(frames, stillFrame(d, i, s.steps()-1, o.at, o.width, o.height))
 	}
-	return writeSheet(frames, o.width, o.height, sheetCols, o.shrink, o.sheet, d.Theme)
+	return writeSheet(frames, o.width, o.height, 4, o.shrink, o.sheet, d.Theme)
 }
 
 func runSnapshot(d *Deck, o options) error {
@@ -152,8 +148,7 @@ func runLive(d *Deck, o options) error {
 		}
 	}
 
-	// The presenter view connects over the link; it's always on, and costs
-	// nothing when nobody connects.
+	// The link is always on; it costs nothing until a presenter view connects.
 	var prog atomic.Pointer[tea.Program]
 	link, err := listenLink(o.socket, func(c linkCmd) {
 		if p := prog.Load(); p != nil {
@@ -163,8 +158,7 @@ func runLive(d *Deck, o options) error {
 	if err != nil {
 		return err
 	}
-	// The deck draws its own frames (see termout.go); Bubble Tea handles
-	// keys and the program loop.
+	// The deck draws its own frames; Bubble Tea only handles keys.
 	live, err := startLiveTerminal(d.Theme)
 	if err != nil {
 		return err
@@ -177,15 +171,14 @@ func runLive(d *Deck, o options) error {
 	live.watchSize(p)
 	final, err := p.Run()
 	live.close()
-	link.Close()
+	link.close()
 	if err != nil {
 		return err
 	}
 	if m, ok := final.(model); ok && m.execOnQuit != nil {
 		// Dev mode rebuilt us: become the new binary, on the same slide. A
 		// connected presenter view sees the link drop and reconnects.
-		args := append(m.execOnQuit, "-socket", o.socket)
-		if err := syscall.Exec(args[0], args, os.Environ()); err != nil {
+		if err := execRestart(m.execOnQuit, o.socket); err != nil {
 			return fmt.Errorf("restart failed: %w", err)
 		}
 	}

@@ -29,18 +29,17 @@ type Scene struct {
 	cells []*uv.Cell // character-layer cells; nil where the pixels show
 	used  []int      // indexes of set cells, for clearing on reuse
 
-	ink     RGB           // character-layer text with no color of its own
-	overlay func(*Pixels) // drawn over the pixels by Render (Theme.Overlay)
+	ink          RGB           // character-layer text with no color of its own
+	themeOverlay func(*Pixels) // drawn over the pixels by Render (Theme.Overlay)
+	sink         *frameSink    // set by Ctx.Scene while the engine is capturing the slide
 }
 
-// Scenes are big (a 682×171 scene is ~2.8MB of pixels) and a slide makes a
-// new one every frame, so they're recycled: Render returns its scene to
-// the pool once the frame is encoded.
+// A 682×171 scene is ~2.8MB of pixels and a slide makes one every frame:
+// recycle them. Render returns its scene to the pool.
 var scenes = sizedPool[Scene]{max: 4}
 
 // NewScene returns an empty scene of the given size in cells, on the
-// theme's background. Slides get theirs from Ctx.Scene, which also adds the
-// theme's overlay; use NewScene to draw something off screen.
+// theme's background, to draw something off screen. Slides use Ctx.Scene.
 func NewScene(w, h int, t *Theme) *Scene {
 	w, h = max(w, 1), max(h, 1)
 	if s := scenes.get(func(s *Scene) bool { return s.W == w && s.H == h }); s != nil {
@@ -51,11 +50,10 @@ func NewScene(w, h int, t *Theme) *Scene {
 	return &Scene{W: w, H: h, Px: NewPixels(w, 2*h, t.Background), ink: t.Text}
 }
 
-// Release returns a scene to the pool without rendering it, once you've
-// taken what you need from its pixels. Don't use it afterwards, or after
-// Render, which already releases the scene.
+// Release returns a scene to the pool without rendering it. Don't use the
+// scene afterwards, or after Render, which already releases it.
 func (s *Scene) Release() {
-	s.overlay = nil
+	s.themeOverlay, s.sink = nil, nil
 	for _, i := range s.used {
 		s.cells[i] = nil
 	}
@@ -106,8 +104,7 @@ func (s *Scene) Text(x, y int, text string, fg color.Color, attrs ...uint8) {
 	}
 }
 
-// runes draws the non-space runes of line from (x, y), one cell each, styled
-// by style(i) for the i-th rune.
+// runes draws the non-space runes of line from (x, y), styled by style(i).
 func (s *Scene) runes(x, y int, line string, style func(i int) uv.Style) {
 	col := 0
 	for i, r := range []rune(line) {
@@ -187,43 +184,26 @@ func (s *Scene) Sprite(x, y int, sp Sprite) {
 }
 
 // Render returns the scene as a string of exactly H lines of W cells, with
-// every cell's background explicit (see Grid.String), and releases the
-// scene: don't use it afterwards. It returns "" while a capture hook is set.
+// every cell's background explicit, and releases the scene. When the engine
+// is capturing, the slide's own scene (from Ctx.Scene) hands it the frame
+// instead and Render returns "".
 func (s *Scene) Render() string {
-	if s.overlay != nil {
-		s.overlay(s.Px)
+	if s.themeOverlay != nil {
+		s.themeOverlay(s.Px)
 	}
-	if captureFrame != nil {
-		captureFrame(s.Px)
+	k := s.sink
+	if k != nil && k.pixels != nil {
+		k.pixels(s.Px)
 		s.Release()
 		return ""
 	}
-	g := s.grid()
+	g := s.toGrid()
 	s.Release()
-	if captureGrid != nil {
-		captureGrid(g)
+	if k != nil && k.grid != nil {
+		k.grid(g)
 		return ""
 	}
 	out := g.String()
 	g.release()
 	return out
-}
-
-// captureFrame, when set, receives each scene's pixels in place of Render
-// encoding them, before the scene is reused. Video rendering sets it; it
-// isn't safe to use from more than one goroutine.
-var captureFrame func(*Pixels)
-
-// captureGrid, when set, receives each scene's cells in place of Render
-// encoding them, and owns the grid. renderSlideGrid sets it; it isn't safe
-// to use from more than one goroutine.
-var captureGrid func(*Grid)
-
-// opaque redraws a styled string (the footer, panels, an error message) as
-// a w×h scene on the theme's background, so it gets an explicit background
-// color everywhere, like the slides.
-func opaque(s string, w, h int, t *Theme) string {
-	sc := NewScene(w, h, t)
-	sc.Put(0, 0, s)
-	return sc.Render()
 }

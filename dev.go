@@ -1,25 +1,26 @@
 package decker
 
 import (
+	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime/debug"
+	"slices"
+	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/fsnotify/fsnotify"
 )
 
-// Dev mode (-dev): watch the Go sources, rebuild on save, and if the build
-// succeeds, replace this process with the new binary on the same slide.
-// If the build fails, the compiler output is shown on top of the deck and
-// the old version keeps running.
-//
-// It rebuilds the running deck's own main package, and watches every
-// package of the same module that the deck imports, so editing the talk or
-// the engine both reload.
-
+// devState implements -dev: it watches the Go sources, rebuilds on save, and
+// if the build succeeds, the process is replaced by the new binary on the
+// same slide. If the build fails, the compiler output shows on top of the
+// deck and the old version keeps running. It rebuilds the running deck's
+// own main package and watches every package of the same module that the
+// deck imports, so editing the talk or the engine both reload.
 type devState struct {
 	events     chan struct{}
 	pkg        string // the package to build
@@ -40,6 +41,7 @@ type buildDoneMsg struct {
 // debounce waits for saves to settle (editors often write several times).
 const debounce = 250 * time.Millisecond
 
+// startDev starts watching the deck's module; rebuilt binaries go to bin.
 func startDev(bin string) (*devState, error) {
 	pkg, dirs := devTarget()
 	w, err := fsnotify.NewWatcher()
@@ -55,10 +57,8 @@ func startDev(bin string) (*devState, error) {
 	go func() {
 		for ev := range w.Events {
 			name := filepath.Base(ev.Name)
-			if strings.HasPrefix(name, ".") || !(strings.HasSuffix(name, ".go") || name == "go.mod" || name == "go.sum") {
-				continue
-			}
-			if ev.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Rename|fsnotify.Remove) == 0 {
+			if ev.Op == fsnotify.Chmod || strings.HasPrefix(name, ".") ||
+				!(strings.HasSuffix(name, ".go") || name == "go.mod" || name == "go.sum") {
 				continue
 			}
 			select {
@@ -70,6 +70,7 @@ func startDev(bin string) (*devState, error) {
 	return d, nil
 }
 
+// wait returns a command that delivers one fileChangedMsg; re-issue it after each.
 func (d *devState) wait() tea.Cmd {
 	return func() tea.Msg {
 		<-d.events
@@ -77,11 +78,45 @@ func (d *devState) wait() tea.Cmd {
 	}
 }
 
-func (d *devState) build() tea.Cmd {
+// changed records a file change and waits for the next one.
+func (d *devState) changed() tea.Cmd {
+	d.pending, d.lastChange = true, time.Now()
+	return d.wait()
+}
+
+// tick starts a build once the changes have settled.
+func (d *devState) tick(now time.Time) tea.Cmd {
+	if !d.pending || d.building || now.Sub(d.lastChange) <= debounce {
+		return nil
+	}
+	d.pending, d.building = false, true
 	return func() tea.Msg {
 		out, err := exec.Command("go", "build", "-o", d.bin, d.pkg).CombinedOutput()
 		return buildDoneMsg{out: string(out), err: err}
 	}
+}
+
+// built records a finished build and reports whether it succeeded.
+func (d *devState) built(msg buildDoneMsg) bool {
+	d.building = false
+	d.buildErr = ""
+	if msg.err != nil {
+		if d.buildErr = strings.TrimSpace(msg.out); d.buildErr == "" {
+			d.buildErr = msg.err.Error()
+		}
+	}
+	return msg.err == nil
+}
+
+// restartArgs is the command line that reopens the rebuilt deck at slide and step (1-based).
+func (d *devState) restartArgs(slide, step, fps int) []string {
+	return []string{d.bin, "-dev", "-slide", strconv.Itoa(slide), "-step", strconv.Itoa(step), "-fps", strconv.Itoa(fps)}
+}
+
+// execRestart replaces this process with args, linked over socket.
+func execRestart(args []string, socket string) error {
+	args = append(args, "-socket", socket)
+	return syscall.Exec(args[0], args, os.Environ())
 }
 
 // devTarget returns the running deck's main package and the directories of
@@ -94,21 +129,13 @@ func devTarget() (pkg string, dirs []string) {
 	}
 	out, err := exec.Command("go", "list", "-deps",
 		"-f", "{{if .Module}}{{if .Module.Main}}{{.Dir}}{{end}}{{end}}", pkg).Output()
-	if err != nil {
-		return ".", []string{"."}
-	}
-	for _, dir := range strings.Split(string(out), "\n") {
-		if dir != "" {
-			dirs = append(dirs, dir)
-		}
-	}
-	if len(dirs) == 0 {
+	dirs = slices.DeleteFunc(strings.Split(string(out), "\n"), func(d string) bool { return d == "" })
+	if err != nil || len(dirs) == 0 {
 		return ".", []string{"."}
 	}
 	return pkg, dirs
 }
 
-// status is a short footer label.
 func (d *devState) status(st styles) string {
 	switch {
 	case d.building:

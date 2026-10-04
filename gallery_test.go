@@ -892,8 +892,7 @@ func slideScene() Slide {
 			sc.Text(1, c.H-3, fmt.Sprintf("sprite %dx%d", sw, sh), th.Muted.Color())
 
 			// Off-screen scenes: draw into one, copy its pixels out, and
-			// release it. (Render inside a View would be swallowed by the
-			// live deck's capture hook, so these are Release-only.)
+			// release it.
 			off := NewScene(24, 5, th)
 			off.Px.Disc(8, 5, 6, th.Accent, 1)
 			off.Px.Glow(30, 5, 10, th.Accent2, 0.8)

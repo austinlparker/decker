@@ -38,9 +38,6 @@ func TestVideoFrames(t *testing.T) {
 	if w.frames != want {
 		t.Fatalf("%d frames, want %d", w.frames, want)
 	}
-	if captureFrame != nil {
-		t.Fatal("video rendering left the capture hook on")
-	}
 }
 
 func TestVideoFramesAreDrawn(t *testing.T) {
