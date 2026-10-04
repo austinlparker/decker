@@ -1,6 +1,7 @@
 package decker
 
 import (
+	"bytes"
 	"image"
 	_ "image/jpeg"
 	_ "image/png"
@@ -27,9 +28,10 @@ func NewImages(fsys fs.FS, dir string) *Images {
 }
 
 type decodedImage struct {
-	mu    *sync.Mutex // the Images' lock, which also guards cache
-	w, h  int
-	pix   []RGB // nil when the file is missing or unreadable
+	w, h int
+	pix  []RGB // nil when the file is missing or unreadable
+
+	mu    sync.Mutex
 	cache map[[2]int][]RGB
 }
 
@@ -39,9 +41,9 @@ func (ims *Images) load(name string) *decodedImage {
 	if im, ok := ims.cache[name]; ok {
 		return im
 	}
-	im := &decodedImage{mu: &ims.mu}
-	if f, err := ims.fsys.Open(path.Join(ims.dir, name)); err == nil {
-		if src, _, err := image.Decode(f); err == nil {
+	im := &decodedImage{cache: map[[2]int][]RGB{}}
+	if data, err := fs.ReadFile(ims.fsys, path.Join(ims.dir, name)); err == nil {
+		if src, _, err := image.Decode(bytes.NewReader(data)); err == nil {
 			b := src.Bounds()
 			im.w, im.h = b.Dx(), b.Dy()
 			im.pix = make([]RGB, im.w*im.h)
@@ -51,7 +53,6 @@ func (ims *Images) load(name string) *decodedImage {
 				}
 			}
 		}
-		f.Close()
 	}
 	ims.cache[name] = im
 	return im
@@ -71,7 +72,7 @@ func (ims *Images) Draw(p *Pixels, name string, x, y, w, h, alpha float64) (dx, 
 	if im.pix == nil || w < 1 || h < 1 {
 		return 0, 0, 0, 0, false
 	}
-	s := math.Min(w/float64(im.w), h/float64(im.h))
+	s := min(w/float64(im.w), h/float64(im.h))
 	sw, sh := max(int(float64(im.w)*s), 1), max(int(float64(im.h)*s), 1)
 	scaled := im.scaled(sw, sh)
 	ix, iy := int(math.Round(x+(w-float64(sw))/2)), int(math.Round(y+(h-float64(sh))/2))
@@ -87,9 +88,6 @@ func (ims *Images) Draw(p *Pixels, name string, x, y, w, h, alpha float64) (dx, 
 func (im *decodedImage) scaled(w, h int) []RGB {
 	im.mu.Lock()
 	defer im.mu.Unlock()
-	if im.cache == nil {
-		im.cache = map[[2]int][]RGB{}
-	}
 	if out, ok := im.cache[[2]int{w, h}]; ok {
 		return out
 	}
