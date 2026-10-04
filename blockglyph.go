@@ -47,7 +47,8 @@ var solidRunes = func() map[rune]bool {
 	return m
 }()
 
-// drawBlockRunePx paints one block or box-drawing rune into the k×2k box at (x, y).
+// drawBlockRunePx paints one block or box-drawing rune into the k×2k box at (x,
+// y).
 func drawBlockRunePx(p *Pixels, r rune, x, y, k float64, c RGB, a float64) {
 	cw, ch := k, 2*k
 	if m, ok := quadrants[r]; ok {

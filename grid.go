@@ -7,13 +7,15 @@ import (
 	uv "github.com/charmbracelet/ultraviolet"
 )
 
-// grid is one finished frame of terminal cells: what the live deck writes and frame strings encode.
+// grid is one finished frame of terminal cells: what the live deck writes and
+// frame strings encode.
 type grid struct {
 	W, H  int
 	Cells []gcell
 }
 
-// gcell is a space or half block (▀) with explicit colors, or a rich cell with text attributes.
+// gcell is a space or half block (▀) with explicit colors, or a rich cell with
+// text attributes.
 type gcell struct {
 	ch     string // one grapheme; "" for the second half of a wide character
 	fg, bg [3]uint8
@@ -62,7 +64,8 @@ func pixelCell(top, bot RGB) gcell {
 	return gcell{ch: halfBlock, fg: qt, bg: qb}
 }
 
-// toGrid converts the scene to cells: pixels as half blocks, character layer on top.
+// toGrid converts the scene to cells: pixels as half blocks, character layer on
+// top.
 func (s *Scene) toGrid() *grid {
 	g := newGrid(s.W, s.H)
 	w := s.W
@@ -87,7 +90,8 @@ func (s *Scene) toGrid() *grid {
 	return g
 }
 
-// setUV stores a cell at an already-clipped (x, y); a missing foreground takes fg, a missing background bg.
+// setUV stores a cell at an already-clipped (x, y); a missing foreground takes
+// fg, a missing background bg.
 func (g *grid) setUV(x, y int, cell *uv.Cell, fg, bg [3]uint8) {
 	c := gcell{ch: cell.Content, attrs: cell.Style.Attrs, ul: uint8(cell.Style.Underline)}
 	if c.ch == "" {
@@ -119,14 +123,16 @@ func colorQ(c color.Color, fallback [3]uint8) [3]uint8 {
 	return toRGB(c).q()
 }
 
-// parseGrid draws a styled string into a fresh w×h grid on the theme's background.
+// parseGrid draws a styled string into a fresh w×h grid on the theme's
+// background.
 func parseGrid(s string, w, h int, t *Theme) *grid {
 	g := blankGrid(w, h, t.Background)
 	g.draw(0, 0, s, false, t.Text)
 	return g
 }
 
-// draw places a styled block at (x, y); fg colors text with none. If transparent, unstyled spaces are skipped.
+// draw places a styled block at (x, y); fg colors text with none. If
+// transparent, unstyled spaces are skipped.
 func (g *grid) draw(x, y int, block string, transparent bool, fg RGB) {
 	q := fg.q()
 	blit(block, x, y, g.W, g.H, transparent, func(tx, ty int, c *uv.Cell) {
@@ -134,8 +140,9 @@ func (g *grid) draw(x, y int, block string, transparent bool, fg RGB) {
 	})
 }
 
-// blit parses a styled block and calls set for each visible cell landing inside a w×h area with
-// the block's top-left at (x, y). If transparent, unstyled spaces are skipped. set must not keep c.
+// blit parses a styled block and calls set for each visible cell landing inside
+// a w×h area with the block's top-left at (x, y). If transparent, unstyled
+// spaces are skipped. set must not keep c.
 func blit(block string, x, y, w, h int, transparent bool, set func(tx, ty int, c *uv.Cell)) {
 	bw, bh := lipgloss.Size(block)
 	if bw == 0 || bh == 0 {

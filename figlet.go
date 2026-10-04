@@ -43,9 +43,9 @@ const hardBlank = ' '
 
 func stockFig(name string) *FigFont { return LoadFigFont(figFiles, "fonts/figlet/"+name+".flf") }
 
-// LoadFigFont loads a FIGlet (.flf) font from fsys, named after its file. Fonts of
-// block (█ ▀ ▄ ░) and box-drawing (═ ║ ╗) characters draw best. It panics if the
-// font is missing or broken.
+// LoadFigFont loads a FIGlet (.flf) font from fsys, named after its file. Fonts
+// of block (█ ▀ ▄ ░) and box-drawing (═ ║ ╗) characters draw best. It panics if
+// the font is missing or broken.
 func LoadFigFont(fsys fs.FS, path string) *FigFont {
 	b, err := fs.ReadFile(fsys, path)
 	if err != nil {
@@ -59,8 +59,9 @@ func LoadFigFont(fsys fs.FS, path string) *FigFont {
 	return f
 }
 
-// parseFig reads the .flf format: header, comment lines, then each character's rows,
-// which end with an end mark (usually '@', doubled on the last row). Only ASCII is loaded.
+// parseFig reads the .flf format: header, comment lines, then each character's
+// rows, which end with an end mark (usually '@', doubled on the last row). Only
+// ASCII is loaded.
 func parseFig(name, src string) (*FigFont, error) {
 	sc := bufio.NewScanner(strings.NewReader(src))
 	sc.Buffer(make([]byte, 1<<16), 1<<20)
@@ -251,7 +252,8 @@ func (f *FigFont) Wrap(s string, maxW int) []string {
 	return wrapGreedy(s, float64(maxW), func(l string) float64 { return float64(f.Width(l)) })
 }
 
-// Has reports whether the font has a visible glyph for each non-space rune of s.
+// Has reports whether the font has a visible glyph for each non-space rune of
+// s.
 func (f *FigFont) Has(s string) bool {
 	for _, r := range s {
 		if r == ' ' || r == '\n' {

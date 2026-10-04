@@ -24,7 +24,8 @@ func (a Align) shift(w float64) float64 {
 	return 0
 }
 
-// DefaultLeading is the line height, as a multiple of size, used when Leading is 0.
+// DefaultLeading is the line height, as a multiple of size, used when Leading
+// is 0.
 const DefaultLeading = 1.1
 
 func leadingOr(l float64) float64 {
@@ -34,7 +35,8 @@ func leadingOr(l float64) float64 {
 	return l
 }
 
-// Text draws a block of raster type with a Font; sizes below 4 pixels are drawn at 4.
+// Text draws a block of raster type with a Font; sizes below 4 pixels are drawn
+// at 4.
 type Text struct {
 	Font    *Font   // required
 	Size    int     // pixels
@@ -49,8 +51,8 @@ type Text struct {
 	// MaxW, if set, wraps lines to this width.
 	MaxW float64
 
-	// Shine returns extra brightness (0..1) at horizontal position u, 0 at the block's
-	// left edge to 1 at its right; see ShineBand.
+	// Shine returns extra brightness (0..1) at horizontal position u, 0 at the
+	// block's left edge to 1 at its right; see ShineBand.
 	Shine func(u float64) float64
 
 	FX GlyphEffect
@@ -78,20 +80,22 @@ func (t Text) DrawMid(p *Pixels, s string, x, cy float64) (w, h float64) {
 	return t.Draw(p, s, x, baseline-t.baseOff(f, size))
 }
 
-// Baseline is the distance from the top of a line to its baseline, as Draw lays it out.
+// Baseline is the distance from the top of a line to its baseline, as Draw lays
+// it out.
 func (t Text) Baseline() float64 {
 	f, size := t.resolved()
 	return t.baseOff(f, size)
 }
 
-// baseOff is the top-of-line to baseline distance; the 0.08*size nudge centers ink in the line box.
+// baseOff is the top-of-line to baseline distance; the 0.08*size nudge centers
+// ink in the line box.
 func (t Text) baseOff(f *Font, size int) float64 {
 	return f.Ascent(size) + (float64(size)*leadingOr(t.Leading)-float64(size))/2 - float64(size)*0.08
 }
 
-// Draw renders s (which may contain "\n") with its top edge at y and returns the
-// block's size. With FX, glyph indexes count every rune of every line, spaces
-// included, plus one per line break.
+// Draw renders s (which may contain "\n") with its top edge at y and returns
+// the block's size. With FX, glyph indexes count every rune of every line,
+// spaces included, plus one per line break.
 func (t Text) Draw(p *Pixels, s string, x, y float64) (w, h float64) {
 	f, size := t.resolved()
 	if t.MaxW > 0 {
@@ -107,7 +111,8 @@ func (t Text) Draw(p *Pixels, s string, x, y float64) (w, h float64) {
 	h = lineH * float64(len(lines))
 	blockX := x + t.Align.shift(w)
 
-	// The coverage buffer is padded by size on every side for glow and effect motion.
+	// The coverage buffer is padded by size on every side for glow and effect
+	// motion.
 	pad := float64(size)
 	cov := newCoverage(int(math.Floor(blockX-pad)), int(math.Floor(y-pad)), int(math.Ceil(w+2*pad))+1, int(math.Ceil(h+2*pad))+1)
 	t.stamp(cov, f, size, lines, widths, x, y, lineH)

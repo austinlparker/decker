@@ -2,8 +2,9 @@ package decker
 
 import "charm.land/lipgloss/v2"
 
-// Theme is the deck's palette and typefaces. The engine paints its chrome (background, footer,
-// help, notes, presenter view, wipe) with the colors; stock components use the fonts. Display, Body and Mono are required.
+// Theme is the deck's palette and typefaces. The engine paints its chrome
+// (background, footer, help, notes, presenter view, wipe) with the colors;
+// stock components use the fonts. Display, Body and Mono are required.
 type Theme struct {
 	Background RGB // painted behind every slide, so the deck looks the same in any terminal
 	Text       RGB // default text
@@ -20,7 +21,8 @@ type Theme struct {
 	Mono    *Font // code
 
 	// Overlay, if set, draws after every slide into the full canvas p (a TV
-	// station's bug), with the slide's Ctx. Slides should leave its corner clear.
+	// station's bug), with the slide's Ctx. Slides should leave its corner
+	// clear.
 	Overlay func(c Ctx, p *Pixels)
 }
 

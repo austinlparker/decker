@@ -2,10 +2,10 @@ package decker
 
 import "sync"
 
-// memo is a concurrency-safe cache for per-frame layout, which slides redo every
-// frame with the same arguments. It empties itself past max entries so a window
-// resize minting new keys can't grow it without bound. The zero value works
-// apart from max.
+// memo is a concurrency-safe cache for per-frame layout, which slides redo
+// every frame with the same arguments. It empties itself past max entries so a
+// window resize minting new keys can't grow it without bound. The zero value
+// works apart from max.
 type memo[K comparable, V any] struct {
 	mu  sync.Mutex
 	m   map[K]V

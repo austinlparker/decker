@@ -12,7 +12,8 @@ import (
 type tickMsg time.Time
 
 // model is the Bubble Tea model of a running deck. With live set, frames go to
-// the terminal writer and View is empty; otherwise (snapshots, tests) View returns them.
+// the terminal writer and View is empty; otherwise (snapshots, tests) View
+// returns them.
 type model struct {
 	slides    []Slide
 	theme     *Theme
@@ -138,7 +139,8 @@ func (m model) handle(msg tea.Msg) (model, tea.Cmd) {
 	return m, nil
 }
 
-// handleKey applies one key; digits build a count that g, Home or Enter turn into a jump.
+// handleKey applies one key; digits build a count that g, Home or Enter turn
+// into a jump.
 func (m model) handleKey(k string) (model, tea.Cmd) {
 	if n, done := countKey(&m.count, k); done {
 		if n > 0 {
@@ -234,7 +236,8 @@ func (m model) ctx(h int) Ctx {
 	}
 }
 
-// body draws the slide area at exactly m.w × h, mixed with the previous slide during a transition.
+// body draws the slide area at exactly m.w × h, mixed with the previous slide
+// during a transition.
 func (m model) body(h int) *grid {
 	g := renderSlideGrid(m.cur(), m.ctx(h))
 	if from := m.transFrom; from != nil && from.W == g.W && from.H == g.H {
@@ -271,7 +274,8 @@ func (m model) frame() *grid {
 	return g
 }
 
-// View is the frame as a string, for snapshots and tests; the live deck writes frames itself (termout.go).
+// View is the frame as a string, for snapshots and tests; the live deck writes
+// frames itself (termout.go).
 func (m model) View() tea.View {
 	if m.live != nil || m.w == 0 || m.h == 0 {
 		return tea.NewView("")
@@ -288,7 +292,8 @@ func (m model) View() tea.View {
 const chromeHeight = 1
 
 // showChrome reports whether to draw the footer: a dev-mode aid (build status,
-// slide counter) the audience never sees; presenting shows progress in the presenter view.
+// slide counter) the audience never sees; presenting shows progress in the
+// presenter view.
 func (m model) showChrome() bool { return m.dev != nil && !m.cur().HideChrome }
 
 // layout returns the height left for the slide and the panels below it.

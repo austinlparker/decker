@@ -44,7 +44,8 @@ var wraps = memo[wrapKey, []string]{max: 8192}
 
 // Wrap breaks s at spaces into lines no wider than maxW, keeping "\n" breaks.
 // Lines are balanced: it uses the narrowest width needing no more lines than
-// maxW does, so "What Your MCP / Server Does" beats "What Your MCP Server / Does".
+// maxW does, so "What Your MCP / Server Does" beats "What Your MCP Server /
+// Does".
 func (f *Font) Wrap(s string, size int, maxW float64) []string {
 	return slices.Clone(wraps.get(wrapKey{f, s, size, maxW}, func() []string { return f.wrapBalanced(s, size, maxW) }))
 }
@@ -93,8 +94,8 @@ type fitResult struct {
 
 var fitted = memo[fitKey, fitResult]{max: 5000}
 
-// fit finds the largest size at which parts, each wrapped to maxW, stack into at
-// most maxH. If none fits it returns the smallest size wrapped to the width:
+// fit finds the largest size at which parts, each wrapped to maxW, stack into
+// at most maxH. If none fits it returns the smallest size wrapped to the width:
 // running taller beats running off the side of the screen.
 func (f *Font) fit(parts []string, maxW, maxH float64, maxSize int, leading float64) (int, []string) {
 	wrap := func(size int) (lines []string) {
@@ -123,8 +124,8 @@ func (f *Font) Fit(s string, maxW, maxH float64, maxSize int, leading float64) (
 	return r.size, strings.Join(r.lines, "\n")
 }
 
-// FitAll is Fit for several parts stacked at DefaultLeading; it returns the size
-// and all the wrapped lines in order.
+// FitAll is Fit for several parts stacked at DefaultLeading; it returns the
+// size and all the wrapped lines in order.
 func FitAll(f *Font, parts []string, maxW, maxH float64, maxSize int) (int, []string) {
 	r := fitted.get(fitKey{f, strings.Join(parts, "\x00"), maxW, maxH, maxSize, DefaultLeading, true}, func() fitResult {
 		size, lines := f.fit(parts, maxW, maxH, maxSize, DefaultLeading)

@@ -77,7 +77,8 @@ func (b Block) Draw(p *Pixels, s string, x, y float64) (w, h float64) {
 	return w, h
 }
 
-// place lays out lines, runs the effects, and returns the cells that stay visible.
+// place lays out lines, runs the effects, and returns the cells that stay
+// visible.
 func (b Block) place(lines []string, cw, ch int, left, y, k float64, shadow RGB) []placedCell {
 	var cells []placedCell
 	row0, chars := 0, 0

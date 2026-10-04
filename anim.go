@@ -61,7 +61,8 @@ func Spring(from, to, t, freq, damping float64) float64 {
 	}
 	sp := harmonica.NewSpring(harmonica.FPS(fps), freq, damping)
 	pos, vel := from, 0.0
-	// Land exactly on `to` once settled: a 1e-7 residual can flip a rounded position every frame.
+	// Land exactly on `to` once settled: a 1e-7 residual can flip a rounded
+	// position every frame.
 	eps := max(math.Abs(to-from), 1) * 1e-4
 	for i := 0; i < n; i++ {
 		pos, vel = sp.Update(pos, vel, to)
@@ -86,7 +87,8 @@ func Hash01(x, y, seed int) float64 {
 
 // Clamp01 clamps p to [0, 1].
 func Clamp01(p float64) float64 {
-	// Plain comparisons: per-pixel hot path, and math.Max/Min's NaN handling is slower.
+	// Plain comparisons: per-pixel hot path, and math.Max/Min's NaN handling is
+	// slower.
 	if p < 0 {
 		return 0
 	}

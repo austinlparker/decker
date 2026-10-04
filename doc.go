@@ -25,13 +25,15 @@
 //
 // # Main types
 //
-//   - [Deck], [Slide]: the talk, and one slide with its steps, notes and [Transition].
+//   - [Deck], [Slide]: the talk, and one slide with its steps, notes and
+//     [Transition].
 //   - [Ctx]: what changes between frames (T, Step, StepT), plus layout helpers.
 //   - [Theme]: colors, typefaces and an optional overlay the engine uses.
-//   - [Scene], [Pixels]: the canvas a View draws on, and the cells layered above it.
+//   - [Scene], [Pixels]: the canvas a View draws on, and the cells above it.
 //   - [Text], [Font]: smooth antialiased type, fitted and wrapped to a box.
 //   - [Block], [FigFont]: FIGlet block letters scaled to fill a box ([FitBlock]).
-//   - [GlyphEffect], [BlockEffect]: per-letter and per-cell animations, combined with [Chain] and [BlockChain].
+//   - [GlyphEffect], [BlockEffect]: per-letter and per-cell animations,
+//     combined with [Chain] and [BlockChain].
 //   - [Transition]: how a slide enters (push, dissolve, wipe, none).
 //
 // Stock components ([Panel], [Arrow], [CycleDiagram], [BulletList]) and

@@ -19,13 +19,13 @@ func (a GlyphFX) then(b GlyphFX) GlyphFX {
 	return a
 }
 
-// GlyphEffect animates the glyphs of a Text (Text.FX); i counts glyphs across all
-// lines, spaces and line breaks included.
+// GlyphEffect animates the glyphs of a Text (Text.FX); i counts glyphs across
+// all lines, spaces and line breaks included.
 //
-// Constructors take t, the seconds since the effect starts. Effects must be pure
-// functions of t and i (no clock, no math/rand; use Hash01) so frames replay
-// exactly. The zero GlyphFX hides the glyph: return it before the effect reaches
-// i, and GlyphFX{Alpha: 1} for glyphs left alone.
+// Constructors take t, the seconds since the effect starts. Effects must be
+// pure functions of t and i (no clock, no math/rand; use Hash01) so frames
+// replay exactly. The zero GlyphFX hides the glyph: return it before the effect
+// reaches i, and GlyphFX{Alpha: 1} for glyphs left alone.
 type GlyphEffect func(i int) GlyphFX
 
 func staggered(t, per float64, f func(lt float64) GlyphFX) GlyphEffect {
@@ -37,7 +37,8 @@ func staggered(t, per float64, f func(lt float64) GlyphFX) GlyphEffect {
 	}
 }
 
-// RiseIn springs letters up from below, fading in; size sets how far they travel.
+// RiseIn springs letters up from below, fading in; size sets how far they
+// travel.
 func RiseIn(t, stagger float64, size int) GlyphEffect {
 	return staggered(t, stagger, func(lt float64) GlyphFX {
 		return GlyphFX{DY: Spring(1, 0, lt, 7, 0.55) * float64(size) * 0.7, Alpha: Ease(lt, 0.25)}
@@ -51,8 +52,8 @@ func DropIn(t, stagger float64, size int) GlyphEffect {
 	})
 }
 
-// Decode cycles letters through random characters before locking them in, left to
-// right over dur seconds; n is the number of glyphs.
+// Decode cycles letters through random characters before locking them in, left
+// to right over dur seconds; n is the number of glyphs.
 func Decode(t, dur float64, n int) GlyphEffect {
 	const pool = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%&@$*+=<>/"
 	return func(i int) GlyphFX {
@@ -116,7 +117,8 @@ func Chain(fxs ...GlyphEffect) GlyphEffect {
 	}
 }
 
-// sweepPos runs -0.3 to 1.3 over dur, so the band starts and ends off the block.
+// sweepPos runs -0.3 to 1.3 over dur, so the band starts and ends off the
+// block.
 func sweepPos(t, dur float64) float64 { return Lerp(-0.3, 1.3, Progress(t, 0, dur)) }
 
 func bandFalloff(delta float64) float64 {
@@ -127,8 +129,8 @@ func bandFalloff(delta float64) float64 {
 	return 1 - d*d
 }
 
-// ShineBand returns a Text.Shine func: a bright band sweeping left to right once
-// over dur seconds from t=0.
+// ShineBand returns a Text.Shine func: a bright band sweeping left to right
+// once over dur seconds from t=0.
 func ShineBand(t, dur, strength float64) func(float64) float64 {
 	pos := sweepPos(t, dur)
 	return func(u float64) float64 { return strength * bandFalloff(u-pos) }

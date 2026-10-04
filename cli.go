@@ -29,9 +29,9 @@ type options struct {
 	until            int
 }
 
-// Main runs a deck from the command line: live in the terminal by default,
-// or as dev mode, presenter view, snapshot, contact sheet or video, as the
-// flags say. It parses the command line, so register the talk's own flags first.
+// Main runs a deck from the command line: live in the terminal by default, or
+// as dev mode, presenter view, snapshot, contact sheet or video, as the flags
+// say. It parses the command line, so register the talk's own flags first.
 func Main(d Deck) {
 	if err := run(&d); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -172,7 +172,8 @@ func runLive(d *Deck, o options) error {
 		return err
 	}
 	if m, ok := final.(model); ok && m.execOnQuit != nil {
-		// Dev mode rebuilt us: exec the new binary on the same slide; a presenter view reconnects.
+		// Dev mode rebuilt us: exec the new binary on the same slide; a
+		// presenter view reconnects.
 		if err := execRestart(m.execOnQuit, o.socket); err != nil {
 			return fmt.Errorf("restart failed: %w", err)
 		}

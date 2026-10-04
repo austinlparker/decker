@@ -9,10 +9,11 @@ import (
 // Panel draws a rounded box with a centered, auto-fitted label. A zero edge
 // draws no outline; alpha fades the whole panel, label included.
 //
-// Panel is also the pattern for components: take (c Ctx, p *Pixels, ...) in pixel
-// coordinates, size from c.Unit and c.SmallText, take colors and fonts from
-// c.Theme, reveal with c.Reached and c.Since, and return the size drawn if callers
-// lay out around it. Option-heavy components are structs with a Draw method.
+// Panel is also the pattern for components: take (c Ctx, p *Pixels, ...) in
+// pixel coordinates, size from c.Unit and c.SmallText, take colors and fonts
+// from c.Theme, reveal with c.Reached and c.Since, and return the size drawn if
+// callers lay out around it. Option-heavy components are structs with a Draw
+// method.
 func Panel(c Ctx, p *Pixels, x, y, w, h float64, label string, fill, edge, text RGB, alpha float64) {
 	r := min(c.Unit(0.03), w/3, h/3)
 	p.RoundRect(x, y, w, h, r, 0, fill, alpha)
@@ -30,7 +31,8 @@ func Panel(c Ctx, p *Pixels, x, y, w, h float64, label string, fill, edge, text 
 	}
 }
 
-// Arrow strokes a line with an arrowhead at (x1, y1), revealed up to fraction prog (0..1).
+// Arrow strokes a line with an arrowhead at (x1, y1), revealed up to fraction
+// prog (0..1).
 func Arrow(p *Pixels, x0, y0, x1, y1, width float64, col RGB, prog float64) {
 	if prog <= 0 {
 		return
@@ -52,7 +54,8 @@ func Label(c Ctx, p *Pixels, s string, x, y float64, col RGB, align Align) (floa
 	return Text{Font: c.Theme.Body, Size: size, Color: col, Align: align}.Draw(p, s, x, y)
 }
 
-// LineLabel draws small text on a background plate centered on (cx, cy), so it reads over a line.
+// LineLabel draws small text on a background plate centered on (cx, cy), so it
+// reads over a line.
 func LineLabel(c Ctx, p *Pixels, f *Font, s string, cx, cy float64, col RGB, alpha float64) {
 	size := c.SmallText(f)
 	w := f.Measure(s, size)
@@ -83,8 +86,9 @@ func wrappedHeight(f *Font, s string, size int, maxW float64) float64 {
 	return float64(len(f.Wrap(s, size, maxW))) * float64(size) * DefaultLeading
 }
 
-// CycleDiagram is a ring of numbered stations with a legend, one station per step.
-// Once the ring closes, a comet circles it and lights each station as it passes.
+// CycleDiagram is a ring of numbered stations with a legend, one station per
+// step. Once the ring closes, a comet circles it and lights each station as it
+// passes.
 type CycleDiagram struct {
 	Labels []string
 	Lap    float64 // seconds per loop; must be > 0
@@ -105,8 +109,9 @@ func (g cycleGeom) at(a float64) (float64, float64) {
 	return g.cx + g.R*math.Sin(a), g.cy - g.R*math.Cos(a)
 }
 
-// Draw renders the diagram below y=top. It returns whether the comet is circling,
-// its angle (0 = top, clockwise), the active station (-1 if none), and the legend's x.
+// Draw renders the diagram below y=top. It returns whether the comet is
+// circling, its angle (0 = top, clockwise), the active station (-1 if none),
+// and the legend's x.
 func (d CycleDiagram) Draw(c Ctx, p *Pixels, top float64) (looping bool, theta float64, active int, legendX float64) {
 	g := d.geometry(c, top)
 	last := d.Step0 + g.n - 1
@@ -127,7 +132,8 @@ func (d CycleDiagram) geometry(c Ctx, top float64) cycleGeom {
 	cy := (top + c.Y(0.88)) / 2
 	R := min((c.Y(0.88)-top)*0.36, c.X(0.16))
 	nodeR := R * 0.27
-	// Center ring and legend together; reserve legend width so long labels wrap cleanly.
+	// Center ring and legend together; reserve legend width so long labels wrap
+	// cleanly.
 	legendW := c.X(0.45)
 	gap := c.Unit(0.06)
 	groupW := 2*(R+nodeR) + gap + legendW
@@ -155,7 +161,8 @@ func (d CycleDiagram) drawRing(c Ctx, p *Pixels, g cycleGeom) {
 	}
 }
 
-// drawComet draws the comet lapT seconds into its lap; returns its angle and active station (-1 if none).
+// drawComet draws the comet lapT seconds into its lap; returns its angle and
+// active station (-1 if none).
 func (d CycleDiagram) drawComet(c Ctx, p *Pixels, g cycleGeom, lapT float64) (theta float64, active int) {
 	theta = math.Mod(lapT/d.Lap*2*math.Pi, 2*math.Pi)
 	for k := 28; k >= 0; k-- {
@@ -199,7 +206,8 @@ func (d CycleDiagram) drawStations(c Ctx, p *Pixels, g cycleGeom, looping bool, 
 	}
 }
 
-// drawLegend draws one numbered line per station at the largest one text size that fits below top.
+// drawLegend draws one numbered line per station at the largest one text size
+// that fits below top.
 func (d CycleDiagram) drawLegend(c Ctx, p *Pixels, g cycleGeom, top float64, looping bool, active int) {
 	room := c.Y(0.88) - top
 	widest := strings.Repeat("0", len(strconv.Itoa(g.n)))
@@ -233,9 +241,11 @@ func (d CycleDiagram) drawLegend(c Ctx, p *Pixels, g cycleGeom, top float64, loo
 	}
 }
 
-// BulletList draws lines as bullets, line i revealed at step i+firstStep, at one size that fits the box.
+// BulletList draws lines as bullets, line i revealed at step i+firstStep, at
+// one size that fits the box.
 func BulletList(c Ctx, p *Pixels, lines []string, x, y, w, h float64, firstStep int) {
-	// The mark is 0.32 of the text size wide; the gap after it grows with the text.
+	// The mark is 0.32 of the text size wide; the gap after it grows with the
+	// text.
 	indent := func(size int) float64 { return max(c.Unit(0.05), float64(size)*0.6) }
 	size := c.Size(0.17)
 	for {
@@ -276,7 +286,8 @@ func SpeechBubble(p *Pixels, x, y, w, h, tailX, tailY float64, fill, edge RGB, a
 	p.RoundRect(x, y, w, h, r, max(h*0.03, 1), edge, alpha)
 }
 
-// PlaceholderBox is a dashed, labeled frame marking where real material still needs to go.
+// PlaceholderBox is a dashed, labeled frame marking where real material still
+// needs to go.
 func PlaceholderBox(c Ctx, p *Pixels, x, y, w, h float64, what string) {
 	dash := c.Unit(0.03)
 	col := Mix(c.Theme.Background, c.Theme.Warn, 0.8)
@@ -296,7 +307,8 @@ func PlaceholderBox(c Ctx, p *Pixels, x, y, w, h float64, what string) {
 		Draw(p, "PLACEHOLDER\n"+what, x+w/2, y+h/2-float64(s)*DefaultLeading)
 }
 
-// IllustrativeTag labels a chart with made-up data to replace before the talk; (x, y) is its top-right corner.
+// IllustrativeTag labels a chart with made-up data to replace before the talk;
+// (x, y) is its top-right corner.
 func IllustrativeTag(c Ctx, p *Pixels, x, y float64) {
 	Label(c, p, "ILLUSTRATIVE DATA", x, y, c.Theme.Warn, Right)
 }

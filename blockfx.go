@@ -37,15 +37,16 @@ func (a BlockFX) then(b BlockFX) BlockFX {
 }
 
 // BlockEffect animates the cells of a Block (Block.FX); Draw calls it for each
-// non-blank cell. It follows GlyphEffect's contract: a pure function of t (seconds
-// since start) and the cell, where the zero BlockFX hides the cell and
+// non-blank cell. It follows GlyphEffect's contract: a pure function of t
+// (seconds since start) and the cell, where the zero BlockFX hides the cell and
 // BlockFX{Alpha: 1} leaves it alone. Combine with BlockChain.
 type BlockEffect func(BlockCell) BlockFX
 
 var decryptShades = []rune("░▒▓█▚▞▙▟")
 
-// BlockDecrypt flickers cells through shade characters in the noise color (faint
-// reads best), then locks them in with a bright flash, left to right over dur.
+// BlockDecrypt flickers cells through shade characters in the noise color
+// (faint reads best), then locks them in with a bright flash, left to right
+// over dur.
 func BlockDecrypt(t, dur float64, noise RGB) BlockEffect {
 	return func(c BlockCell) BlockFX {
 		lock := dur * (0.15 + 0.85*c.U) * (0.85 + 0.3*Hash01(c.Col, c.Row, 3))
@@ -62,7 +63,8 @@ func BlockDecrypt(t, dur float64, noise RGB) BlockEffect {
 	}
 }
 
-// BlockRain drops each column in from above with a bounce, staggered left to right.
+// BlockRain drops each column in from above with a bounce, staggered left to
+// right.
 func BlockRain(t float64) BlockEffect {
 	return func(c BlockCell) BlockFX {
 		lt := t - 0.5*c.U - 0.05*Hash01(c.Col, 0, 5)
@@ -98,7 +100,8 @@ func BlockType(t, cps float64) BlockEffect {
 	}
 }
 
-// BlockBeam sweeps a bright band across once in dur seconds; layer it on settled text.
+// BlockBeam sweeps a bright band across once in dur seconds; layer it on
+// settled text.
 func BlockBeam(t, dur float64) BlockEffect {
 	pos := sweepPos(t, dur)
 	return func(c BlockCell) BlockFX {

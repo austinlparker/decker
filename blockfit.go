@@ -111,7 +111,8 @@ func balancedWrap(f *FigFont, s string, maxW int) []string {
 	return out
 }
 
-// snapScale rounds down to half pixels (whole from 4 up) so edges stay nearly crisp.
+// snapScale rounds down to half pixels (whole from 4 up) so edges stay nearly
+// crisp.
 func snapScale(s float64) float64 {
 	if s >= 4 {
 		return math.Floor(s)

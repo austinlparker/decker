@@ -1,8 +1,8 @@
 package decker
 
-// PixelArt is one frame of a pixel-art character: each letter in Rows picks a color from
-// Colors; '.' (or any letter without a color) is transparent. Rows must be ASCII.
-// For cell-based art in the character layer, see Sprite.
+// PixelArt is one frame of a pixel-art character: each letter in Rows picks a
+// color from Colors; '.' (or any letter without a color) is transparent. Rows
+// must be ASCII. For cell-based art in the character layer, see Sprite.
 type PixelArt struct {
 	Rows   []string
 	Colors map[rune]RGB
@@ -16,7 +16,8 @@ func (a PixelArt) Size() (w, h int) {
 	return w, len(a.Rows)
 }
 
-// Art draws a at (x, y), scaled by scale (fractions are fine) at opacity alpha, mirrored if flip.
+// Art draws a at (x, y), scaled by scale (fractions are fine) at opacity alpha,
+// mirrored if flip.
 func (p *Pixels) Art(a PixelArt, x, y, scale, alpha float64, flip bool) {
 	aw, ah := a.Size()
 	x0, y0, x1, y1 := p.Box(x, y, x+float64(aw)*scale, y+float64(ah)*scale)

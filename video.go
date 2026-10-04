@@ -16,7 +16,8 @@ type videoOptions struct {
 	first, last   int     // slides to include, 0-based
 }
 
-// videoTiming is how long step (0-based) of s stays on screen; step 0 adds the entrance transition.
+// videoTiming is how long step (0-based) of s stays on screen; step 0 adds the
+// entrance transition.
 func videoTiming(s Slide, step int, hold float64) float64 {
 	if s.Hold > 0 {
 		hold = s.Hold
@@ -86,7 +87,8 @@ func writeVideoFrames(d *Deck, o videoOptions, w io.Writer) error {
 				drew = false
 				out := renderSlide(s, Ctx{W: cw, H: ch, T: slideT + t, Step: step, StepT: t, Theme: d.Theme, sink: sink})
 				if !drew {
-					// The slide drew without a scene (or panicked): decode its text.
+					// The slide drew without a scene (or panicked): decode its
+					// text.
 					toRGB24(framePixels(out, cw, ch, d.Theme), frame)
 				}
 				if step == 0 && i > o.first && t < TransitionDuration {

@@ -18,7 +18,8 @@ import (
 // devState implements -dev: it rebuilds the deck's main package on save of any
 // watched Go source (every same-module package it imports, so talk and engine
 // edits both reload). A good build replaces the process on the same slide; a
-// failed one shows the compiler output over the deck while the old version runs.
+// failed one shows the compiler output over the deck while the old version
+// runs.
 type devState struct {
 	events     chan struct{}
 	pkg        string // the package to build
@@ -68,7 +69,8 @@ func startDev(bin string) (*devState, error) {
 	return d, nil
 }
 
-// wait returns a command that delivers one fileChangedMsg; re-issue it after each.
+// wait returns a command that delivers one fileChangedMsg; re-issue it after
+// each.
 func (d *devState) wait() tea.Cmd {
 	return func() tea.Msg {
 		<-d.events
@@ -104,7 +106,8 @@ func (d *devState) built(msg buildDoneMsg) bool {
 	return msg.err == nil
 }
 
-// restartArgs is the command line that reopens the rebuilt deck at slide and step (1-based).
+// restartArgs is the command line that reopens the rebuilt deck at slide and
+// step (1-based).
 func (d *devState) restartArgs(slide, step, fps int) []string {
 	return []string{d.bin, "-dev", "-slide", strconv.Itoa(slide), "-step", strconv.Itoa(step), "-fps", strconv.Itoa(fps)}
 }

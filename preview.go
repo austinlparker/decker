@@ -8,7 +8,8 @@ import (
 	uv "github.com/charmbracelet/ultraviolet"
 )
 
-// previewKey names one preview: a slide at a step in a pw×ph box, drawn for a dw×dh deck.
+// previewKey names one preview: a slide at a step in a pw×ph box, drawn for a
+// dw×dh deck.
 type previewKey struct{ slide, step, pw, ph, dw, dh int }
 
 // previewMu serializes slide drawing: slides are written for one caller at a
@@ -52,7 +53,8 @@ func renderPreview(s Slide, step, dw, dh, pw, ph int, t *Theme) string {
 	return sc.Render()
 }
 
-// slideImage draws s settled at the deck's size, one image pixel per canvas pixel.
+// slideImage draws s settled at the deck's size, one image pixel per canvas
+// pixel.
 func slideImage(s Slide, step, dw, dh int, t *Theme) *image.RGBA {
 	px := settledPixels(s, step, dw, dh, t)
 	img := image.NewRGBA(image.Rect(0, 0, px.W, px.H))

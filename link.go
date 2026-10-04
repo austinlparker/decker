@@ -29,13 +29,15 @@ type linkOutline struct {
 	Steps int    `json:"steps"`
 }
 
-// linkCmd is a presenter request: press Key (a navigation key in keyActs) or jump to Slide.
+// linkCmd is a presenter request: press Key (a navigation key in keyActs) or
+// jump to Slide.
 type linkCmd struct {
 	Key   string `json:"key,omitempty"`
 	Slide int    `json:"slide,omitempty"` // 1-based
 }
 
-// defaultSocket is in the per-user temp dir, named for the deck, so both processes find it.
+// defaultSocket is in the per-user temp dir, named for the deck, so both
+// processes find it.
 func defaultSocket(name string) string { return filepath.Join(os.TempDir(), name+".sock") }
 
 // linkServer is the deck's end of the link: a Unix socket, one JSON object per

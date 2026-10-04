@@ -17,7 +17,8 @@ type Deck struct {
 }
 
 // Render draws slide i (0-based) as a styled string of exactly c.W×c.H cells,
-// as -snapshot prints it. A nil c.Theme uses the deck's; a panic renders as its error.
+// as -snapshot prints it. A nil c.Theme uses the deck's; a panic renders as its
+// error.
 func (d *Deck) Render(i int, c Ctx) string {
 	return renderSlide(d.Slides[i], d.withTheme(c))
 }
@@ -25,7 +26,8 @@ func (d *Deck) Render(i int, c Ctx) string {
 // Steps returns how many build steps slide i (0-based) has.
 func (d *Deck) Steps(i int) int { return d.Slides[i].steps() }
 
-// Draw renders slide i into cells without encoding them: the live deck's per-frame work, for benchmarks.
+// Draw renders slide i into cells without encoding them: the live deck's
+// per-frame work, for benchmarks.
 func (d *Deck) Draw(i int, c Ctx) {
 	renderSlideGrid(d.Slides[i], d.withTheme(c)).release()
 }

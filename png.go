@@ -22,7 +22,8 @@ func writePNG(frame string, w, h int, path string, t *Theme) error {
 }
 
 // frameImage paints a rendered frame as a terminal would, to preview slides
-// without one: block and box-drawing characters by hand, the rest in a bitmap font.
+// without one: block and box-drawing characters by hand, the rest in a bitmap
+// font.
 func frameImage(frame string, w, h int, t *Theme) *image.RGBA {
 	cv := frameCanvas(frame, w, h)
 	img := image.NewRGBA(image.Rect(0, 0, w*cellW, h*cellH))

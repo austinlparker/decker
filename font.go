@@ -14,12 +14,13 @@ import (
 //go:embed fonts/*.ttf
 var stockFonts embed.FS
 
-// StockFont loads a bundled typeface (SIL OFL; see fonts/): "SpaceGrotesk-Bold",
-// "SpaceGrotesk-Medium" or "JetBrainsMono-ExtraBold". Load each once: a Font caches glyphs.
+// StockFont loads a bundled typeface (SIL OFL; see fonts/):
+// "SpaceGrotesk-Bold", "SpaceGrotesk-Medium" or "JetBrainsMono-ExtraBold". Load
+// each once: a Font caches glyphs.
 func StockFont(name string) *Font { return LoadFont(stockFonts, "fonts/"+name+".ttf") }
 
-// LoadFont loads a TrueType or OpenType font from fsys. It panics if the font is
-// missing or broken: fonts are built in, so that is a deck bug.
+// LoadFont loads a TrueType or OpenType font from fsys. It panics if the font
+// is missing or broken: fonts are built in, so that is a deck bug.
 func LoadFont(fsys fs.FS, path string) *Font {
 	b, err := fs.ReadFile(fsys, path)
 	if err != nil {
@@ -50,8 +51,8 @@ type Font struct {
 	glyphs map[glyphKey]*glyph
 	kerns  map[kernKey]float64
 
-	// Small, if set, replaces this font below SmallBelow pixels: medium weights get
-	// spindly at low resolution, so point it at a bolder cut.
+	// Small, if set, replaces this font below SmallBelow pixels: medium weights
+	// get spindly at low resolution, so point it at a bolder cut.
 	Small      *Font
 	SmallBelow int
 }

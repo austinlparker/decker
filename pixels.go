@@ -58,7 +58,8 @@ func (p *Pixels) Add(x, y int, c RGB, a float64) {
 	p.Pix[i] = RGB{min(d.R+c.R*f, 255), min(d.G+c.G*f, 255), min(d.B+c.B*f, 255)}
 }
 
-// Box returns inclusive pixel bounds covering [x0,x1]×[y0,y1], clipped to the canvas.
+// Box returns inclusive pixel bounds covering [x0,x1]×[y0,y1], clipped to the
+// canvas.
 func (p *Pixels) Box(x0, y0, x1, y1 float64) (int, int, int, int) {
 	ix0 := max(int(math.Floor(x0)), 0)
 	iy0 := max(int(math.Floor(y0)), 0)
@@ -190,7 +191,8 @@ func (p *Pixels) Line(xa, ya, xb, yb, width float64, c RGB, a float64) {
 	}
 }
 
-// RoundRect fills a rounded rectangle, or only an outline of thickness stroke if > 0.
+// RoundRect fills a rounded rectangle, or only an outline of thickness stroke
+// if > 0.
 func (p *Pixels) RoundRect(x, y, w, h, radius, stroke float64, c RGB, a float64) {
 	radius = min(radius, w/2, h/2)
 	x0, y0, x1, y1 := p.Box(x-1, y-1, x+w+1, y+h+1)

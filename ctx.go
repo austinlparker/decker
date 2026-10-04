@@ -2,7 +2,8 @@ package decker
 
 // Ctx is everything a slide needs to draw a frame. Its layout methods take
 // fractions of the pixel canvas (W wide, 2H tall), so a slide looks the same at
-// any size: c.X(0.5) is the center, c.Size(0.1) a font a tenth of the screen tall.
+// any size: c.X(0.5) is the center, c.Size(0.1) a font a tenth of the screen
+// tall.
 type Ctx struct {
 	W, H  int     // drawable area in cells
 	T     float64 // seconds since this slide appeared
@@ -61,7 +62,8 @@ func (c Ctx) Y(f float64) float64 { return f * c.PH() }
 // Size returns a font size in pixels, f of the canvas height, at least 6.
 func (c Ctx) Size(f float64) int { return max(int(f*c.PH()), 6) }
 
-// MinText is the smallest text size, as a canvas-height fraction, readable at projector resolutions.
+// MinText is the smallest text size, as a canvas-height fraction, readable at
+// projector resolutions.
 const MinText = 0.068
 
 // Unit scales a stroke, gap or radius with the canvas: f of its height.

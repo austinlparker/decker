@@ -2,7 +2,8 @@ package decker
 
 import "math"
 
-// coverage is a float alpha mask with its top-left at (x0, y0) on the pixel canvas.
+// coverage is a float alpha mask with its top-left at (x0, y0) on the pixel
+// canvas.
 type coverage struct {
 	a      []float32
 	w, h   int

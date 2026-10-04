@@ -24,9 +24,10 @@ import (
 	"github.com/austinlparker/decker"
 )
 
-// Slides renders every slide at every step, at three sizes and four moments (appearing,
-// mid-entrance, entered, settled), failing on panics, wrong-size frames, and cells
-// without a background color (a translucent terminal shows through them).
+// Slides renders every slide at every step, at three sizes and four moments
+// (appearing, mid-entrance, entered, settled), failing on panics, wrong-size
+// frames, and cells without a background color (a translucent terminal shows
+// through them).
 func Slides(t *testing.T, d decker.Deck) {
 	t.Helper()
 	for i, s := range d.Slides {
@@ -62,7 +63,8 @@ func unpainted(frame string, w, h int) (x, y int, found bool) {
 	return 0, 0, false
 }
 
-// view draws one frame straight from the slide so a panic fails the test instead of being drawn.
+// view draws one frame straight from the slide so a panic fails the test
+// instead of being drawn.
 func view(t *testing.T, s decker.Slide, c decker.Ctx) string {
 	t.Helper()
 	defer func() {
@@ -76,9 +78,10 @@ func view(t *testing.T, s decker.Slide, c decker.Ctx) string {
 	return s.View(c)
 }
 
-// Golden compares every frame with the hashes recorded in path: one per slide and build step,
-// covering eight moments at three sizes (up to 682×171). Run with UPDATE_GOLDEN=1 to
-// re-record after an intentional change. Skipped with -short.
+// Golden compares every frame with the hashes recorded in path: one per slide
+// and build step, covering eight moments at three sizes (up to 682×171). Run
+// with UPDATE_GOLDEN=1 to re-record after an intentional change. Skipped with
+// -short.
 func Golden(t *testing.T, d decker.Deck, path string) {
 	t.Helper()
 	if testing.Short() {
@@ -124,7 +127,8 @@ func Golden(t *testing.T, d decker.Deck, path string) {
 // Hash is the hash of every golden frame of one build step.
 type Hash struct{ Key, Sum string }
 
-// Hashes renders the golden frames of every slide and step, keyed by slide number and title.
+// Hashes renders the golden frames of every slide and step, keyed by slide
+// number and title.
 func Hashes(d decker.Deck) []Hash {
 	sizes := [][2]int{{80, 24}, {240, 67}, {682, 171}}
 	times := []float64{0, 0.25, 0.7, 1.5, 3, 6, 12, decker.Settled}
@@ -171,9 +175,9 @@ func readHashes(path string) (map[string]string, error) {
 	return out, sc.Err()
 }
 
-// Frames benchmarks one mid-animation frame of each slide at projector-like sizes, drawn into
-// cells as the live deck does. At 60 fps a frame has ~16ms and the terminal needs time too,
-// so aim for a few ms at the presenting size:
+// Frames benchmarks one mid-animation frame of each slide at projector-like
+// sizes, drawn into cells as the live deck does. At 60 fps a frame has ~16ms
+// and the terminal needs time too, so aim for a few ms at the presenting size:
 //
 //	go test -bench Frames/682x171
 func Frames(b *testing.B, d decker.Deck) {

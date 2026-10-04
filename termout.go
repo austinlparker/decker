@@ -42,7 +42,8 @@ type termWriter struct {
 	buf       []byte
 }
 
-// rewriteGap is how many unchanged cells between changes are rewritten rather than skipped with a cursor move.
+// rewriteGap is how many unchanged cells between changes are rewritten rather
+// than skipped with a cursor move.
 const rewriteGap = 8
 
 func newTermWriter(out io.Writer, bg RGB) *termWriter {
@@ -53,14 +54,16 @@ func newTermWriter(out io.Writer, bg RGB) *termWriter {
 		finished: make(chan struct{}),
 	}
 	q := bg.q()
-	// No autowrap (the last column never scrolls); the deck's background becomes the terminal's.
+	// No autowrap (the last column never scrolls); the deck's background
+	// becomes the terminal's.
 	io.WriteString(out, ansi.SetModeAltScreenSaveCursor+ansi.HideCursor+ansi.ResetModeAutoWrap+
 		ansi.SetBackgroundColor(fmt.Sprintf("#%02x%02x%02x", q[0], q[1], q[2]))+ansi.EraseEntireScreen)
 	go w.loop()
 	return w
 }
 
-// submit hands g to the writer, which owns it from now on; a frame not yet written is dropped.
+// submit hands g to the writer, which owns it from now on; a frame not yet
+// written is dropped.
 func (w *termWriter) submit(g *grid, title string) {
 	w.mu.Lock()
 	w.pending.release()
@@ -72,7 +75,8 @@ func (w *termWriter) submit(g *grid, title string) {
 	}
 }
 
-// invalidate makes the next frame redraw every cell, after something else drew on the terminal.
+// invalidate makes the next frame redraw every cell, after something else drew
+// on the terminal.
 func (w *termWriter) invalidate() {
 	w.mu.Lock()
 	w.full = true
@@ -104,7 +108,8 @@ func (w *termWriter) loop() {
 	}
 }
 
-// write encodes g as a diff against the previous frame (in full if full or resized) and takes ownership of g.
+// write encodes g as a diff against the previous frame (in full if full or
+// resized) and takes ownership of g.
 func (w *termWriter) write(g *grid, title string, full bool) {
 	prev := w.prev
 	full = full || prev == nil || prev.W != g.W || prev.H != g.H
@@ -137,7 +142,8 @@ func (w *termWriter) write(g *grid, title string, full bool) {
 	w.prev = g
 }
 
-// diffRow appends the moves and cells that turn old into row y; changes at most rewriteGap apart form one run.
+// diffRow appends the moves and cells that turn old into row y; changes at most
+// rewriteGap apart form one run.
 func diffRow(b []byte, p *pen, row, old []gcell, y int) []byte {
 	for x := 0; x < len(row); {
 		if row[x] == old[x] {
@@ -162,7 +168,8 @@ func diffRow(b []byte, p *pen, row, old []gcell, y int) []byte {
 	return b
 }
 
-// The encoder appends bytes by hand: it runs per changed cell per frame, and x/ansi's helpers allocate.
+// The encoder appends bytes by hand: it runs per changed cell per frame, and
+// x/ansi's helpers allocate.
 
 // moveTo appends a cursor move to column x, row y (0-based).
 func moveTo(b []byte, x, y int) []byte {
@@ -173,8 +180,9 @@ func moveTo(b []byte, x, y int) []byte {
 	return append(b, 'H')
 }
 
-// String encodes the grid as exactly H lines of W cells, each with an explicit background
-// (a translucent terminal only shows through the default one). Colors are written only on change.
+// String encodes the grid as exactly H lines of W cells, each with an explicit
+// background (a translucent terminal only shows through the default one).
+// Colors are written only on change.
 func (g *grid) String() string {
 	var b strings.Builder
 	b.Grow(g.W * g.H * 6)
@@ -194,7 +202,8 @@ func (g *grid) String() string {
 	return b.String()
 }
 
-// pen tracks the terminal's current colors and attributes so encoding writes only changes.
+// pen tracks the terminal's current colors and attributes so encoding writes
+// only changes.
 type pen struct {
 	fg, bg     [3]uint8
 	fgOn, bgOn bool
@@ -254,7 +263,8 @@ func sgrColor(buf []byte, kind byte, c [3]uint8) []byte {
 	return append(buf, 'm')
 }
 
-// liveTerminal sets up raw input, window size reports and the frame writer Bubble Tea leaves to us.
+// liveTerminal sets up raw input, window size reports and the frame writer
+// Bubble Tea leaves to us.
 type liveTerminal struct {
 	writer  *termWriter
 	restore func()
