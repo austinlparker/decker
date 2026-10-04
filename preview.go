@@ -4,34 +4,34 @@ package decker
 // dw×dh deck.
 type previewKey struct{ slide, step, pw, ph, dw, dh int }
 
-// previewBox is the inside size of each preview frame: the deck's shape,
-// leaving a few lines for notes. It is 0, 0 when previews don't fit.
-func (p presenter) previewBox() (pw, ph int) {
-	inner, rest := max(p.w-2*presMargin, 10), p.h-2-footerLines // 2: header and blank line
-	dw, dh := p.deckSize()
-	pw = (inner - presGutter - 4) / 2 // each frame adds 2 columns
+// key describes the preview of slide i at step: the largest box in the
+// deck's shape that fits beside its twin and leaves room for notes. ok is
+// false before the deck has reported its size, or when the box is too small.
+func (p presenter) key(i, step int) (k previewKey, ok bool) {
+	dw, dh := p.st.W, p.st.H
+	if dw <= 0 || dh <= 0 {
+		return k, false
+	}
+	pw := (p.inner() - presGutter - 4) / 2 // each frame adds 2 columns
 	// A cell shows one pixel across and two down, like the deck's, so the
 	// deck's shape in cells carries over directly.
-	ph = pw * dh / dw
-	if most := rest - 3 - 6; ph > most { // label + frame, and 6 lines of notes
+	ph := pw * dh / dw
+	if most := p.h - presHeader - footerLines - 3 - 6; ph > most { // label + frame, and 6 lines of notes
 		ph = most
 		pw = ph * dw / dh
 	}
-	if ph < 5 || pw < 20 {
-		return 0, 0
-	}
-	return pw, ph
+	return previewKey{i, step, pw, ph, dw, dh}, ph >= 5 && pw >= 20
 }
 
 // renderPreview draws s at a size it's designed for (240 cells wide, in the
 // deck's shape), then shrinks it into pw×ph cells; drawing at preview size
 // would lay the slide out for a tiny screen instead.
-func renderPreview(s Slide, step, dw, dh, pw, ph int, t *Theme) string {
+func renderPreview(s Slide, k previewKey, t *Theme) string {
 	const rw = 240
-	rh := max(rw*dh/dw, 20)
-	g := renderSlideGrid(s, Ctx{W: rw, H: rh, T: Settled, Step: step, StepT: Settled, Theme: t})
+	rh := max(rw*k.dh/k.dw, 20)
+	g := renderSlideGrid(s, Ctx{W: rw, H: rh, T: Settled, Step: k.step, StepT: Settled, Theme: t})
 	defer g.release()
-	sc := NewScene(pw, ph, t)
+	sc := NewScene(k.pw, k.ph, t)
 	shrinkInto(g.pixels(), sc.Px)
 	return sc.Render()
 }

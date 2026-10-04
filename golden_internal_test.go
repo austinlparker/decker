@@ -763,7 +763,7 @@ func goldenPresenter(t *testing.T, g *goldenEntries) {
 		p = presenterFor(d, w, h, true, 3, 0, previews)
 		p.st.W, p.st.H = 120, 40
 		g.addString(key("small-deck"), p.View().Content)
-		p.st.W, p.st.H = 0, 0 // unreported: the default shape
+		p.st.W, p.st.H = 0, 0 // unreported: no previews
 		g.addString(key("no-deck-size"), p.View().Content)
 		// Long notes are cut to fit.
 		p = presenterFor(d, w, h, true, 0, 0, previews)
@@ -813,8 +813,8 @@ func goldenPresenter(t *testing.T, g *goldenEntries) {
 	for _, i := range []int{0, 2, 5} {
 		for _, step := range []int{0, 1} {
 			g.addString(fmt.Sprintf("presenter/renderPreview/%d.%d", i, step),
-				renderPreview(d.Slides[i], step, 682, 171, 50, 12, testTheme),
-				renderPreview(d.Slides[i], step, 120, 40, 30, 9, testTheme))
+				renderPreview(d.Slides[i], previewKey{i, step, 50, 12, 682, 171}, testTheme),
+				renderPreview(d.Slides[i], previewKey{i, step, 30, 9, 120, 40}, testTheme))
 		}
 	}
 	g.addString("presenter/nextTarget", func() string {
@@ -830,8 +830,11 @@ func goldenPresenter(t *testing.T, g *goldenEntries) {
 	for _, sz := range [][4]int{{100, 30, 682, 171}, {40, 12, 682, 171}, {200, 60, 120, 40}, {30, 9, 100, 100}, {120, 5, 682, 171}} {
 		p := presenterFor(d, sz[0], sz[1], true, 1, 1, previews)
 		p.st.W, p.st.H = sz[2], sz[3]
-		pw, ph := p.previewBox()
-		g.addString(fmt.Sprintf("presenter/previewBox/%dx%d/%dx%d", sz[0], sz[1], sz[2], sz[3]), fmt.Sprint(pw, ph))
+		k, ok := p.key(1, 1)
+		if !ok {
+			k.pw, k.ph = 0, 0
+		}
+		g.addString(fmt.Sprintf("presenter/previewBox/%dx%d/%dx%d", sz[0], sz[1], sz[2], sz[3]), fmt.Sprint(k.pw, k.ph))
 	}
 }
 

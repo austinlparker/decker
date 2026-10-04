@@ -224,13 +224,15 @@ func (p presenter) mainView() string {
 
 	// Previews of now and next, if they fit and leave room for notes.
 	var previews string
-	if pw, ph := p.previewBox(); ph > 0 {
-		nextLabel, nextBox := "END OF DECK", p.placeholder(pw, ph, "that's the last slide")
+	if k, ok := p.key(p.st.Slide, p.st.Step); ok {
+		nextLabel, nextBox := "END OF DECK", p.placeholder(k.pw, k.ph, "that's the last slide")
 		if next, label, ok := p.nextTarget(); ok {
-			nextLabel, nextBox = label, p.preview(next[0], next[1], pw, ph)
+			nk := k
+			nk.slide, nk.step = next[0], next[1]
+			nextLabel, nextBox = label, p.preview(nk)
 		}
-		now := lipgloss.JoinVertical(lipgloss.Left, p.sty.accent.Render("NOW"), frame(p.preview(p.st.Slide, p.st.Step, pw, ph), p.theme.Accent))
-		next := lipgloss.JoinVertical(lipgloss.Left, p.sty.muted.Render(truncate(nextLabel, pw+2)), frame(nextBox, p.theme.Faint))
+		now := lipgloss.JoinVertical(lipgloss.Left, p.sty.accent.Render("NOW"), frame(p.preview(k), p.theme.Accent))
+		next := lipgloss.JoinVertical(lipgloss.Left, p.sty.muted.Render(truncate(nextLabel, k.pw+2)), frame(nextBox, p.theme.Faint))
 		previews = lipgloss.JoinHorizontal(lipgloss.Top, now, strings.Repeat(" ", presGutter), next)
 		rest -= lipgloss.Height(previews) + 1
 	}
@@ -270,32 +272,23 @@ func (p presenter) nextTarget() (next [2]int, label string, ok bool) {
 	return next, "", false
 }
 
-func (p presenter) deckSize() (int, int) {
-	if p.st.W <= 0 || p.st.H <= 0 {
-		return 682, 171 // a typical presenting terminal: 4pt font, full screen
-	}
-	return p.st.W, p.st.H
-}
-
 // matches reports whether this build's slide i is the deck's slide i; in dev
 // mode the deck rebuilds and the presenter view doesn't, so they can drift.
 func (p presenter) matches(i int) bool {
 	return i < len(p.slides) && i < len(p.st.Outline) && p.slides[i].Title == p.st.Outline[i].Title
 }
 
-// preview draws slide i at step, settled, into a pw×ph box. A slide whose
-// title no longer matches the deck's (dev mode) is left out.
-func (p presenter) preview(i, step, pw, ph int) string {
-	if !p.matches(i) {
-		return p.placeholder(pw, ph, "preview out of date: restart the presenter view")
+// preview draws the slide k names, settled. A slide whose title no longer
+// matches the deck's (dev mode) is left out.
+func (p presenter) preview(k previewKey) string {
+	if !p.matches(k.slide) {
+		return p.placeholder(k.pw, k.ph, "preview out of date: restart the presenter view")
 	}
-	dw, dh := p.deckSize()
-	key := previewKey{i, step, pw, ph, dw, dh}
-	if s, ok := p.previews[key]; ok {
+	if s, ok := p.previews[k]; ok {
 		return s
 	}
-	s := renderPreview(p.slides[i], step, dw, dh, pw, ph, p.theme)
-	p.previews[key] = s
+	s := renderPreview(p.slides[k.slide], k, p.theme)
+	p.previews[k] = s
 	return s
 }
 
