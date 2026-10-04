@@ -2,15 +2,10 @@ package decker
 
 import "math"
 
-// Pixels is a true-color framebuffer that a slide paints into. The scene
-// shows it with half-block characters: each terminal cell displays two
-// vertically stacked pixels (the top in the foreground color of "▀", the
-// bottom in the background color), so a 240×60 terminal is a 240×120 pixel
-// display.
-//
-// Everything that should look big and smooth on a projector goes here: raster
-// type, shapes, glows, pixel-art characters. Coordinates are floats and edges
-// are antialiased. Drawing methods blend with opacity a in 0..1 (1 is opaque).
+// Pixels is a true-color framebuffer. The scene shows it as half blocks: each
+// terminal cell is two stacked pixels, so 240×60 cells is 240×120 pixels.
+// Coordinates are floats, edges are antialiased, and drawing methods blend at
+// opacity a in 0..1.
 type Pixels struct {
 	W, H int
 	Pix  []RGB
@@ -24,7 +19,7 @@ func NewPixels(w, h int, bg RGB) *Pixels {
 	return p
 }
 
-// At returns the pixel at (x, y); out-of-bounds returns black.
+// At returns the pixel at (x, y), or black out of bounds.
 func (p *Pixels) At(x, y int) RGB {
 	if x < 0 || y < 0 || x >= p.W || y >= p.H {
 		return RGB{}
@@ -52,7 +47,7 @@ func (p *Pixels) Blend(x, y int, c RGB, a float64) {
 	p.Pix[i] = Mix(p.Pix[i], c, a)
 }
 
-// Add brightens pixel (x, y) by c×a (additive light, for glows).
+// Add brightens pixel (x, y) by c×a, clamped: additive light for glows.
 func (p *Pixels) Add(x, y int, c RGB, a float64) {
 	if a <= 0 || x < 0 || y < 0 || x >= p.W || y >= p.H {
 		return
@@ -63,8 +58,7 @@ func (p *Pixels) Add(x, y int, c RGB, a float64) {
 	p.Pix[i] = RGB{min(d.R+c.R*f, 255), min(d.G+c.G*f, 255), min(d.B+c.B*f, 255)}
 }
 
-// Box returns the pixel bounds covering [x0,x1]×[y0,y1], clipped to the
-// canvas. The bounds are inclusive: loop "for py := y0; py <= y1; py++".
+// Box returns inclusive pixel bounds covering [x0,x1]×[y0,y1], clipped to the canvas.
 func (p *Pixels) Box(x0, y0, x1, y1 float64) (int, int, int, int) {
 	ix0 := max(int(math.Floor(x0)), 0)
 	iy0 := max(int(math.Floor(y0)), 0)
@@ -73,11 +67,10 @@ func (p *Pixels) Box(x0, y0, x1, y1 float64) (int, int, int, int) {
 	return ix0, iy0, ix1, iy1
 }
 
-// Coverage turns a signed distance (negative = inside) into antialiased
-// opacity, for custom shapes drawn pixel by pixel.
+// Coverage maps a signed distance (negative inside) to antialiased opacity.
 func Coverage(d float64) float64 { return Clamp01(0.5 - d) }
 
-// Fill paints every pixel with c (BG is unchanged).
+// Fill paints every pixel with c; BG is unchanged.
 func (p *Pixels) Fill(c RGB) {
 	for i := range p.Pix {
 		p.Pix[i] = c
@@ -117,7 +110,7 @@ func (p *Pixels) Disc(cx, cy, r float64, c RGB, a float64) {
 	}
 }
 
-// Glow adds soft light around (cx, cy) that fades out by radius r.
+// Glow adds soft light around (cx, cy), fading to zero at radius r.
 func (p *Pixels) Glow(cx, cy, r float64, c RGB, a float64) {
 	x0, y0, x1, y1 := p.Box(cx-r, cy-r, cx+r, cy+r)
 	for py := y0; py <= y1; py++ {
@@ -131,9 +124,8 @@ func (p *Pixels) Glow(cx, cy, r float64, c RGB, a float64) {
 	}
 }
 
-// Arc strokes part of a ring centered on (cx, cy) with radius r and the given
-// thickness, from angle a0 to a1 (radians, 0 = 12 o'clock, clockwise).
-// Round caps. Use a0=0, a1=2π for a full ring.
+// Arc strokes a ring of radius r around (cx, cy) from angle a0 to a1 (radians,
+// 0 = 12 o'clock, clockwise) with round caps; a0=0, a1=2π is a full ring.
 func (p *Pixels) Arc(cx, cy, r, thick, a0, a1 float64, c RGB, alpha float64) {
 	if a1 <= a0 {
 		return
@@ -166,7 +158,6 @@ func (p *Pixels) Arc(cx, cy, r, thick, a0, a1 float64, c RGB, alpha float64) {
 	}
 }
 
-// angleIn reports whether angle a lies on the clockwise sweep from a0 to a1.
 func angleIn(a, a0, a1 float64) bool {
 	rel := math.Mod(a-a0, 2*math.Pi)
 	if rel < 0 {
@@ -199,8 +190,7 @@ func (p *Pixels) Line(xa, ya, xb, yb, width float64, c RGB, a float64) {
 	}
 }
 
-// RoundRect fills a rounded rectangle. If stroke > 0, only an outline of
-// that thickness is drawn.
+// RoundRect fills a rounded rectangle, or only an outline of thickness stroke if > 0.
 func (p *Pixels) RoundRect(x, y, w, h, radius, stroke float64, c RGB, a float64) {
 	radius = min(radius, w/2, h/2)
 	x0, y0, x1, y1 := p.Box(x-1, y-1, x+w+1, y+h+1)
@@ -210,9 +200,8 @@ func (p *Pixels) RoundRect(x, y, w, h, radius, stroke float64, c RGB, a float64)
 		qy := math.Abs(float64(py)+0.5-cy) - hy
 		for px := x0; px <= x1; px++ {
 			qx := math.Abs(float64(px)+0.5-cx) - hx
-			// Signed distance to the rounded box, with the square root only
-			// in the corner regions (big plates are mostly interior). Plain
-			// comparisons: builtin max/min's NaN handling costs ~30% here.
+			// Signed distance; sqrt only in corners. Plain comparisons:
+			// builtin max/min's NaN handling costs ~30% here.
 			ox, oy := qx, qy
 			if ox < 0 {
 				ox = 0

@@ -9,8 +9,7 @@ import (
 // RGB is a color with 0..255 float channels, used for fast blending.
 type RGB struct{ R, G, B float32 }
 
-// Hex parses a CSS-style hex color such as "#FFB000" or "#fb0". Anything
-// unparseable yields black.
+// Hex parses a CSS-style hex color such as "#FFB000" or "#fb0"; unparseable input is black.
 func Hex(s string) RGB { return toRGB(lipgloss.Color(s)) }
 
 func toRGB(c color.Color) RGB {
@@ -24,7 +23,7 @@ func Mix(a, b RGB, p float64) RGB {
 	return RGB{a.R + (b.R-a.R)*q, a.G + (b.G-a.G)*q, a.B + (b.B-a.B)*q}
 }
 
-// Scale multiplies a color's brightness.
+// Scale multiplies brightness, clamped to 255.
 func (c RGB) Scale(k float64) RGB {
 	f := float32(k)
 	return RGB{min(c.R*f, 255), min(c.G*f, 255), min(c.B*f, 255)}

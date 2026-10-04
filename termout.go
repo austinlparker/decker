@@ -16,16 +16,15 @@ import (
 	"github.com/charmbracelet/x/term"
 )
 
-// termWriter draws the live deck, replacing Bubble Tea's renderer, which
-// re-parses each frame and updates the terminal with shortcuts (scrolling
-// regions, repeated and inserted characters) that can land wrong, leaving
-// shifted or mis-colored stripes; at 682×171 it costs ~8ms a frame.
+// termWriter draws the live deck in place of Bubble Tea's renderer, which
+// re-parses each frame and updates with shortcuts (scrolling regions, repeated
+// and inserted characters) that can land wrong, leaving shifted or mis-colored
+// stripes; at 682×171 it costs ~8ms a frame.
 //
-// termWriter diffs each grid against the last one it wrote and sends only the
-// changed cells, using nothing but cursor moves, colors and text, in
-// synchronized output so the terminal shows a frame whole or not at all. It
-// writes on its own goroutine: if the terminal falls behind, frames are
-// dropped rather than queued.
+// termWriter diffs each grid against the last one written and sends only
+// changed cells, using just cursor moves, colors and text, in synchronized
+// output so a frame shows whole or not at all. It writes on its own goroutine;
+// if the terminal falls behind, frames are dropped, not queued.
 type termWriter struct {
 	out io.Writer
 
@@ -43,8 +42,7 @@ type termWriter struct {
 	buf       []byte
 }
 
-// rewriteGap is how many unchanged cells between two changes are rewritten
-// rather than skipped with a cursor move.
+// rewriteGap is how many unchanged cells between changes are rewritten rather than skipped with a cursor move.
 const rewriteGap = 8
 
 func newTermWriter(out io.Writer, bg RGB) *termWriter {
@@ -55,16 +53,14 @@ func newTermWriter(out io.Writer, bg RGB) *termWriter {
 		finished: make(chan struct{}),
 	}
 	q := bg.q()
-	// No autowrap, so writing the last column never scrolls, and the deck's
-	// background as the terminal's, so window padding matches the slides.
+	// No autowrap (the last column never scrolls); the deck's background becomes the terminal's.
 	io.WriteString(out, ansi.SetModeAltScreenSaveCursor+ansi.HideCursor+ansi.ResetModeAutoWrap+
 		ansi.SetBackgroundColor(fmt.Sprintf("#%02x%02x%02x", q[0], q[1], q[2]))+ansi.EraseEntireScreen)
 	go w.loop()
 	return w
 }
 
-// submit hands a frame to the writer, which owns it from now on. A frame
-// that hasn't been written yet is dropped in favor of the new one.
+// submit hands g to the writer, which owns it from now on; a frame not yet written is dropped.
 func (w *termWriter) submit(g *grid, title string) {
 	w.mu.Lock()
 	w.pending.release()
@@ -76,15 +72,13 @@ func (w *termWriter) submit(g *grid, title string) {
 	}
 }
 
-// invalidate makes the next frame redraw every cell, in case something
-// else drew on the terminal.
+// invalidate makes the next frame redraw every cell, after something else drew on the terminal.
 func (w *termWriter) invalidate() {
 	w.mu.Lock()
 	w.full = true
 	w.mu.Unlock()
 }
 
-// close stops the writer and restores the terminal.
 func (w *termWriter) close() {
 	close(w.quit)
 	<-w.finished
@@ -110,8 +104,7 @@ func (w *termWriter) loop() {
 	}
 }
 
-// write encodes g as a diff against the previous frame, or in full when full
-// is set or the size changed, and takes ownership of g.
+// write encodes g as a diff against the previous frame (in full if full or resized) and takes ownership of g.
 func (w *termWriter) write(g *grid, title string, full bool) {
 	prev := w.prev
 	full = full || prev == nil || prev.W != g.W || prev.H != g.H
@@ -144,8 +137,7 @@ func (w *termWriter) write(g *grid, title string, full bool) {
 	w.prev = g
 }
 
-// diffRow appends the cursor moves and cells that turn old into row, which is
-// row y. Changes at most rewriteGap cells apart are written as one run.
+// diffRow appends the moves and cells that turn old into row y; changes at most rewriteGap apart form one run.
 func diffRow(b []byte, p *pen, row, old []gcell, y int) []byte {
 	for x := 0; x < len(row); {
 		if row[x] == old[x] {
@@ -170,8 +162,7 @@ func diffRow(b []byte, p *pen, row, old []gcell, y int) []byte {
 	return b
 }
 
-// The terminal encoder appends bytes by hand: it runs for every changed cell
-// of every frame, and x/ansi's helpers allocate.
+// The encoder appends bytes by hand: it runs per changed cell per frame, and x/ansi's helpers allocate.
 
 // moveTo appends a cursor move to column x, row y (0-based).
 func moveTo(b []byte, x, y int) []byte {
@@ -182,10 +173,8 @@ func moveTo(b []byte, x, y int) []byte {
 	return append(b, 'H')
 }
 
-// String encodes the grid as exactly H lines of W cells. Every cell gets an
-// explicit background, since a translucent terminal only makes the default
-// background see-through. Colors are written only when they change, to keep
-// frames small: at 682×171 the terminal parses 117k cells.
+// String encodes the grid as exactly H lines of W cells, each with an explicit background
+// (a translucent terminal only shows through the default one). Colors are written only on change.
 func (g *grid) String() string {
 	var b strings.Builder
 	b.Grow(g.W * g.H * 6)
@@ -205,8 +194,7 @@ func (g *grid) String() string {
 	return b.String()
 }
 
-// pen tracks the terminal's current colors and attributes, so encoding
-// only writes what changes.
+// pen tracks the terminal's current colors and attributes so encoding writes only changes.
 type pen struct {
 	fg, bg     [3]uint8
 	fgOn, bgOn bool
@@ -214,7 +202,6 @@ type pen struct {
 	on         bool // anything set since the last reset
 }
 
-// cell appends the escape codes and text for c to buf and returns it.
 func (p *pen) cell(buf []byte, c *gcell) []byte {
 	if c.attrs != p.attrs || c.ul != p.ul {
 		// Attributes can only be turned off together: reset, then set.
@@ -243,7 +230,6 @@ func (p *pen) cell(buf []byte, c *gcell) []byte {
 	return append(buf, c.ch...)
 }
 
-// run appends cells first..last of row.
 func (p *pen) run(b []byte, row []gcell, first, last int) []byte {
 	for x := first; x <= last && x < len(row); x++ {
 		c := &row[x]
@@ -268,9 +254,7 @@ func sgrColor(buf []byte, kind byte, c [3]uint8) []byte {
 	return append(buf, 'm')
 }
 
-// liveTerminal sets up the terminal for the live deck: raw input, window
-// size reports and the frame writer, which Bubble Tea leaves to us when it
-// runs without its renderer.
+// liveTerminal sets up raw input, window size reports and the frame writer Bubble Tea leaves to us.
 type liveTerminal struct {
 	writer  *termWriter
 	restore func()

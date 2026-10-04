@@ -1,8 +1,7 @@
-// Package decktest is the test suite every deck wants: every slide renders
-// at every build step, size and moment without panicking; every frame is
-// exactly the requested size and fully opaque; nothing changes without you
-// knowing (golden hashes); and a per-slide frame-time benchmark. A talk's
-// test file is a few lines:
+// Package decktest is the test suite every deck wants: every slide renders at
+// every step, size and moment without panicking, in exact-size, fully opaque
+// frames; golden hashes catch unintended changes; and a per-slide benchmark
+// measures frame time. A talk's test file is a few lines:
 //
 //	func TestSlides(t *testing.T)      { decktest.Slides(t, talk()) }
 //	func TestGolden(t *testing.T)      { decktest.Golden(t, talk(), "testdata/golden.txt") }
@@ -25,10 +24,9 @@ import (
 	"github.com/austinlparker/decker"
 )
 
-// Slides renders every slide at every step, at three terminal sizes and
-// four moments (appearing, mid-entrance, entered, settled), and fails on
-// panics, frames of the wrong size, and cells without a background color
-// (terminals with a translucent background show through those).
+// Slides renders every slide at every step, at three sizes and four moments (appearing,
+// mid-entrance, entered, settled), failing on panics, wrong-size frames, and cells
+// without a background color (a translucent terminal shows through them).
 func Slides(t *testing.T, d decker.Deck) {
 	t.Helper()
 	for i, s := range d.Slides {
@@ -51,7 +49,6 @@ func Slides(t *testing.T, d decker.Deck) {
 	}
 }
 
-// unpainted returns the first cell of a w×h frame without a background color.
 func unpainted(frame string, w, h int) (x, y int, found bool) {
 	cv := lipgloss.NewCanvas(w, h)
 	uv.NewStyledString(frame).Draw(cv, cv.Bounds())
@@ -65,8 +62,7 @@ func unpainted(frame string, w, h int) (x, y int, found bool) {
 	return 0, 0, false
 }
 
-// view draws one frame straight from the slide, so a panic fails the test
-// instead of being drawn on screen the way the deck shows it.
+// view draws one frame straight from the slide so a panic fails the test instead of being drawn.
 func view(t *testing.T, s decker.Slide, c decker.Ctx) string {
 	t.Helper()
 	defer func() {
@@ -80,12 +76,9 @@ func view(t *testing.T, s decker.Slide, c decker.Ctx) string {
 	return s.View(c)
 }
 
-// Golden compares every frame of the deck with the hashes recorded in
-// path: one hash per slide and build step, covering eight moments at three
-// sizes (up to the presenting size, 682×171). Run with UPDATE_GOLDEN=1 to
-// record the deck as it is now; do that when you change a slide on
-// purpose, and the test catches every change you didn't mean, such as an
-// engine change that moves a pixel. Skipped with -short.
+// Golden compares every frame with the hashes recorded in path: one per slide and build step,
+// covering eight moments at three sizes (up to 682×171). Run with UPDATE_GOLDEN=1 to
+// re-record after an intentional change. Skipped with -short.
 func Golden(t *testing.T, d decker.Deck, path string) {
 	t.Helper()
 	if testing.Short() {
@@ -131,8 +124,7 @@ func Golden(t *testing.T, d decker.Deck, path string) {
 // Hash is the hash of every golden frame of one build step.
 type Hash struct{ Key, Sum string }
 
-// Hashes renders the golden frames of every slide and step. The key names
-// the slide by number and title, so a reordered deck reads clearly.
+// Hashes renders the golden frames of every slide and step, keyed by slide number and title.
 func Hashes(d decker.Deck) []Hash {
 	sizes := [][2]int{{80, 24}, {240, 67}, {682, 171}}
 	times := []float64{0, 0.25, 0.7, 1.5, 3, 6, 12, decker.Settled}
@@ -179,10 +171,9 @@ func readHashes(path string) (map[string]string, error) {
 	return out, sc.Err()
 }
 
-// Frames benchmarks one frame of each slide, mid-animation, at
-// projector-like sizes: drawing it into cells, as the live deck does each
-// frame. At 60 fps a frame has ~16ms, and the terminal needs time to draw
-// it too, so aim for a few milliseconds at the presenting size:
+// Frames benchmarks one mid-animation frame of each slide at projector-like sizes, drawn into
+// cells as the live deck does. At 60 fps a frame has ~16ms and the terminal needs time too,
+// so aim for a few ms at the presenting size:
 //
 //	go test -bench Frames/682x171
 func Frames(b *testing.B, d decker.Deck) {

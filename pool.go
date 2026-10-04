@@ -5,8 +5,7 @@ import (
 	"sync"
 )
 
-// sizedPool keeps up to max idle values, so big per-frame buffers are reused
-// instead of reallocated.
+// sizedPool keeps up to max idle values so big per-frame buffers are reused.
 type sizedPool[T any] struct {
 	mu   sync.Mutex
 	free []*T

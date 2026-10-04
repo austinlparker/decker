@@ -9,20 +9,14 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
-// Scene is a fixed-size grid of terminal cells that a slide draws into.
-// Think of it as a tiny 2D canvas: place styled text, Lip Gloss blocks, and
-// sprites at exact (x, y) positions, layered in the order you draw them.
-// Anything drawn partly or wholly off-screen is clipped, so it is safe to
-// animate things in from beyond the edges.
+// Scene is a fixed-size grid of terminal cells that a slide draws into, layered in
+// drawing order. Off-screen drawing is clipped, so animating in from the edges is safe. Two layers:
 //
-// A scene has two layers:
-//
-//   - Px, a pixel framebuffer twice as tall as the scene. Big type, shapes,
-//     glows, and pixel-art characters go here.
-//   - Character cells on top: Put, PutCenter, Overlay, Text, Cell, Fill and
-//     Sprite. Use these for small native-terminal text. A cell drawn here
-//     replaces the two pixels beneath it; if it has no background color of
-//     its own, it takes the average color of those pixels so it blends in.
+//   - Px, a pixel framebuffer twice as tall as the scene, for big type, shapes,
+//     glows and pixel art.
+//   - Character cells on top (Put, PutCenter, Overlay, Text, Cell, Fill,
+//     Sprite), for small native-terminal text. A cell replaces the two pixels
+//     beneath it; with no background of its own it takes their average color.
 type Scene struct {
 	W, H  int
 	Px    *Pixels
@@ -34,12 +28,10 @@ type Scene struct {
 	sink         *frameSink    // set by Ctx.Scene while the engine is capturing the slide
 }
 
-// A 682×171 scene is ~2.8MB of pixels and a slide makes one every frame:
-// recycle them. Render returns its scene to the pool.
+// A 682×171 scene is ~2.8MB of pixels and one is made every frame: recycle them (Render releases its scene).
 var scenes = sizedPool[Scene]{max: 4}
 
-// NewScene returns an empty scene of the given size in cells, on the
-// theme's background, to draw something off screen. Slides use Ctx.Scene.
+// NewScene returns an empty w×h-cell scene on the theme's background. Slides use Ctx.Scene.
 func NewScene(w, h int, t *Theme) *Scene {
 	w, h = max(w, 1), max(h, 1)
 	if s := scenes.get(func(s *Scene) bool { return s.W == w && s.H == h }); s != nil {
@@ -50,8 +42,7 @@ func NewScene(w, h int, t *Theme) *Scene {
 	return &Scene{W: w, H: h, Px: NewPixels(w, 2*h, t.Background), ink: t.Text}
 }
 
-// Release returns a scene to the pool without rendering it. Don't use the
-// scene afterwards, or after Render, which already releases it.
+// Release returns s to the pool without rendering. Don't use s afterwards or after Render, which releases it.
 func (s *Scene) Release() {
 	s.themeOverlay, s.sink = nil, nil
 	for _, i := range s.used {
@@ -72,13 +63,10 @@ func (s *Scene) setCell(x, y int, c *uv.Cell) {
 	s.cells[i] = c
 }
 
-// Put draws a (possibly styled, multi-line) string with its top-left corner
-// at (x, y). Every cell of the block is opaque, so spaces overwrite whatever
-// was underneath. Use it for Lip Gloss boxes, Markdown output, etc.
+// Put draws a styled, possibly multi-line block at (x, y). Every cell is opaque, so spaces overwrite what was beneath.
 func (s *Scene) Put(x, y int, block string) { s.put(x, y, block, false) }
 
-// Overlay is like Put, but unstyled spaces are transparent: only visible
-// characters (and cells with a background color) are drawn.
+// Overlay is Put with unstyled spaces transparent.
 func (s *Scene) Overlay(x, y int, block string) { s.put(x, y, block, true) }
 
 // PutCenter draws block centered in the scene, shifted by (dx, dy).
@@ -91,8 +79,7 @@ func (s *Scene) put(x, y int, block string, transparent bool) {
 	blit(block, x, y, s.W, s.H, transparent, func(tx, ty int, c *uv.Cell) { s.setCell(tx, ty, c.Clone()) })
 }
 
-// Text draws plain text in one color with transparent spaces. Optional attrs
-// are uv.AttrBold, uv.AttrItalic, uv.AttrFaint, etc., OR'd together.
+// Text draws plain text in one color with transparent spaces; attrs are uv.Attr* bits.
 func (s *Scene) Text(x, y int, text string, fg color.Color, attrs ...uint8) {
 	var a uint8
 	for _, v := range attrs {
@@ -116,7 +103,7 @@ func (s *Scene) runes(x, y int, line string, style func(i int) uv.Style) {
 	}
 }
 
-// Cell sets a single cell. Out-of-bounds coordinates are ignored.
+// Cell sets a single cell; out-of-bounds is ignored.
 func (s *Scene) Cell(x, y int, ch string, st uv.Style) {
 	if x < 0 || y < 0 || x >= s.W || y >= s.H {
 		return
@@ -133,11 +120,9 @@ func (s *Scene) Fill(x, y, w, h int, bg color.Color) {
 	}
 }
 
-// Sprite is multi-line ASCII art with per-character colors. Spaces are
-// transparent. Paint (optional) has the same shape as Art; each character
-// in Paint selects a color from Colors for the matching Art character.
-// Characters in Paint that are not in Colors (e.g. ' ') use Default. For
-// pixel-art characters, see PixelArt.
+// Sprite is multi-line ASCII art with per-character colors; spaces are transparent.
+// Each character of Paint (optional, same shape as Art) selects a color from Colors
+// for the matching Art character; others use Default. For pixel art, see PixelArt.
 //
 //	bee := Sprite{
 //	    Art:    []string{`(o)##>`},
@@ -183,10 +168,9 @@ func (s *Scene) Sprite(x, y int, sp Sprite) {
 	}
 }
 
-// Render returns the scene as a string of exactly H lines of W cells, with
-// every cell's background explicit, and releases the scene. When the engine
-// is capturing, the slide's own scene (from Ctx.Scene) hands it the frame
-// instead and Render returns "".
+// Render returns the scene as exactly H lines of W cells, each with an explicit background,
+// and releases it. While the engine is capturing, the slide's own scene (from Ctx.Scene)
+// hands it the frame instead and Render returns "".
 func (s *Scene) Render() string {
 	if s.themeOverlay != nil {
 		s.themeOverlay(s.Px)
