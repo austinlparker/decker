@@ -1,0 +1,193 @@
+package decker
+
+import (
+	"errors"
+	"flag"
+	"fmt"
+	"os"
+	"path/filepath"
+	"sync/atomic"
+	"syscall"
+	"time"
+
+	tea "charm.land/bubbletea/v2"
+)
+
+// sheetCols is how many frames a contact sheet has per row.
+const sheetCols = 4
+
+// options are the command-line flags of Main.
+type options struct {
+	slide, step, fps int
+	dev, list        bool
+	snapshot         bool
+	at               float64
+	width, height    int
+	png, sheet       string
+	shrink           int
+	presenter        bool
+	socket           string
+	length           time.Duration
+	previews         string
+	video, size      string
+	hold             float64
+	until            int
+}
+
+// Main runs a deck from the command line: live in the terminal (the
+// default), in dev mode, as the presenter view, or rendered to snapshots,
+// a contact sheet or a video, as the flags say. Call it from the talk's
+// main function. Register any flags of the talk's own before calling it;
+// Main parses the command line.
+func Main(d Deck) {
+	if err := run(&d); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+func run(d *Deck) error {
+	if err := d.check(); err != nil {
+		return err
+	}
+	o := parseFlags(d.Name)
+	switch {
+	case o.video != "":
+		return runVideo(d, o)
+	case o.presenter:
+		return runPresenter(d, o.socket, o.length, imagePreviews(o.previews))
+	case o.list:
+		listSlides(d)
+		return nil
+	case o.sheet != "":
+		return runSheet(d, o)
+	case o.snapshot:
+		return runSnapshot(d, o)
+	}
+	return runLive(d, o)
+}
+
+func parseFlags(name string) options {
+	var o options
+	flag.IntVar(&o.slide, "slide", 1, "start at this slide (1-based)")
+	flag.IntVar(&o.step, "step", 1, "start at this build step (1-based)")
+	flag.IntVar(&o.fps, "fps", 60, "animation frames per second")
+	flag.BoolVar(&o.dev, "dev", false, "rebuild and reload when .go files change")
+	flag.BoolVar(&o.list, "list", false, "print slide titles and exit")
+	flag.BoolVar(&o.snapshot, "snapshot", false, "print one frame of -slide to stdout and exit")
+	flag.Float64Var(&o.at, "t", Settled, "with -snapshot: seconds since the slide appeared")
+	flag.IntVar(&o.width, "w", 120, "with -snapshot: frame width")
+	flag.IntVar(&o.height, "h", 36, "with -snapshot: frame height")
+	flag.StringVar(&o.png, "png", "", "with -snapshot: write the frame as a PNG image instead of printing it")
+	flag.StringVar(&o.sheet, "sheet", "", "write every slide (last step, settled) into one PNG contact sheet and exit")
+	flag.IntVar(&o.shrink, "shrink", 4, "with -sheet: shrink each frame by this factor (use 8 for very big terminals)")
+	flag.BoolVar(&o.presenter, "presenter", false, "run the presenter view (notes, timer, next slide) and drive a deck running in another window")
+	flag.StringVar(&o.socket, "socket", defaultSocket(name), "Unix socket linking the deck and the presenter view")
+	flag.DurationVar(&o.length, "length", 30*time.Minute, "with -presenter: the talk's length, for the timer and pace")
+	flag.StringVar(&o.previews, "previews", "auto", "with -presenter: draw slide previews as images (Ghostty, kitty) or cells; auto picks images when the terminal supports them")
+	flag.StringVar(&o.video, "video", "", "render the deck to this video file (MP4, needs ffmpeg) and exit; starts at -slide")
+	flag.StringVar(&o.size, "size", "1920x1080", "with -video: the video's size in pixels")
+	flag.Float64Var(&o.hold, "hold", 4, "with -video: seconds each build step stays on screen")
+	flag.IntVar(&o.until, "until", 0, "with -video: the last slide to include (default: the end)")
+	flag.Parse()
+	o.fps = max(o.fps, 1)
+	return o
+}
+
+func runVideo(d *Deck, o options) error {
+	vo := videoOptions{path: o.video, fps: o.fps, hold: o.hold, first: o.slide - 1, last: 1 << 30}
+	if o.until > 0 {
+		vo.last = o.until - 1
+	}
+	if _, err := fmt.Sscanf(o.size, "%dx%d", &vo.width, &vo.height); err != nil {
+		return errors.New("-size: want WIDTHxHEIGHT, like 1920x1080")
+	}
+	return renderVideo(d, vo)
+}
+
+func listSlides(d *Deck) {
+	for i, s := range d.Slides {
+		plural := ""
+		if s.steps() > 1 {
+			plural = "s"
+		}
+		fmt.Printf("%3d  %s (%d step%s)\n", i+1, s.Title, s.steps(), plural)
+	}
+}
+
+// stillFrame renders slide idx at the given step, secs into its life, at w×h
+// cells.
+func stillFrame(d *Deck, idx, step int, secs float64, w, h int) string {
+	m := newModel(d, idx, step, 60, nil)
+	m.w, m.h = w, h
+	back := m.now.Add(-time.Duration(secs * float64(time.Second)))
+	m.enter, m.stepStart = back, back
+	return m.View().Content
+}
+
+func runSheet(d *Deck, o options) error {
+	var frames []string
+	for i, s := range d.Slides {
+		frames = append(frames, stillFrame(d, i, s.steps()-1, o.at, o.width, o.height))
+	}
+	return writeSheet(frames, o.width, o.height, sheetCols, o.shrink, o.sheet, d.Theme)
+}
+
+func runSnapshot(d *Deck, o options) error {
+	frame := stillFrame(d, o.slide-1, o.step-1, o.at, o.width, o.height)
+	if o.png != "" {
+		return writePNG(frame, o.width, o.height, o.png, d.Theme)
+	}
+	fmt.Println(frame)
+	return nil
+}
+
+func runLive(d *Deck, o options) error {
+	var dev *devState
+	if o.dev {
+		bin, _ := filepath.Abs(filepath.Join(".slides", d.Name))
+		var err error
+		if dev, err = startDev(bin); err != nil {
+			return fmt.Errorf("dev mode: %w", err)
+		}
+	}
+
+	// The presenter view connects over the link; it's always on, and costs
+	// nothing when nobody connects.
+	var prog atomic.Pointer[tea.Program]
+	link, err := listenLink(o.socket, func(c linkCmd) {
+		if p := prog.Load(); p != nil {
+			p.Send(c)
+		}
+	})
+	if err != nil {
+		return err
+	}
+	// The deck draws its own frames (see termout.go); Bubble Tea handles
+	// keys and the program loop.
+	live, err := startLiveTerminal(d.Theme)
+	if err != nil {
+		return err
+	}
+	m := newModel(d, o.slide-1, o.step-1, o.fps, dev)
+	m.link = link
+	m.live = live.writer
+	p := tea.NewProgram(m, tea.WithoutRenderer())
+	prog.Store(p)
+	live.watchSize(p)
+	final, err := p.Run()
+	live.close()
+	link.Close()
+	if err != nil {
+		return err
+	}
+	if m, ok := final.(model); ok && m.execOnQuit != nil {
+		// Dev mode rebuilt us: become the new binary, on the same slide. A
+		// connected presenter view sees the link drop and reconnects.
+		args := append(m.execOnQuit, "-socket", o.socket)
+		if err := syscall.Exec(args[0], args, os.Environ()); err != nil {
+			return fmt.Errorf("restart failed: %w", err)
+		}
+	}
+	return nil
+}
