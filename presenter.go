@@ -3,12 +3,10 @@ package decker
 import (
 	"fmt"
 	"strings"
-	"sync"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/charmbracelet/x/ansi"
 )
 
@@ -283,12 +281,6 @@ func (p presenter) mainView() string {
 // footerLines is the footer's height: a rule, the timer line, and keys.
 const footerLines = 3
 
-// previewBox is the inside size of each preview frame on this screen, or
-// 0, 0 when previews don't fit.
-func (p presenter) previewBox() (pw, ph int) {
-	return p.previewSize(max(p.w-2*presMargin, 10), p.h-2-footerLines) // 2: header and blank line
-}
-
 // nextTarget is the slide and step the "next" preview shows, with its
 // label. ok is false on the last step of the last slide.
 func (p presenter) nextTarget() (next [2]int, label string, ok bool) {
@@ -342,44 +334,12 @@ func (p presenter) upload() tea.Cmd {
 			cmds = append(cmds, tea.Raw(free))
 		}
 		cmds = append(cmds, func() tea.Msg {
-			previewMu.Lock()
-			img := slideImage(s, step, dw, dh, p.theme)
-			previewMu.Unlock()
-			seq, err := kittyTransmit(id, img, pw, ph)
-			if err != nil {
-				seq = ""
-			}
+			seq := kittyTransmit(id, slideImage(s, step, dw, dh, p.theme), pw, ph)
 			return kittyUploadMsg{gen: gen, key: key, seq: seq}
 		})
 	}
 	return tea.Batch(cmds...)
 }
-
-// previewMu keeps preview drawing on one goroutine at a time: slides were
-// written to be drawn by one caller, and image previews draw in the
-// background.
-var previewMu sync.Mutex
-
-// previewSize picks the inside size of each preview frame, keeping the
-// deck's shape and leaving at least a few lines for notes. It returns 0, 0
-// when previews don't fit.
-func (p presenter) previewSize(inner, rest int) (pw, ph int) {
-	dw, dh := p.deckSize()
-	pw = (inner - presGutter - 4) / 2 // each frame adds 2 columns
-	// A cell shows one pixel across and two down, like the deck's, so the
-	// deck's shape in cells carries over directly.
-	ph = pw * dh / dw
-	if most := rest - 3 - 6; ph > most { // label + frame, and 6 lines of notes
-		ph = most
-		pw = ph * dw / dh
-	}
-	if ph < 5 || pw < 20 {
-		return 0, 0
-	}
-	return pw, ph
-}
-
-type previewKey struct{ slide, step, pw, ph, dw, dh int }
 
 // preview draws slide i at the given step, settled, into a pw×ph box. It
 // uses this build's slides, so after the deck changes shape (in dev mode) a
@@ -398,85 +358,9 @@ func (p presenter) preview(i, step, pw, ph int) string {
 	if s, ok := p.previews[key]; ok {
 		return s
 	}
-	previewMu.Lock()
 	s := renderPreview(p.slides[i], step, dw, dh, pw, ph, p.theme)
-	previewMu.Unlock()
 	p.previews[key] = s
 	return s
-}
-
-// renderPreview draws a slide at a size it's designed for (240 cells wide,
-// in the deck's shape), then shrinks the picture into pw×ph cells.
-// Drawing straight at preview size would lay the slide out for a tiny
-// screen instead of shrinking the real thing.
-func renderPreview(s Slide, step, dw, dh, pw, ph int, t *Theme) string {
-	rw := 240
-	rh := max(rw*dh/dw, 20)
-	frame := renderSlide(s, Ctx{W: rw, H: rh, T: Settled, Step: step, StepT: Settled, Theme: t})
-	src := framePixels(frame, rw, rh, t)
-	sc := NewScene(pw, ph, t)
-	shrinkInto(src, sc.Px)
-	return sc.Render()
-}
-
-// framePixels turns a rendered frame back into pixels: a "▀" cell is its
-// foreground color over its background. Other characters (rare on slides)
-// are approximated by blending the two.
-func framePixels(frame string, w, h int, t *Theme) *Pixels {
-	cv := lipgloss.NewCanvas(w, h)
-	uv.NewStyledString(frame).Draw(cv, cv.Bounds())
-	bgDefault, fgDefault := t.Background, t.Text
-	px := NewPixels(w, 2*h, bgDefault)
-	for y := 0; y < h; y++ {
-		for x := 0; x < w; x++ {
-			cell := cv.CellAt(x, y)
-			if cell == nil || cell.Width == 0 {
-				continue
-			}
-			fg, bg := fgDefault, bgDefault
-			if cell.Style.Fg != nil {
-				fg = toRGB(cell.Style.Fg)
-			}
-			if cell.Style.Bg != nil {
-				bg = toRGB(cell.Style.Bg)
-			}
-			top, bot := bg, bg
-			switch cell.Content {
-			case "", " ":
-			case "▀":
-				top = fg
-			case "▄":
-				bot = fg
-			case "█":
-				top, bot = fg, fg
-			default:
-				top = Mix(bg, fg, 0.5)
-				bot = top
-			}
-			px.Set(x, 2*y, top)
-			px.Set(x, 2*y+1, bot)
-		}
-	}
-	return px
-}
-
-// shrinkInto scales src down into dst, averaging each block of pixels.
-func shrinkInto(src, dst *Pixels) {
-	for y := 0; y < dst.H; y++ {
-		y0, y1 := y*src.H/dst.H, max((y+1)*src.H/dst.H, y*src.H/dst.H+1)
-		for x := 0; x < dst.W; x++ {
-			x0, x1 := x*src.W/dst.W, max((x+1)*src.W/dst.W, x*src.W/dst.W+1)
-			var r, g, b float32
-			for yy := y0; yy < y1; yy++ {
-				for xx := x0; xx < x1; xx++ {
-					c := src.At(xx, yy)
-					r, g, b = r+c.R, g+c.G, b+c.B
-				}
-			}
-			n := float32((y1 - y0) * (x1 - x0))
-			dst.Set(x, y, RGB{r / n, g / n, b / n})
-		}
-	}
 }
 
 func (p presenter) footer() string {

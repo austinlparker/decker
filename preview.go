@@ -2,108 +2,134 @@ package decker
 
 import (
 	"image"
-	"image/color"
-	"image/draw"
-	"image/png"
-	"os"
+	"sync"
 
 	"charm.land/lipgloss/v2"
 	uv "github.com/charmbracelet/ultraviolet"
-	"golang.org/x/image/font"
-	"golang.org/x/image/font/basicfont"
-	"golang.org/x/image/math/fixed"
 )
 
-// writePNG paints a rendered frame into a PNG the way a terminal would show
-// it: each cell is cellW×cellH pixels, "▀" cells are split into two colored
-// halves, and other characters are drawn with a small bitmap font. Used by
-// `-snapshot -png file.png` to preview slides without a terminal.
-func writePNG(frame string, w, h int, path string, t *Theme) error {
-	return savePNG(frameImage(frame, w, h, t), path)
+// previewKey names one presenter preview: a slide at a step, shown in a
+// pw×ph box, drawn for a dw×dh deck.
+type previewKey struct{ slide, step, pw, ph, dw, dh int }
+
+// previewMu keeps slide drawing on one goroutine at a time: slides were
+// written to be drawn by one caller, and image previews draw in the
+// background.
+var previewMu sync.Mutex
+
+// previewBox is the inside size of each preview frame on this screen: the
+// deck's shape, leaving at least a few lines for notes. It is 0, 0 when
+// previews don't fit.
+func (p presenter) previewBox() (pw, ph int) {
+	inner, rest := max(p.w-2*presMargin, 10), p.h-2-footerLines // 2: header and blank line
+	dw, dh := p.deckSize()
+	pw = (inner - presGutter - 4) / 2 // each frame adds 2 columns
+	// A cell shows one pixel across and two down, like the deck's, so the
+	// deck's shape in cells carries over directly.
+	ph = pw * dh / dw
+	if most := rest - 3 - 6; ph > most { // label + frame, and 6 lines of notes
+		ph = most
+		pw = ph * dw / dh
+	}
+	if ph < 5 || pw < 20 {
+		return 0, 0
+	}
+	return pw, ph
 }
 
-// frameImage paints a frame into an image (see writePNG).
-func frameImage(frame string, w, h int, t *Theme) *image.RGBA {
-	const cellW, cellH = 8, 16
+// settledPixels draws a slide at a step, settled, at w×h cells.
+func settledPixels(s Slide, step, w, h int, t *Theme) *Pixels {
+	previewMu.Lock()
+	defer previewMu.Unlock()
+	return framePixels(renderSlide(s, Ctx{W: w, H: h, T: Settled, Step: step, StepT: Settled, Theme: t}), w, h, t)
+}
+
+// renderPreview draws a slide at a size it's designed for (240 cells wide,
+// in the deck's shape), then shrinks the picture into pw×ph cells.
+// Drawing straight at preview size would lay the slide out for a tiny
+// screen instead of shrinking the real thing.
+func renderPreview(s Slide, step, dw, dh, pw, ph int, t *Theme) string {
+	const rw = 240
+	rh := max(rw*dh/dw, 20)
+	src := settledPixels(s, step, rw, rh, t)
+	sc := NewScene(pw, ph, t)
+	shrinkInto(src, sc.Px)
+	return sc.Render()
+}
+
+// slideImage draws a slide, settled at the given step, at the deck's size:
+// one image pixel per canvas pixel, exactly what the projector shows.
+func slideImage(s Slide, step, dw, dh int, t *Theme) *image.RGBA {
+	px := settledPixels(s, step, dw, dh, t)
+	img := image.NewRGBA(image.Rect(0, 0, px.W, px.H))
+	for i, c := range px.Pix {
+		q := c.q()
+		img.Pix[4*i], img.Pix[4*i+1], img.Pix[4*i+2], img.Pix[4*i+3] = q[0], q[1], q[2], 255
+	}
+	return img
+}
+
+func frameCanvas(frame string, w, h int) *lipgloss.Canvas {
 	cv := lipgloss.NewCanvas(w, h)
 	uv.NewStyledString(frame).Draw(cv, cv.Bounds())
+	return cv
+}
 
-	img := image.NewRGBA(image.Rect(0, 0, w*cellW, h*cellH))
-	bgDefault := t.Background.Color()
-	fgDefault := t.Text.Color()
-	draw.Draw(img, img.Bounds(), &image.Uniform{bgDefault}, image.Point{}, draw.Src)
-
-	d := &font.Drawer{Dst: img, Face: basicfont.Face7x13}
+// framePixels turns a rendered frame back into pixels: a "▀" cell is its
+// foreground color over its background. Other characters (rare on slides)
+// are approximated by blending the two.
+func framePixels(frame string, w, h int, t *Theme) *Pixels {
+	cv := frameCanvas(frame, w, h)
+	bgDefault, fgDefault := t.Background, t.Text
+	px := NewPixels(w, 2*h, bgDefault)
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
 			cell := cv.CellAt(x, y)
 			if cell == nil || cell.Width == 0 {
 				continue
 			}
-			fg, bg := cell.Style.Fg, cell.Style.Bg
-			if fg == nil {
-				fg = fgDefault
+			fg, bg := fgDefault, bgDefault
+			if cell.Style.Fg != nil {
+				fg = toRGB(cell.Style.Fg)
 			}
-			if bg == nil {
-				bg = bgDefault
+			if cell.Style.Bg != nil {
+				bg = toRGB(cell.Style.Bg)
 			}
-			r := image.Rect(x*cellW, y*cellH, (x+1)*cellW, (y+1)*cellH)
-			draw.Draw(img, r, &image.Uniform{bg}, image.Point{}, draw.Src)
+			top, bot := bg, bg
 			switch cell.Content {
 			case "", " ":
 			case "▀":
-				top := image.Rect(r.Min.X, r.Min.Y, r.Max.X, r.Min.Y+cellH/2)
-				draw.Draw(img, top, &image.Uniform{fg}, image.Point{}, draw.Src)
-			case "▁":
-				low := image.Rect(r.Min.X, r.Max.Y-cellH/8, r.Max.X, r.Max.Y)
-				draw.Draw(img, low, &image.Uniform{fg}, image.Point{}, draw.Src)
+				top = fg
+			case "▄":
+				bot = fg
+			case "█":
+				top, bot = fg, fg
 			default:
-				if drawBlockRune(img, []rune(cell.Content)[0], r, fg, bg) {
-					continue
-				}
-				d.Src = &image.Uniform{fg}
-				d.Dot = fixed.P(r.Min.X, r.Min.Y+12)
-				d.DrawString(cell.Content)
+				top = Mix(bg, fg, 0.5)
+				bot = top
 			}
+			px.Set(x, 2*y, top)
+			px.Set(x, 2*y+1, bot)
 		}
 	}
-	return img
+	return px
 }
 
-// writeSheet renders frames into one contact-sheet image, cols across,
-// each shrunk by an integer factor.
-func writeSheet(frames []string, w, h, cols, shrink int, path string, t *Theme) error {
-	const cellW, cellH = 8, 16
-	fw, fh := w*cellW/shrink, h*cellH/shrink
-	rows := (len(frames) + cols - 1) / cols
-	gap := 6
-	sheet := image.NewRGBA(image.Rect(0, 0, cols*(fw+gap)+gap, rows*(fh+gap)+gap))
-	draw.Draw(sheet, sheet.Bounds(), &image.Uniform{color.Black}, image.Point{}, draw.Src)
-	for i, fr := range frames {
-		src := frameImage(fr, w, h, t)
-		ox, oy := gap+(i%cols)*(fw+gap), gap+(i/cols)*(fh+gap)
-		for y := 0; y < fh; y++ {
-			for x := 0; x < fw; x++ {
-				var r, g, b uint32
-				for yy := 0; yy < shrink; yy++ {
-					for xx := 0; xx < shrink; xx++ {
-						c := src.RGBAAt(x*shrink+xx, y*shrink+yy)
-						r, g, b = r+uint32(c.R), g+uint32(c.G), b+uint32(c.B)
-					}
+// shrinkInto scales src down into dst, averaging each block of pixels.
+func shrinkInto(src, dst *Pixels) {
+	for y := 0; y < dst.H; y++ {
+		y0, y1 := y*src.H/dst.H, max((y+1)*src.H/dst.H, y*src.H/dst.H+1)
+		for x := 0; x < dst.W; x++ {
+			x0, x1 := x*src.W/dst.W, max((x+1)*src.W/dst.W, x*src.W/dst.W+1)
+			var r, g, b float32
+			for yy := y0; yy < y1; yy++ {
+				for xx := x0; xx < x1; xx++ {
+					c := src.At(xx, yy)
+					r, g, b = r+c.R, g+c.G, b+c.B
 				}
-				n := uint32(shrink * shrink)
-				sheet.Set(ox+x, oy+y, RGB{float32(r / n), float32(g / n), float32(b / n)}.Color())
 			}
+			n := float32((y1 - y0) * (x1 - x0))
+			dst.Set(x, y, RGB{r / n, g / n, b / n})
 		}
 	}
-	return savePNG(sheet, path)
-}
-
-func savePNG(img image.Image, path string) error {
-	f, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	return png.Encode(f, img)
 }

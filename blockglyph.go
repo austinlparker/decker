@@ -14,40 +14,32 @@ var quadrants = map[rune]uint8{
 // blockShades maps shade characters to the opacity they fill the cell with.
 var blockShades = map[rune]float64{'░': 0.35, '▒': 0.55, '▓': 0.8}
 
-type blockArms struct{ u, d, l, r, double bool }
-
-// blockBoxArms maps box-drawing characters to the arms they draw. Joins of
-// single and double lines (╒ ╕ ╘ ╛ ╥ ╨) are drawn as single lines.
-var blockBoxArms = map[rune]blockArms{
-	'─': {l: true, r: true}, '│': {u: true, d: true},
-	'┌': {r: true, d: true}, '┐': {l: true, d: true}, '└': {u: true, r: true}, '┘': {u: true, l: true},
-	'├': {u: true, d: true, r: true}, '┤': {u: true, d: true, l: true},
-	'┬': {l: true, r: true, d: true}, '┴': {l: true, r: true, u: true},
-	'┼': {u: true, d: true, l: true, r: true},
-	'═': {l: true, r: true, double: true}, '║': {u: true, d: true, double: true},
-	'╔': {r: true, d: true, double: true}, '╗': {l: true, d: true, double: true},
-	'╚': {u: true, r: true, double: true}, '╝': {u: true, l: true, double: true},
-	'╠': {u: true, d: true, r: true, double: true}, '╣': {u: true, d: true, l: true, double: true},
-	'╦': {l: true, r: true, d: true, double: true}, '╩': {l: true, r: true, u: true, double: true},
-	'╬': {u: true, d: true, l: true, r: true, double: true},
-	'╒': {r: true, d: true}, '╕': {l: true, d: true}, '╘': {u: true, r: true}, '╛': {u: true, l: true},
-	'╥': {l: true, r: true, d: true}, '╨': {l: true, r: true, u: true},
+// boxArms maps box-drawing characters to their arms' weights in the order up,
+// right, down, left: 0 none, 1 single, 2 double.
+var boxArms = map[rune][4]uint8{
+	'─': {0, 1, 0, 1}, '━': {0, 1, 0, 1}, '│': {1, 0, 1, 0}, '┃': {1, 0, 1, 0},
+	'┌': {0, 1, 1, 0}, '┐': {0, 0, 1, 1}, '└': {1, 1, 0, 0}, '┘': {1, 0, 0, 1},
+	'╭': {0, 1, 1, 0}, '╮': {0, 0, 1, 1}, '╰': {1, 1, 0, 0}, '╯': {1, 0, 0, 1},
+	'├': {1, 1, 1, 0}, '┤': {1, 0, 1, 1}, '┬': {0, 1, 1, 1}, '┴': {1, 1, 0, 1}, '┼': {1, 1, 1, 1},
+	'═': {0, 2, 0, 2}, '║': {2, 0, 2, 0},
+	'╔': {0, 2, 2, 0}, '╗': {0, 0, 2, 2}, '╚': {2, 2, 0, 0}, '╝': {2, 0, 0, 2},
+	'╠': {2, 2, 2, 0}, '╣': {2, 0, 2, 2}, '╦': {0, 2, 2, 2}, '╩': {2, 2, 0, 2}, '╬': {2, 2, 2, 2},
+	'╒': {0, 2, 1, 0}, '╕': {0, 0, 1, 2}, '╘': {1, 2, 0, 0}, '╛': {1, 0, 0, 2},
+	'╓': {0, 1, 2, 0}, '╖': {0, 0, 2, 1}, '╙': {2, 1, 0, 0}, '╜': {2, 0, 0, 1},
+	'╞': {1, 2, 1, 0}, '╡': {1, 0, 1, 2}, '╤': {0, 2, 1, 2}, '╧': {1, 2, 0, 2},
+	'╟': {2, 1, 2, 0}, '╢': {2, 0, 2, 1}, '╥': {0, 1, 2, 1}, '╨': {2, 1, 0, 1},
+	'╪': {1, 2, 1, 2}, '╫': {2, 1, 2, 1},
+	'╴': {0, 0, 0, 1}, '╵': {1, 0, 0, 0}, '╶': {0, 1, 0, 0}, '╷': {0, 0, 1, 0},
+	'╸': {0, 0, 0, 1}, '╹': {1, 0, 0, 0}, '╺': {0, 1, 0, 0}, '╻': {0, 0, 1, 0},
 }
 
 // isSolid reports whether r is a filled block character, which takes the
 // block's color and glows, as opposed to a box-drawing edge or small mark.
-func isSolid(r rune) bool { return solidRunes[r] }
-
-var solidRunes = func() map[rune]bool {
-	m := map[rune]bool{'■': true}
-	for r := range quadrants {
-		m[r] = true
-	}
-	for r := range blockShades {
-		m[r] = true
-	}
-	return m
-}()
+func isSolid(r rune) bool {
+	_, q := quadrants[r]
+	_, s := blockShades[r]
+	return q || s || r == '■'
+}
 
 // drawBlockRunePx paints one block or box-drawing character into the k×2k
 // pixel box at (x, y).
@@ -85,27 +77,29 @@ func drawBlockRunePx(p *Pixels, r rune, x, y, k float64, c RGB, a float64) {
 		p.Rect(x+cw*0.35, y+ch*0.42, cw*0.3, ch*0.16, c, a)
 		return
 	}
-	arms, ok := blockBoxArms[r]
+	arms, ok := boxArms[r]
 	if !ok {
 		return
 	}
+	// Mixed single and double joins are drawn as single lines.
+	double := arms[0] != 1 && arms[1] != 1 && arms[2] != 1 && arms[3] != 1
 	t := math.Max(1, k*0.3)
 	cx, cy := x+cw/2, y+ch/2
 	stroke := func(ox, oy float64) {
-		if arms.l {
+		if arms[3] > 0 {
 			p.Rect(x, cy+oy-t/2, cw/2+ox+t/2, t, c, a)
 		}
-		if arms.r {
+		if arms[1] > 0 {
 			p.Rect(cx+ox-t/2, cy+oy-t/2, cw/2-ox+t/2, t, c, a)
 		}
-		if arms.u {
+		if arms[0] > 0 {
 			p.Rect(cx+ox-t/2, y, t, ch/2+oy+t/2, c, a)
 		}
-		if arms.d {
+		if arms[2] > 0 {
 			p.Rect(cx+ox-t/2, cy+oy-t/2, t, ch/2-oy+t/2, c, a)
 		}
 	}
-	if arms.double {
+	if double {
 		o := math.Max(k*0.22, t*0.8)
 		stroke(-o, -o)
 		stroke(o, o)

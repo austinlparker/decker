@@ -7,6 +7,7 @@ import (
 
 	"charm.land/lipgloss/v2"
 	uv "github.com/charmbracelet/ultraviolet"
+	"github.com/charmbracelet/x/ansi/kitty"
 )
 
 // Bubble Tea lays the screen out by width, so each placeholder (U+10EEEE
@@ -27,7 +28,7 @@ func TestKittyPlaceholdersAreOneCellEach(t *testing.T) {
 	cv := lipgloss.NewCanvas(cols, rows)
 	uv.NewStyledString(s).Draw(cv, cv.Bounds())
 	cell := cv.CellAt(5, 3)
-	want := string([]rune{kittyPlaceholder, kittyDiacritics[3], kittyDiacritics[5]})
+	want := string([]rune{kitty.Placeholder, kitty.Diacritic(3), kitty.Diacritic(5)})
 	if cell == nil || cell.Content != want {
 		t.Fatalf("cell (5,3) = %+v, want row 3 column 5 placeholder", cell)
 	}
@@ -38,10 +39,7 @@ func TestKittyPlaceholdersAreOneCellEach(t *testing.T) {
 
 func TestKittyTransmitChunks(t *testing.T) {
 	img := slideImage(testDeck().Slides[0], 0, 120, 36, testTheme)
-	seq, err := kittyTransmit(9, img, 30, 8)
-	if err != nil {
-		t.Fatal(err)
-	}
+	seq := kittyTransmit(9, img, 30, 8)
 	parts := strings.Split(strings.TrimSuffix(seq, "\x1b\\"), "\x1b\\")
 	if len(parts) < 2 {
 		t.Fatalf("expected several chunks, got %d", len(parts))
@@ -91,15 +89,16 @@ func TestKittyImageIDsWrapAndFree(t *testing.T) {
 // A preview image is drawn in the background when the slide changes; it
 // should be ready well before you've finished glancing down.
 func TestSlideImageIsQuick(t *testing.T) {
+	if testing.Short() {
+		t.Skip("wall-clock test")
+	}
 	slides := testDeck().Slides
 	slideImage(slides[0], 0, 682, 171, testTheme) // warm the font caches
 	var worst time.Duration
 	for i := range slides {
 		start := time.Now()
 		img := slideImage(slides[i], slides[i].steps()-1, 682, 171, testTheme)
-		if _, err := kittyTransmit(1, img, 60, 15); err != nil {
-			t.Fatal(err)
-		}
+		kittyTransmit(1, img, 60, 15)
 		worst = max(worst, time.Since(start))
 	}
 	t.Logf("slowest preview image: %v", worst)

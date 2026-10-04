@@ -852,19 +852,11 @@ func goldenKitty(t *testing.T, g *goldenEntries) {
 	for i, s := range d.Slides {
 		img := slideImage(s, s.steps()-1, 120, 36, testTheme)
 		g.add(fmt.Sprintf("kitty/slideImage/%d", i), img.Pix, []byte(fmt.Sprint(img.Bounds())))
-		seq, err := kittyTransmit(i+1, img, 30, 8)
-		if err != nil {
-			t.Fatal(err)
-		}
-		g.addString(fmt.Sprintf("kitty/transmit/%d", i), seq)
+		g.addString(fmt.Sprintf("kitty/transmit/%d", i), kittyTransmit(i+1, img, 30, 8))
 	}
 	img := slideImage(wideSlide(), 1, 240, 67, testTheme)
 	g.add("kitty/slideImage/wide-240x67", img.Pix)
-	seq, err := kittyTransmit(255, img, 60, 17)
-	if err != nil {
-		t.Fatal(err)
-	}
-	g.addString("kitty/transmit/wide-240x67", seq)
+	g.addString("kitty/transmit/wide-240x67", kittyTransmit(255, img, 60, 17))
 	for _, sz := range [][3]int{{7, 40, 12}, {1, 1, 1}, {255, 5, 3}, {3, 300, 300}} {
 		g.addString(fmt.Sprintf("kitty/placeholders/%d/%dx%d", sz[0], sz[1], sz[2]), kittyPlaceholders(sz[0], sz[1], sz[2]))
 	}
