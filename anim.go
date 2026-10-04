@@ -48,27 +48,26 @@ func LerpInt(a, b int, p float64) int { return int(math.Round(Lerp(float64(a), f
 
 // Spring returns the position at time t of a Harmonica spring that starts at
 // from and is pulled toward to. freq sets speed (try 2-8); damping < 1 bounces,
-// 1 is critically damped. Every call simulates from t=0, so the result depends
-// only on t; it stops at settling or after 10 seconds.
+// 1 is critically damped. The result depends only on t, which counts in whole
+// 1/60 s steps; it stops at settling or after 10 seconds.
 func Spring(from, to, t, freq, damping float64) float64 {
 	const fps = 60
-	if t <= 0 {
+	n := int(t * fps)
+	if n <= 0 {
 		return from
 	}
-	n := int(t * fps)
 	if n >= 10*fps { // any spring worth using has settled by 10s
 		return to
 	}
-	sp := harmonica.NewSpring(harmonica.FPS(fps), freq, damping)
-	pos, vel := from, 0.0
+	// Harmonica's step is the exact solution for any dt, so n steps of 1/60 s
+	// are one step of n/60 s.
+	dt := float64(n) * harmonica.FPS(fps)
+	pos, vel := harmonica.NewSpring(dt, freq, damping).Update(from, 0, to)
 	// Land exactly on `to` once settled: a 1e-7 residual can flip a rounded
 	// position every frame.
 	eps := max(math.Abs(to-from), 1) * 1e-4
-	for i := 0; i < n; i++ {
-		pos, vel = sp.Update(pos, vel, to)
-		if math.Abs(pos-to) < eps && math.Abs(vel) < eps {
-			return to
-		}
+	if math.Abs(pos-to) < eps && math.Abs(vel) < eps {
+		return to
 	}
 	return pos
 }
