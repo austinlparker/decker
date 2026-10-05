@@ -27,7 +27,7 @@ func BenchmarkLive(b *testing.B) {
 				m.now = start.Add(time.Duration(n) * time.Second / 60)
 				if tc.trans {
 					// Stay mid-transition: restart it every frame.
-					m.transFrom = renderSlideGrid(d.Slides[0], m.ctx(m.h))
+					m.transFrom = renderSlide(d.Slides[0], m.ctx(m.h))
 					m.trans, m.transFwd = TransitionPush, true
 					m.transStart = m.now.Add(-time.Duration(TransitionDuration / 2 * float64(time.Second)))
 				}

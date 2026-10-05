@@ -12,14 +12,15 @@ things live") for the file map.
   Anything stateful breaks replay, `-snapshot`, video and the goldens.
 - **The engine owns the scene.** A slide's `View(c Ctx, sc *Scene)` only
   draws; `renderSlide` makes the scene, runs `View`, draws `Theme.Overlay`
-  once and catches panics (drawn into the pixels). Cells (`renderSlideGrid`:
-  live, snapshots, transitions, previews) come from `Scene.toGrid`; video
-  reads `sc.Px` directly and has no character layer. Styled strings are
+  once and catches panics (drawn into the pixels). Transitions mix two such
+  finished scenes. Cells (live, snapshots, previews) come from
+  `Scene.toGrid` after that; video reads `sc.Px` directly and has no
+  character layer. Styled strings are
   parsed only for the engine's own chrome (footer, panels, help box).
 - **Goldens pin every byte.** `gallery_test.go` (`testdata/gallery.golden`) hashes
   every pixel and cell of a deck that exercises each exported drawing API.
   `golden_internal_test.go` (`testdata/internal.golden`) hashes what the gallery
-  can't reach: cell and video transitions, PNG export, the live model's screen,
+  can't reach: transitions in cells and video, PNG export, the live model's screen,
   the terminal writer's escape sequences, the presenter view.
 - **Keep float operation order.** Reordering or fusing arithmetic (`a*b+c`,
   summing in a different order, changing a constant's type) moves pixels and
@@ -63,11 +64,13 @@ run `go test ./...`, and re-record only the new keys
 (`UPDATE_GOLDEN=1 go test -run TestGalleryGolden`).
 
 **Add a transition** (`transition.go`). Append a constant to the `Transition`
-block (at the end, so existing values keep their numbers). Write a `xxxCells`
-func (`out, from, to *grid, p float64, forward bool, t *Theme`, ending each row
-with `fixWideEdges`) and a `xxxPixels` func (`from, to []byte, w, h int, p
-float64, t *Theme`, mixing into `to` in place). Register both in the
-`transitions` map; a kind with no entry cuts straight to the new frame. Add the
+block (at the end, so existing values keep their numbers). Write one
+`transitionFunc` (`from, to *Scene, p float64, forward bool, t *Theme`) that
+mixes `from` into `to` in place: the pixels, and the character layer through
+`moveChars`. The terminal, snapshots and video all use it. Size bands and
+blocks from the frame's width, not in fixed cells, so it looks the same at
+any resolution. Register it in the `transitions` map; a kind with no entry
+cuts straight to the new frame. Add the
 kind to `transitionNames` and `transitionKinds` in `golden_internal_test.go`,
 and use it on a slide in `gallery_test.go`. Mention it in `Slide.Transition` docs
 and the README. Easing is the implementation's job: `p` is linear.

@@ -25,6 +25,13 @@ type Scene struct {
 	used  []int      // indexes of set cells, for clearing on reuse
 
 	ink RGB // character-layer text with no color of its own
+
+	moved []movedCell // moveChars' scratch
+}
+
+type movedCell struct {
+	i    int
+	cell *uv.Cell
 }
 
 // A 682×171 scene is ~2.8MB of pixels and one is made every frame: recycle them
@@ -62,6 +69,33 @@ func (s *Scene) setCell(x, y int, c *uv.Cell) {
 		s.used = append(s.used, i)
 	}
 	s.cells[i] = c
+}
+
+// moveChars rebuilds to's character layer from the cells of both frames:
+// where says where the cell at (x, y) lands, from the old frame or the new
+// one, and false if it doesn't show. Cells are shared, not copied; neither
+// frame changes them.
+func moveChars(from, to *Scene, where func(x, y int, old bool) (int, int, bool)) {
+	if len(from.used) == 0 && len(to.used) == 0 {
+		return
+	}
+	to.moved = to.moved[:0]
+	for _, i := range to.used {
+		to.moved = append(to.moved, movedCell{i, to.cells[i]})
+		to.cells[i] = nil
+	}
+	to.used = to.used[:0]
+	place := func(i int, c *uv.Cell, old bool) {
+		if x, y, ok := where(i%to.W, i/to.W, old); ok && x >= 0 && y >= 0 && x < to.W && y < to.H {
+			to.setCell(x, y, c)
+		}
+	}
+	for _, i := range from.used {
+		place(i, from.cells[i], true)
+	}
+	for _, m := range to.moved {
+		place(m.i, m.cell, false)
+	}
 }
 
 // Put draws a styled, possibly multi-line block at (x, y). Every cell is

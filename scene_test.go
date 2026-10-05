@@ -25,20 +25,36 @@ func TestSceneLayering(t *testing.T) {
 	}
 }
 
-func TestTransitionsKeepSize(t *testing.T) {
-	a := strings.Repeat(strings.Repeat("a", 20)+"\n", 4) + strings.Repeat("a", 20)
-	b := strings.Repeat(strings.Repeat("b", 20)+"\n", 4) + strings.Repeat("b", 20)
+// TestTransitionsMoveChars checks the character layer goes with its frame:
+// each output cell shows the old or the new frame's character, or none (in a
+// wipe's band), never both, and the new frame's alone at the end.
+func TestTransitionsMoveChars(t *testing.T) {
+	const w, h = 20, 5
+	text := func(ch string) *Scene {
+		sc := NewScene(w, h, testTheme)
+		sc.Put(0, 0, strings.TrimSuffix(strings.Repeat(strings.Repeat(ch, w)+"\n", h), "\n"))
+		return sc
+	}
 	for k := range transitions {
 		for _, p := range []float64{0, 0.5, 1} {
 			for _, fwd := range []bool{true, false} {
-				out := frameLines(composeTransition(k, a, b, 20, 5, p, fwd, testTheme))
-				if len(out) != 5 {
-					t.Errorf("transition %d p=%v: %d lines", k, p, len(out))
+				a, b := text("a"), text("b")
+				mixTransition(k, a, b, p, fwd, testTheme)
+				out := frameLines(b.Render())
+				a.Release()
+				if len(out) != h {
+					t.Fatalf("transition %d p=%v: %d lines", k, p, len(out))
+				}
+				if n := strings.Count(strings.Join(out, ""), "a") + strings.Count(strings.Join(out, ""), "b"); n > w*h {
+					t.Errorf("transition %d p=%v: %d characters in %d cells", k, p, n, w*h)
+				}
+				if p == 1 && out[0] != strings.Repeat("b", w) {
+					t.Errorf("transition %d at p=1 should be fully new, got %q", k, out[0])
+				}
+				if p == 0.5 && k != TransitionWipe && !strings.Contains(out[0], "a") {
+					t.Errorf("transition %d at p=0.5 lost the old frame's characters: %q", k, out[0])
 				}
 			}
-		}
-		if got := frameLines(composeTransition(k, a, b, 20, 5, 1, true, testTheme)); got[0] != strings.Repeat("b", 20) {
-			t.Errorf("transition %d at p=1 should be fully new, got %q", k, got[0])
 		}
 	}
 }

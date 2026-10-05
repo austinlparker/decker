@@ -1,7 +1,7 @@
 package decker
 
 // Golden hashes for the engine paths the deck-level golden (gallery_test.go)
-// cannot reach, because they are unexported: cell and video transitions,
+// cannot reach, because they are unexported: transitions in cells and video,
 // the video frame loop, PNG export, the live model's screen, the terminal
 // writer's escape sequences, the presenter view.
 //
@@ -149,8 +149,8 @@ func (g *goldenEntries) check(t *testing.T, path string) {
 var goldenBase = time.Date(2025, 1, 2, 3, 4, 5, 0, time.UTC)
 
 // wideSlide has wide characters (CJK, emoji) at odd and even columns, rich
-// text attributes, a Lip Gloss box and a gradient: what fixWideEdges and
-// the cell writer have to get right.
+// text attributes, a Lip Gloss box and a gradient: what transitions' seams
+// and the cell writer have to get right.
 func wideSlide() Slide {
 	return Slide{Title: "Wide", Notes: "wide characters\nand a second line", Steps: 2, Transition: TransitionWipe,
 		View: func(c Ctx, sc *Scene) {
@@ -325,29 +325,22 @@ func goldenCellTransitions(t *testing.T, g *goldenEntries) {
 			for _, k := range transitionKinds {
 				for _, fwd := range []bool{true, false} {
 					for _, p := range ps {
-						out := composeTransition(k, from, to, w, h, p, fwd, testTheme)
-						g.addString(fmt.Sprintf("cells/%dx%d/%s/%s/fwd=%v/p=%v", w, h, pr.name, transitionNames[k], fwd, p), out)
+						sc := mixSlides(k, pr.from, pr.to, pr.fstep, pr.tstep, w, h, p, fwd)
+						g.addString(fmt.Sprintf("cells/%dx%d/%s/%s/fwd=%v/p=%v", w, h, pr.name, transitionNames[k], fwd, p), sc.Render())
 					}
 				}
 			}
 		}
 	}
-	// composeGrid on the grids the live deck builds (wide flags set by the
-	// scene, not parsed back from a string), without releasing them.
-	w, h := 120, 34
-	a := renderSlideGrid(deck[0], Ctx{W: w, H: h, T: Settled, Theme: testTheme})
-	b := renderSlideGrid(wide, Ctx{W: w, H: h, T: 0.4, Step: 1, StepT: 0.4, Theme: testTheme})
+	// The same at the size the live model's tests use.
 	for _, k := range transitionKinds {
 		for _, fwd := range []bool{true, false} {
 			for _, p := range ps {
-				out := composeGrid(k, a, b, p, fwd, testTheme)
-				g.addString(fmt.Sprintf("cells/grid/%s/fwd=%v/p=%v", transitionNames[k], fwd, p), out.String())
-				out.release()
+				sc := mixSlides(k, deck[0], wide, 0, 1, 120, 34, p, fwd)
+				g.addString(fmt.Sprintf("cells/grid/%s/fwd=%v/p=%v", transitionNames[k], fwd, p), sc.Render())
 			}
 		}
 	}
-	// A degenerate size returns the new frame unchanged.
-	g.addString("cells/degenerate", composeTransition(TransitionPush, "a", "b", 0, 0, 0.5, true, testTheme))
 }
 
 func goldenVideoTransitions(t *testing.T, g *goldenEntries) {
@@ -362,8 +355,13 @@ func goldenVideoTransitions(t *testing.T, g *goldenEntries) {
 		g.add(fmt.Sprintf("video/frame/%dx%d/to", w, h), to)
 		for _, k := range transitionKinds {
 			for _, p := range ps {
-				mix := append([]byte(nil), to...)
-				blendTransition(k, from, mix, w, h, p, testTheme)
+				a := renderSlide(deck[0], Ctx{W: w, H: h / 2, T: Settled, StepT: Settled, Theme: testTheme})
+				b := renderSlide(wide, Ctx{W: w, H: h / 2, T: 0.4, Step: 1, StepT: 0.4, Theme: testTheme})
+				mixTransition(k, a, b, p, true, testTheme)
+				mix := make([]byte, 3*w*h)
+				toRGB24(b.Px, mix)
+				a.Release()
+				b.Release()
 				g.add(fmt.Sprintf("video/%dx%d/%s/p=%v", w, h, transitionNames[k], p), mix)
 			}
 		}

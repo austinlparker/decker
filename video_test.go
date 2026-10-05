@@ -57,24 +57,6 @@ func TestVideoFramesAreDrawn(t *testing.T) {
 	}
 }
 
-func TestBlendTransitionEnds(t *testing.T) {
-	const w, h = 64, 36
-	from := bytes.Repeat([]byte{10, 20, 30}, w*h)
-	to := bytes.Repeat([]byte{200, 100, 50}, w*h)
-	for k := range transitions {
-		start := append([]byte(nil), to...)
-		blendTransition(k, from, start, w, h, 0, testTheme)
-		if k != TransitionWipe && !bytes.Equal(start, from) { // wipe's band starts off screen
-			t.Errorf("transition %d at p=0 isn't the old slide", k)
-		}
-		end := append([]byte(nil), to...)
-		blendTransition(k, from, end, w, h, 1, testTheme)
-		if !bytes.Equal(end, to) {
-			t.Errorf("transition %d at p=1 isn't the new slide", k)
-		}
-	}
-}
-
 type writerFunc func([]byte) (int, error)
 
 func (f writerFunc) Write(b []byte) (int, error) { return f(b) }

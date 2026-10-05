@@ -67,24 +67,40 @@ func renderVideo(d *Deck, o videoOptions) error {
 func writeVideoFrames(d *Deck, o videoOptions, w io.Writer) error {
 	cw, ch := o.width, o.height/2 // canvas size in cells
 	frame := make([]byte, 3*o.width*o.height)
-	from := make([]byte, len(frame)) // the previous slide's last frame, for transitions
 
+	// last is the frame just written; from, the previous slide's last frame,
+	// for its transition.
+	var from, last *Scene
+	defer func() {
+		for _, sc := range []*Scene{from, last} {
+			if sc != nil {
+				sc.Release()
+			}
+		}
+	}()
 	dt := 1 / float64(o.fps)
 	start, frames := time.Now(), 0
 	for i := o.first; i <= o.last; i++ {
 		s := d.Slides[i]
 		kind := s.Transition.resolve()
 		fmt.Fprintf(os.Stderr, "\rslide %d/%d  %-40.40s", i+1, o.last+1, s.Title)
+		if from != nil {
+			from.Release()
+		}
+		from, last = last, nil
 		slideT := 0.0
 		for step := 0; step < s.steps(); step++ {
 			dur := videoTiming(s, step, o.hold)
 			for t := 0.0; t < dur-dt/2; t += dt {
 				sc := renderSlide(s, Ctx{W: cw, H: ch, T: slideT + t, Step: step, StepT: t, Theme: d.Theme})
-				toRGB24(sc.Px, frame)
-				sc.Release()
-				if step == 0 && i > o.first && t < TransitionDuration {
-					blendTransition(kind, from, frame, o.width, o.height, t/TransitionDuration, d.Theme)
+				if step == 0 && from != nil && t < TransitionDuration {
+					mixTransition(kind, from, sc, t/TransitionDuration, true, d.Theme)
 				}
+				toRGB24(sc.Px, frame)
+				if last != nil {
+					last.Release()
+				}
+				last = sc
 				if _, err := w.Write(frame); err != nil {
 					return err
 				}
@@ -92,7 +108,6 @@ func writeVideoFrames(d *Deck, o videoOptions, w io.Writer) error {
 			}
 			slideT += dur
 		}
-		copy(from, frame)
 	}
 	secs := float64(frames) / float64(o.fps)
 	fmt.Fprintf(os.Stderr, "\r%d frames, %d:%02d of video, in %v%40s\n",

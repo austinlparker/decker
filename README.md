@@ -305,7 +305,7 @@ invariants, the golden tests, and a recipe for each kind of addition.
 | `anim.go` | easing, springs, noise |
 | `scene.go`, `grid.go`, `pool.go` | combine the pixel canvas and character layer into terminal cells; reused frame buffers |
 | `render.go` | a slide's frame: the scene `View` draws on, the overlay, panics caught |
-| `transition.go` | slide transitions and the registry of their cell and video versions |
+| `transition.go` | slide transitions: each mixes two finished scenes, for the terminal and video alike |
 | `model.go`, `keys.go`, `termout.go`, `dev.go` | the app: navigation, the key table, writing frames, dev reload |
 | `presenter.go`, `link.go`, `preview.go` | the presenter view, the socket link to the deck, slide previews |
 | `png.go` | PNG snapshots and contact sheets, painted from cell grids |
