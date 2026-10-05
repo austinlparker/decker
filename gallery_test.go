@@ -133,6 +133,8 @@ func gallery() Deck {
 		slideScene(),
 		slideBuilds(),
 		slideLayout(),
+		slideMorph(false),
+		slideMorph(true),
 	}}
 }
 
@@ -960,5 +962,50 @@ func slideLayout() Slide {
 			outline(tag.Inset(-2, -2), th.Accent)
 			dot := tag.Sub(0.9, 0.1, 0.05, 0.3)
 			p.Disc(dot.Right(), dot.Bottom(), 2, th.Accent, 1)
+		}}
+}
+
+// slideMorph is a pair of slides for TransitionMorph: the second enters with
+// it, so the elements both place (title, box, dot) glide to their new rects
+// while "before" fades out and "after" fades in.
+func slideMorph(after bool) Slide {
+	title, tr := "Morph A", TransitionDefault
+	if after {
+		title, tr = "Morph B", TransitionMorph
+	}
+	return Slide{Title: title, Transition: tr,
+		View: func(c Ctx, sc *Scene) {
+			th := c.Theme
+			sc.Px.VGradient(0, sc.Px.H-1, th.Background, th.Panel)
+			page := c.Frame().Inset(c.X(0.04), c.Y(0.05))
+
+			head, body := page.CutTop(page.H * 0.5)
+			box, dot := body.Inset(0, c.Unit(0.03)).CutLeft(body.W * 0.6)
+			if after {
+				head, body = page.CutTop(page.H * 0.18)
+				dot, box = body.CutLeft(body.W * 0.25)
+				box = box.Inset(c.Unit(0.03), c.Unit(0.03))
+			}
+			sc.Place("title", head, func(p *Pixels, r Rect) {
+				size, s := th.Display.Fit(title, r.W, r.H, c.Size(0.3), 0)
+				Text{Font: th.Display, Size: size, Color: th.Accent, Align: Center, Glow: 0.4}.Draw(p, s, r.X+r.W/2, r.Y)
+			})
+			sc.Place("box", box, func(p *Pixels, r Rect) {
+				fill := th.Panel
+				if after {
+					fill = th.Accent2.Scale(0.5)
+				}
+				Panel(c, p, r.X, r.Y, r.W, r.H, "the same panel", fill, th.Accent2, th.Text, 1)
+			})
+			sc.Place("dot", dot.Place(dot.H*0.5, dot.H*0.5, 0.5, 0.5), func(p *Pixels, r Rect) {
+				x, y := r.Center()
+				p.Disc(x, y, r.W/2, th.Good, 1)
+			})
+			only, label := "before", Rect{page.X, page.Bottom() - c.Y(0.1), page.W * 0.3, c.Y(0.1)}
+			if after {
+				only, label = "after", Rect{page.Right() - page.W*0.3, page.Bottom() - c.Y(0.1), page.W * 0.3, c.Y(0.1)}
+			}
+			sc.Place(only, label, func(p *Pixels, r Rect) { Label(c, p, only+" only", r.X, r.Y, th.Muted, Left) })
+			sc.Place("", c.Rect(0.9, 0.9, 0.05, 0.05), func(p *Pixels, r Rect) { p.Rect(r.X, r.Y, r.W, r.H, th.Warn, 1) })
 		}}
 }

@@ -68,16 +68,16 @@ func writeVideoFrames(d *Deck, o videoOptions, w io.Writer) error {
 	cw, ch := o.width, o.height/2 // canvas size in cells
 	frame := make([]byte, 3*o.width*o.height)
 
-	// last is the frame just written; from, the previous slide's last frame,
-	// for its transition.
-	var from, last *Scene
+	// from is the previous slide's last frame, drawn again unfinished so a
+	// morph can move its placed elements.
+	var from *Scene
 	defer func() {
-		for _, sc := range []*Scene{from, last} {
-			if sc != nil {
-				sc.Release()
-			}
+		if from != nil {
+			from.Release()
 		}
 	}()
+	var lastSlide Slide
+	var lastCtx Ctx
 	dt := 1 / float64(o.fps)
 	start, frames := time.Now(), 0
 	for i := o.first; i <= o.last; i++ {
@@ -86,21 +86,24 @@ func writeVideoFrames(d *Deck, o videoOptions, w io.Writer) error {
 		fmt.Fprintf(os.Stderr, "\rslide %d/%d  %-40.40s", i+1, o.last+1, s.Title)
 		if from != nil {
 			from.Release()
+			from = nil
 		}
-		from, last = last, nil
+		if i > o.first {
+			from = drawSlide(lastSlide, lastCtx)
+		}
 		slideT := 0.0
 		for step := 0; step < s.steps(); step++ {
 			dur := videoTiming(s, step, o.hold)
 			for t := 0.0; t < dur-dt/2; t += dt {
-				sc := renderSlide(s, Ctx{W: cw, H: ch, T: slideT + t, Step: step, StepT: t, Theme: d.Theme})
+				c := Ctx{W: cw, H: ch, T: slideT + t, Step: step, StepT: t, Theme: d.Theme}
+				sc := drawSlide(s, c)
 				if step == 0 && from != nil && t < TransitionDuration {
 					mixTransition(kind, from, sc, t/TransitionDuration, true, d.Theme)
 				}
+				sc.finish()
 				toRGB24(sc.Px, frame)
-				if last != nil {
-					last.Release()
-				}
-				last = sc
+				sc.Release()
+				lastSlide, lastCtx = s, c
 				if _, err := w.Write(frame); err != nil {
 					return err
 				}

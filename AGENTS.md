@@ -11,9 +11,10 @@ things live") for the file map.
   `math/rand`, no globals that change between frames; use `Hash01` for noise.
   Anything stateful breaks replay, `-snapshot`, video and the goldens.
 - **The engine owns the scene.** A slide's `View(c Ctx, sc *Scene)` only
-  draws; `renderSlide` makes the scene, runs `View`, draws `Theme.Overlay`
-  once and catches panics (drawn into the pixels). Transitions mix two such
-  finished scenes. Cells (live, snapshots, previews) come from
+  draws; `drawSlide` makes the scene and runs `View`, and `finish` draws the
+  elements it placed and `Theme.Overlay`, once; both catch panics (drawn into
+  the pixels). Transitions mix two scenes from `drawSlide`: most finish both
+  first, and the morph moves the elements before drawing them. Cells (live, snapshots, previews) come from
   `Scene.toGrid` after that; video reads `sc.Px` directly and has no
   character layer. Styled strings are
   parsed only for the engine's own chrome (footer, panels, help box).
@@ -69,8 +70,10 @@ block (at the end, so existing values keep their numbers). Write one
 mixes `from` into `to` in place: the pixels, and the character layer through
 `moveChars`. The terminal, snapshots and video all use it. Size bands and
 blocks from the frame's width, not in fixed cells, so it looks the same at
-any resolution. Register it in the `transitions` map; a kind with no entry
-cuts straight to the new frame. Add the
+any resolution. Register it in the `transitions` map wrapped in `finished`,
+which draws both slides' placed elements first; only a transition that moves
+elements itself, like `morph`, goes in unwrapped. A kind with no entry cuts
+straight to the new frame. Add the
 kind to `transitionNames` and `transitionKinds` in `golden_internal_test.go`,
 and use it on a slide in `gallery_test.go`. Mention it in `Slide.Transition` docs
 and the README. Easing is the implementation's job: `p` is linear.

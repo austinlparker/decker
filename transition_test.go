@@ -14,9 +14,9 @@ func parseGrid(s string, w, h int, t *Theme) *grid {
 // cells and mixes them as the deck does at progress p. The caller releases
 // the scene.
 func mixSlides(kind Transition, from, to Slide, fstep, tstep, w, h int, p float64, forward bool) *Scene {
-	a := renderSlide(from, Ctx{W: w, H: h, T: Settled, Step: fstep, StepT: Settled, Theme: testTheme})
+	a := drawSlide(from, Ctx{W: w, H: h, T: Settled, Step: fstep, StepT: Settled, Theme: testTheme})
 	defer a.Release()
-	b := renderSlide(to, Ctx{W: w, H: h, T: 0.4, Step: tstep, StepT: 0.4, Theme: testTheme})
+	b := drawSlide(to, Ctx{W: w, H: h, T: 0.4, Step: tstep, StepT: 0.4, Theme: testTheme})
 	mixTransition(kind, a, b, p, forward, testTheme)
 	return b
 }

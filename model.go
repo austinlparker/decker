@@ -235,9 +235,11 @@ func (m model) ctx(h int) Ctx {
 }
 
 // body draws the slide area at exactly m.w × h, mixed with the previous slide
-// during a transition. The caller releases it.
+// during a transition. Outside one it isn't finished yet, so a transition
+// that starts from it can still move its placed elements. The caller
+// releases it.
 func (m model) body(h int) *Scene {
-	sc := renderSlide(m.cur(), m.ctx(h))
+	sc := drawSlide(m.cur(), m.ctx(h))
 	if m.transFrom != nil {
 		p := m.now.Sub(m.transStart).Seconds() / TransitionDuration
 		mixTransition(m.trans, m.transFrom, sc, p, m.transFwd, m.theme)
@@ -248,6 +250,7 @@ func (m model) body(h int) *Scene {
 func (m model) frame() *grid {
 	bodyH, panels := m.layout()
 	sc := m.body(bodyH)
+	sc.finish()
 	body := sc.toGrid()
 	sc.Release()
 	if m.showHelp {

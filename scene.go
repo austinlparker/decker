@@ -27,6 +27,17 @@ type Scene struct {
 	ink RGB // character-layer text with no color of its own
 
 	moved []movedCell // moveChars' scratch
+
+	placed []placed // elements to draw after View, in order (Place)
+	pair   []int    // morph's scratch: the old element each new one matches
+	taken  []bool   // morph's scratch: old elements already matched
+
+	// A slide's scene (drawSlide) knows its slide and Ctx, for the overlay
+	// and a panic's message; finished is set once its elements and overlay
+	// are drawn.
+	slide, finished bool
+	ctx             Ctx
+	title           string
 }
 
 type movedCell struct {
@@ -43,20 +54,36 @@ var scenes = sizedPool[Scene]{max: 4}
 func NewScene(w, h int, t *Theme) *Scene {
 	w, h = max(w, 1), max(h, 1)
 	if s := scenes.get(func(s *Scene) bool { return s.W == w && s.H == h }); s != nil {
-		s.Px.Fill(t.Background)
-		s.Px.BG, s.ink = t.Background, t.Text
+		s.clear(t)
 		return s
 	}
 	return &Scene{W: w, H: h, Px: NewPixels(w, 2*h, t.Background), ink: t.Text}
 }
 
-// Release returns s to the pool without rendering. Don't use s afterwards or
-// after Render, which releases it.
-func (s *Scene) Release() {
+// clear empties s onto the theme's background: no pixels drawn, no
+// characters, nothing placed.
+func (s *Scene) clear(t *Theme) {
+	s.Px.Fill(t.Background)
+	s.Px.BG, s.ink = t.Background, t.Text
+	s.clearChars()
+	clear(s.placed)
+	s.placed = s.placed[:0]
+}
+
+func (s *Scene) clearChars() {
 	for _, i := range s.used {
 		s.cells[i] = nil
 	}
 	s.used = s.used[:0]
+}
+
+// Release returns s to the pool without rendering. Don't use s afterwards or
+// after Render, which releases it.
+func (s *Scene) Release() {
+	s.clearChars()
+	clear(s.placed)
+	s.placed = s.placed[:0]
+	s.slide, s.finished, s.ctx, s.title = false, false, Ctx{}, ""
 	scenes.put(s)
 }
 
@@ -82,9 +109,8 @@ func moveChars(from, to *Scene, where func(x, y int, old bool) (int, int, bool))
 	to.moved = to.moved[:0]
 	for _, i := range to.used {
 		to.moved = append(to.moved, movedCell{i, to.cells[i]})
-		to.cells[i] = nil
 	}
-	to.used = to.used[:0]
+	to.clearChars()
 	place := func(i int, c *uv.Cell, old bool) {
 		if x, y, ok := where(i%to.W, i/to.W, old); ok && x >= 0 && y >= 0 && x < to.W && y < to.H {
 			to.setCell(x, y, c)
@@ -206,10 +232,33 @@ func (s *Scene) Sprite(x, y int, sp Sprite) {
 	}
 }
 
+// Place adds an element to the scene: draw paints it into r after View
+// returns, above View's own drawing, in the order placed. draw should size
+// itself from r and stay inside it, give or take a glow, and must be
+// frame-pure like View.
+//
+// key names the element across slides. When a slide enters with
+// TransitionMorph, an element whose key the slide before it also placed
+// glides from its old rect to its new one, cross-fading between the old
+// draw and the new; elements on only one side fade out or in. An empty key
+// never matches. Keys should be unique within a slide; repeats pair up in
+// order.
+func (s *Scene) Place(key string, r Rect, draw func(p *Pixels, r Rect)) {
+	s.placed = append(s.placed, placed{key, r, draw})
+}
+
+type placed struct {
+	key  string
+	r    Rect
+	draw func(p *Pixels, r Rect)
+}
+
 // Render returns the scene as exactly H lines of W cells, each with an explicit
 // background, and releases it. Use it on scenes made with NewScene, never on
-// the one a slide's View is given; Theme.Overlay is not applied.
+// the one a slide's View is given; placed elements are drawn first, but
+// Theme.Overlay is not applied.
 func (s *Scene) Render() string {
+	s.finish()
 	g := s.toGrid()
 	s.Release()
 	out := g.String()

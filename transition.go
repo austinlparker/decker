@@ -10,6 +10,7 @@ const (
 	TransitionPush                       // new slide pushes the old one sideways
 	TransitionDissolve                   // cells flip from old to new at random
 	TransitionWipe                       // a bright edge sweeps across
+	TransitionMorph                      // elements placed with the same key glide to their new places; the rest cross-fades
 )
 
 // DefaultTransition applies to slides that don't set Transition.
@@ -26,24 +27,36 @@ func (k Transition) resolve() Transition {
 }
 
 // transitionFunc mixes from into to, in place, at linear progress p from 0
-// (all from) to 1 (all to); each applies its own easing. Both are finished
-// frames of the same size. A transition moves both of a scene's layers, so
-// the terminal, snapshots and video all show the same one: cells are made
-// from the result, and video reads its pixels.
+// (all from) to 1 (all to); each applies its own easing. Both are frames of
+// the same size as drawSlide makes them: View has drawn, and placed elements
+// may not be (finish draws them). A transition moves both of a scene's
+// layers, so the terminal, snapshots and video all show the same one: cells
+// are made from the result, and video reads its pixels.
 type transitionFunc func(from, to *Scene, p float64, forward bool, t *Theme)
 
 var transitions = map[Transition]transitionFunc{
-	TransitionPush:     push,
-	TransitionDissolve: dissolve,
-	TransitionWipe:     wipe,
+	TransitionPush:     finished(push),
+	TransitionDissolve: finished(dissolve),
+	TransitionWipe:     finished(wipe),
+	TransitionMorph:    morph,
 }
 
-// mixTransition mixes from into to in place. Kinds without an implementation,
-// and frames of different sizes, leave to as it is: a cut.
+// finished adapts a transition that mixes two finished frames.
+func finished(f transitionFunc) transitionFunc {
+	return func(from, to *Scene, p float64, forward bool, t *Theme) {
+		from.finish()
+		to.finish()
+		f(from, to, p, forward, t)
+	}
+}
+
+// mixTransition mixes from into to in place, leaving to finished. Kinds
+// without an implementation, and frames of different sizes, cut to to.
 func mixTransition(kind Transition, from, to *Scene, p float64, forward bool, t *Theme) {
 	if f, ok := transitions[kind]; ok && from.W == to.W && from.H == to.H {
 		f(from, to, p, forward, t)
 	}
+	to.finish()
 }
 
 func push(from, to *Scene, p float64, forward bool, _ *Theme) {

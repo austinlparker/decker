@@ -33,11 +33,13 @@
 //   - [Theme]: colors, typefaces and an optional overlay the engine uses.
 //   - [Scene], [Pixels]: what a View draws on (the engine makes the scene and
 //     draws the theme's overlay on it), and the cells above the pixels.
+//     [Scene.Place] hands the engine a keyed element to draw instead, which
+//     [TransitionMorph] can move from one slide to the next.
 //   - [Text], [Font]: smooth antialiased type, fitted and wrapped to a box.
 //   - [Block], [FigFont]: FIGlet block letters scaled to fill a box ([FitBlock]).
 //   - [GlyphEffect], [BlockEffect]: per-letter and per-cell animations,
 //     combined with [Chain] and [BlockChain].
-//   - [Transition]: how a slide enters (push, dissolve, wipe, none).
+//   - [Transition]: how a slide enters (push, dissolve, wipe, morph, none).
 //
 // Stock components ([Panel], [Arrow], [CycleDiagram], [BulletList]) and
 // easing helpers ([Ease], [Spring]) are in draw.go and anim.go. The package

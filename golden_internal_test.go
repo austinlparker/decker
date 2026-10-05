@@ -174,6 +174,49 @@ func wideSlide() Slide {
 		}}
 }
 
+// morphSlides are two slides that place elements for TransitionMorph: some
+// keys in both (one moving, one staying put, one whose draw changes), one
+// in each alone, a repeated key, an unkeyed one, a glow, and characters.
+func morphSlides() []Slide {
+	slide := func(title string, b bool) Slide {
+		return Slide{Title: title, Transition: TransitionMorph, View: func(c Ctx, sc *Scene) {
+			th := c.Theme
+			sc.Px.VGradient(0, sc.Px.H-1, th.Background, th.Panel)
+			sc.Text(1, 1, title, th.Text.Color())
+			moved := c.Rect(0.05, 0.1, 0.3, 0.3)
+			col := th.Accent
+			if b {
+				moved, col = c.Rect(0.55, 0.5, 0.4, 0.4), th.Good
+			}
+			sc.Place("moved", moved, func(p *Pixels, r Rect) {
+				p.RoundRect(r.X, r.Y, r.W, r.H, r.H/5, 0, col, 1)
+				x, y := r.Center()
+				p.Glow(x, y, r.H, col, 0.4)
+			})
+			sc.Place("still", c.Rect(0.45, 0.05, 0.1, 0.1), func(p *Pixels, r Rect) {
+				x, y := r.Center()
+				p.Disc(x, y, r.W/2, th.Accent2, 0.7)
+			})
+			for i := range 2 {
+				r := c.Rect(0.1+0.1*float64(i), 0.75, 0.05, 0.1)
+				if b {
+					r = c.Rect(0.1+0.1*float64(i), 0.6, 0.05, 0.1)
+				}
+				sc.Place("twin", r, func(p *Pixels, r Rect) { p.Rect(r.X, r.Y, r.W, r.H, th.Muted, 1) })
+			}
+			only := "a-only"
+			if b {
+				only = "b-only"
+			}
+			sc.Place(only, c.Rect(0.7, 0.1, 0.25, 0.15), func(p *Pixels, r Rect) {
+				Text{Font: th.Body, Size: c.SmallText(th.Body), Color: th.Text}.Draw(p, only, r.X, r.Y)
+			})
+			sc.Place("", c.Rect(0.02, 0.9, 0.05, 0.08), func(p *Pixels, r Rect) { p.Rect(r.X, r.Y, r.W, r.H, th.Warn, 1) })
+		}}
+	}
+	return []Slide{slide("Morph A", false), slide("Morph B", true)}
+}
+
 // plainSlide is styled text and nothing else: no pixels drawn.
 func plainSlide() Slide {
 	return Slide{Title: "Plain", View: func(c Ctx, sc *Scene) {
@@ -270,10 +313,10 @@ func testModel(d *Deck, idx, step, w, h int, age float64, dev *devState) model {
 
 var transitionNames = map[Transition]string{
 	TransitionDefault: "default", TransitionNone: "none", TransitionPush: "push",
-	TransitionDissolve: "dissolve", TransitionWipe: "wipe",
+	TransitionDissolve: "dissolve", TransitionWipe: "wipe", TransitionMorph: "morph",
 }
 
-var transitionKinds = []Transition{TransitionDefault, TransitionNone, TransitionPush, TransitionDissolve, TransitionWipe}
+var transitionKinds = []Transition{TransitionDefault, TransitionNone, TransitionPush, TransitionDissolve, TransitionWipe, TransitionMorph}
 
 // ---- the test ----
 
@@ -292,6 +335,7 @@ func TestInternalGolden(t *testing.T) {
 		{"png", goldenPNG},
 		{"model", goldenModel},
 		{"modelTransitions", goldenModelTransitions},
+		{"morph", goldenMorph},
 		{"termWriter", goldenTermWriter},
 		{"presenter", goldenPresenter},
 		{"misc", goldenMisc},
@@ -618,6 +662,51 @@ func goldenModelTransitions(t *testing.T, g *goldenEntries) {
 	m.w, m.h = 100, 30
 	m.now = goldenBase.Add(100 * time.Millisecond)
 	g.addString("modelTrans/resized", view(m))
+}
+
+func goldenMorph(t *testing.T, g *goldenEntries) {
+	ms := morphSlides()
+	ps := []float64{0, 0.1, 0.33, 0.5, 0.77, 1}
+	for _, size := range [][2]int{{80, 24}, {240, 67}} {
+		w, h := size[0], size[1]
+		for _, p := range ps {
+			sc := mixSlides(TransitionMorph, ms[0], ms[1], 0, 0, w, h, p, true)
+			g.addString(fmt.Sprintf("morph/cells/%dx%d/p=%v", w, h, p), sc.Render())
+		}
+	}
+	for _, p := range ps {
+		w, h := 320, 180
+		a := drawSlide(ms[0], Ctx{W: w, H: h / 2, T: Settled, StepT: Settled, Theme: testTheme})
+		b := drawSlide(ms[1], Ctx{W: w, H: h / 2, T: 0.4, StepT: 0.4, Theme: testTheme})
+		mixTransition(TransitionMorph, a, b, p, true, testTheme)
+		mix := make([]byte, 3*w*h)
+		toRGB24(b.Px, mix)
+		a.Release()
+		b.Release()
+		g.add(fmt.Sprintf("morph/video/%dx%d/p=%v", w, h, p), mix)
+	}
+	// The live model: forward, back, and starting over mid-way, when the
+	// frame on screen has no elements left to move and cross-fades instead.
+	d := &Deck{Name: "morph", Theme: testTheme, Slides: append(ms, testDeck().Slides[0])}
+	for _, p := range []float64{0.2, 0.5, 0.8} {
+		at := goldenBase.Add(time.Duration(p * TransitionDuration * float64(time.Second)))
+		m := testModel(d, 0, 0, 100, 30, Settled, nil)
+		m.goTo(1, 0, true)
+		m.now = at
+		g.addString(fmt.Sprintf("morph/model/fwd/p=%v", p), view(m))
+		m = testModel(d, 1, 0, 100, 30, Settled, nil)
+		m.goTo(0, 0, false)
+		m.now = at
+		g.addString(fmt.Sprintf("morph/model/back/p=%v", p), view(m))
+		m.goTo(1, 0, true)
+		g.addString(fmt.Sprintf("morph/model/restart/p=%v", p), view(m))
+	}
+	o := videoOptions{width: 160, height: 90, fps: 10, hold: 0.5, first: 0, last: 2}
+	hw := &hashWriter{h: sha256.New(), size: 3 * o.width * o.height}
+	if err := writeVideoFrames(d, o, hw); err != nil {
+		t.Fatal(err)
+	}
+	g.add("morph/videoloop", hw.h.Sum(nil))
 }
 
 func goldenTermWriter(t *testing.T, g *goldenEntries) {
