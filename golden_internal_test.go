@@ -554,7 +554,7 @@ func goldenModel(t *testing.T, g *goldenEntries) {
 	for _, k := range strings.Fields("right right right right right right right left left [ ] 3 g 1 2 enter G g home end h l space pgdn pgup j k down up enter backspace r n ? esc q ctrl+l 99 g 0 g") {
 		m = press(m, k)
 		fmt.Fprintf(&trail, "%s -> s%d.%d count=%q notes=%v help=%v trans=%d fwd=%v from=%v\n",
-			k, m.idx, m.step, m.count, m.showNotes, m.showHelp, m.trans, m.transFwd, m.transFrom != nil)
+			k, m.idx, m.step, m.count, m.showNotes, m.showHelp, m.trans.kind, m.transFwd, m.transFrom != nil)
 	}
 	g.addString("model/keys", trail.String())
 	st, _ := json.Marshal(m.linkState())
@@ -650,7 +650,7 @@ func goldenModelTransitions(t *testing.T, g *goldenEntries) {
 					m.transFrom = nil // what the tick does
 				}
 				g.addString(fmt.Sprintf("modelTrans/%dx%d/%s/p=%v", size[0], size[1], tc.name, p),
-					fmt.Sprint(m.trans, m.transFwd, m.transFrom != nil), view(m))
+					fmt.Sprint(m.trans.kind, m.transFwd, m.transFrom != nil), view(m))
 			}
 		}
 	}
@@ -689,7 +689,7 @@ func goldenMorph(t *testing.T, g *goldenEntries) {
 	// frame on screen has no elements left to move and cross-fades instead.
 	d := &Deck{Name: "morph", Theme: testTheme, Slides: append(ms, testDeck().Slides[0])}
 	for _, p := range []float64{0.2, 0.5, 0.8} {
-		at := goldenBase.Add(time.Duration(p * TransitionDuration * float64(time.Second)))
+		at := goldenBase.Add(time.Duration(p * MorphDuration * float64(time.Second)))
 		m := testModel(d, 0, 0, 100, 30, Settled, nil)
 		m.goTo(1, 0, true)
 		m.now = at
@@ -711,7 +711,7 @@ func goldenMorph(t *testing.T, g *goldenEntries) {
 	// A slower morph: TransitionTime stretches the same frames over 0.9s,
 	// in the live model and in video.
 	slow := &Deck{Name: "slow", Theme: testTheme, Slides: append([]Slide(nil), d.Slides...)}
-	slow.Slides[1].TransitionTime = 0.9
+	slow.Slides[1].Transition = TransitionMorph.Over(0.9)
 	for _, p := range []float64{0.2, 0.5, 0.8} {
 		m := testModel(slow, 0, 0, 100, 30, Settled, nil)
 		m.goTo(1, 0, true)

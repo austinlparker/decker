@@ -35,13 +35,14 @@ func TestTransitionEnds(t *testing.T) {
 		return g.String()
 	}
 	old, new := frame(from, 1, true), frame(to, 2, false)
-	for k := range transitions {
+	for kind := range transitions {
+		k := Transition{kind: kind}
 		for _, fwd := range []bool{true, false} {
 			for p, want := range map[float64]string{0: old, 1: new} {
 				sc := mixSlides(k, from, to, 1, 2, 90, 30, p, fwd)
 				g := sc.toGrid()
 				if got := g.String(); got != want {
-					t.Errorf("transition %d forward=%v at p=%v isn't the %s frame", k, fwd, p, map[bool]string{true: "old", false: "new"}[p == 0])
+					t.Errorf("transition %v forward=%v at p=%v isn't the %s frame", k, fwd, p, map[bool]string{true: "old", false: "new"}[p == 0])
 				}
 				g.release()
 				sc.Release()

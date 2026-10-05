@@ -1,30 +1,85 @@
 package decker
 
-// Transition is how a slide enters. Each kind but Default and None needs an
-// entry in transitions.
-type Transition int
+// Transition is how a slide enters: one of the kinds below, taking its
+// default time or the one Over gives it. Transitions are comparable values;
+// the zero Transition is TransitionDefault.
+//
+//	Transition: decker.TransitionMorph.Over(1.2)
+type Transition struct {
+	kind transitionKind
+	secs float64 // 0 is the kind's default
+}
+
+// transitionKind picks the implementation. Each kind but default and none
+// needs an entry in transitions.
+type transitionKind int
 
 const (
-	TransitionDefault  Transition = iota // use DefaultTransition
-	TransitionNone                       // hard cut
-	TransitionPush                       // new slide pushes the old one sideways
-	TransitionDissolve                   // cells flip from old to new at random
-	TransitionWipe                       // a bright edge sweeps across
-	TransitionMorph                      // elements placed with the same key glide to their new places; the rest cross-fades
+	kindDefault transitionKind = iota
+	kindNone
+	kindPush
+	kindDissolve
+	kindWipe
+	kindMorph
+)
+
+// The transitions. A slide's Transition is one of these, optionally with Over.
+var (
+	TransitionDefault  = Transition{}                   // DefaultTransition, but Over still sets the time
+	TransitionNone     = Transition{kind: kindNone}     // hard cut
+	TransitionPush     = Transition{kind: kindPush}     // new slide pushes the old one sideways
+	TransitionDissolve = Transition{kind: kindDissolve} // cells flip from old to new at random
+	TransitionWipe     = Transition{kind: kindWipe}     // a bright edge sweeps across
+
+	// TransitionMorph moves elements placed with the same key (Scene.Place)
+	// to their new rects, and cross-fades the rest. It takes MorphDuration.
+	TransitionMorph = Transition{kind: kindMorph}
 )
 
 // DefaultTransition applies to slides that don't set Transition.
 var DefaultTransition = TransitionPush
 
-// TransitionDuration is how long a transition takes, in seconds, unless the
-// slide sets TransitionTime.
+// TransitionDuration is how long a transition takes by default, in seconds;
+// TransitionMorph takes MorphDuration.
 const TransitionDuration = 0.45
 
-func (k Transition) resolve() Transition {
-	if k == TransitionDefault {
-		return DefaultTransition
+// MorphDuration is how long TransitionMorph takes by default, in seconds:
+// moving things need longer to read than a cut between frames.
+const MorphDuration = 0.8
+
+// Over returns t taking secs seconds; zero or less restores its default.
+func (t Transition) Over(secs float64) Transition {
+	t.secs = max(secs, 0)
+	return t
+}
+
+// Duration returns how long t takes, in seconds.
+func (t Transition) Duration() float64 {
+	switch {
+	case t.secs > 0:
+		return t.secs
+	case t.kind == kindDefault:
+		return DefaultTransition.resolve().Duration()
+	case t.kind == kindMorph:
+		return MorphDuration
 	}
-	return k
+	return TransitionDuration
+}
+
+// resolve replaces the default kind with DefaultTransition's, keeping t's own
+// time if it has one.
+func (t Transition) resolve() Transition {
+	if t.kind != kindDefault {
+		return t
+	}
+	d := DefaultTransition
+	if d.kind == kindDefault {
+		d = TransitionPush
+	}
+	if t.secs > 0 {
+		d.secs = t.secs
+	}
+	return d
 }
 
 // transitionFunc mixes from into to, in place, at linear progress p from 0
@@ -35,11 +90,11 @@ func (k Transition) resolve() Transition {
 // are made from the result, and video reads its pixels.
 type transitionFunc func(from, to *Scene, p float64, forward bool, t *Theme)
 
-var transitions = map[Transition]transitionFunc{
-	TransitionPush:     finished(push),
-	TransitionDissolve: finished(dissolve),
-	TransitionWipe:     finished(wipe),
-	TransitionMorph:    morph,
+var transitions = map[transitionKind]transitionFunc{
+	kindPush:     finished(push),
+	kindDissolve: finished(dissolve),
+	kindWipe:     finished(wipe),
+	kindMorph:    morph,
 }
 
 // finished adapts a transition that mixes two finished frames.
@@ -51,10 +106,11 @@ func finished(f transitionFunc) transitionFunc {
 	}
 }
 
-// mixTransition mixes from into to in place, leaving to finished. Kinds
-// without an implementation, and frames of different sizes, cut to to.
-func mixTransition(kind Transition, from, to *Scene, p float64, forward bool, t *Theme) {
-	if f, ok := transitions[kind]; ok && from.W == to.W && from.H == to.H {
+// mixTransition mixes from into to in place, leaving to finished. tr is
+// resolved already; kinds without an implementation (the default kind
+// among them), and frames of different sizes, cut to to.
+func mixTransition(tr Transition, from, to *Scene, p float64, forward bool, t *Theme) {
+	if f, ok := transitions[tr.kind]; ok && from.W == to.W && from.H == to.H {
 		f(from, to, p, forward, t)
 	}
 	to.finish()

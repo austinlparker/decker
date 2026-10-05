@@ -36,7 +36,8 @@ func TestTransitionsMoveChars(t *testing.T) {
 		sc.Put(0, 0, strings.TrimSuffix(strings.Repeat(strings.Repeat(ch, w)+"\n", h), "\n"))
 		return sc
 	}
-	for k := range transitions {
+	for kind := range transitions {
+		k := Transition{kind: kind}
 		for _, p := range []float64{0, 0.5, 1} {
 			for _, fwd := range []bool{true, false} {
 				a, b := text("a"), text("b")
@@ -44,16 +45,16 @@ func TestTransitionsMoveChars(t *testing.T) {
 				out := frameLines(b.Render())
 				a.Release()
 				if len(out) != h {
-					t.Fatalf("transition %d p=%v: %d lines", k, p, len(out))
+					t.Fatalf("transition %v p=%v: %d lines", k, p, len(out))
 				}
 				if n := strings.Count(strings.Join(out, ""), "a") + strings.Count(strings.Join(out, ""), "b"); n > w*h {
-					t.Errorf("transition %d p=%v: %d characters in %d cells", k, p, n, w*h)
+					t.Errorf("transition %v p=%v: %d characters in %d cells", k, p, n, w*h)
 				}
 				if p == 1 && out[0] != strings.Repeat("b", w) {
-					t.Errorf("transition %d at p=1 should be fully new, got %q", k, out[0])
+					t.Errorf("transition %v at p=1 should be fully new, got %q", k, out[0])
 				}
 				if p == 0.5 && k != TransitionWipe && k != TransitionMorph && !strings.Contains(out[0], "a") {
-					t.Errorf("transition %d at p=0.5 lost the old frame's characters: %q", k, out[0])
+					t.Errorf("transition %v at p=0.5 lost the old frame's characters: %q", k, out[0])
 				}
 			}
 		}

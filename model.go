@@ -218,7 +218,8 @@ func (m *model) goTo(idx, step int, forward bool) {
 		past := m.now.Add(-Settled * time.Second)
 		m.enter, m.stepStart = past, past
 	}
-	m.trans, m.transDur = m.cur().Transition.resolve(), m.cur().transitionTime()
+	m.trans = m.cur().Transition.resolve()
+	m.transDur = m.trans.Duration()
 	if m.trans == TransitionNone {
 		m.transFrom = nil
 	}

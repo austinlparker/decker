@@ -47,7 +47,7 @@ func TestRectSplits(t *testing.T) {
 
 func TestRectPlace(t *testing.T) {
 	r := Rect{0, 0, 100, 50}
-	if got := r.Place(20, 10, 1, 0.5); got != (Rect{80, 20, 20, 10}) {
+	if got := r.Anchor(20, 10, 1, 0.5); got != (Rect{80, 20, 20, 10}) {
 		t.Errorf("Place: %v", got)
 	}
 	if x, y := r.Center(); x != 50 || y != 25 {

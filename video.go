@@ -23,7 +23,7 @@ func videoTiming(s Slide, step int, hold float64) float64 {
 		hold = s.Hold
 	}
 	if step == 0 {
-		hold += s.transitionTime()
+		hold += s.Transition.Duration()
 	}
 	return hold
 }
@@ -82,7 +82,7 @@ func writeVideoFrames(d *Deck, o videoOptions, w io.Writer) error {
 	start, frames := time.Now(), 0
 	for i := o.first; i <= o.last; i++ {
 		s := d.Slides[i]
-		kind, tdur := s.Transition.resolve(), s.transitionTime()
+		kind, tdur := s.Transition.resolve(), s.Transition.Duration()
 		fmt.Fprintf(os.Stderr, "\rslide %d/%d  %-40.40s", i+1, o.last+1, s.Title)
 		if from != nil {
 			from.Release()

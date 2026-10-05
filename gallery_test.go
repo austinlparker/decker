@@ -939,7 +939,7 @@ func slideLayout() Slide {
 			for i, r := range cols[0].Grid(3, 2, c.Unit(0.02)) {
 				outline(r, th.Muted)
 				if c.Reached(1) {
-					in := LerpRect(r.Place(0, 0, 0.5, 0.5), r.Inset(c.Unit(0.01), c.Unit(0.01)), Ease(c.Since(1)-0.05*float64(i), 0.4))
+					in := LerpRect(r.Anchor(0, 0, 0.5, 0.5), r.Inset(c.Unit(0.01), c.Unit(0.01)), Ease(c.Since(1)-0.05*float64(i), 0.4))
 					p.RoundRect(in.X, in.Y, in.W, in.H, c.Unit(0.02), 0, Mix(th.Accent, th.Good, float64(i)/5), 1)
 				}
 			}
@@ -949,12 +949,12 @@ func slideLayout() Slide {
 			outline(right, th.Faint)
 			cw, ch := right.W*0.3, right.H*0.15
 			for _, a := range [][2]float64{{0, 0}, {1, 0}, {0.5, 0.5}, {0, 1}, {1, 1}} {
-				r := right.Place(cw, ch, a[0], a[1])
+				r := right.Anchor(cw, ch, a[0], a[1])
 				p.Rect(r.X, r.Y, r.W, r.H, th.Accent2, 0.6)
 			}
 			x, y := right.Center()
 			p.Disc(x, y, c.Unit(0.01), th.Warn, 1)
-			oversize := right.Place(right.W*1.2, ch, 0.5, 0.25) // overhangs both sides
+			oversize := right.Anchor(right.W*1.2, ch, 0.5, 0.25) // overhangs both sides
 			p.Rect(oversize.X, oversize.Y, oversize.W, oversize.H, th.Good, 0.3)
 
 			// Ctx.Rect, Sub, Right and Bottom, with a negative Inset growing a box.
@@ -969,11 +969,11 @@ func slideLayout() Slide {
 // it, so the elements both place (title, box, dot) glide to their new rects
 // while "before" fades out and "after" fades in.
 func slideMorph(after bool) Slide {
-	title, tr, dur := "Morph A", TransitionDefault, 0.0
+	title, tr := "Morph A", TransitionDefault
 	if after {
-		title, tr, dur = "Morph B", TransitionMorph, 0.8
+		title, tr = "Morph B", TransitionMorph.Over(1)
 	}
-	return Slide{Title: title, Transition: tr, TransitionTime: dur,
+	return Slide{Title: title, Transition: tr,
 		View: func(c Ctx, sc *Scene) {
 			th := c.Theme
 			sc.Px.VGradient(0, sc.Px.H-1, th.Background, th.Panel)
@@ -997,7 +997,7 @@ func slideMorph(after bool) Slide {
 				}
 				Panel(c, p, r.X, r.Y, r.W, r.H, "the same panel", fill, th.Accent2, th.Text, 1)
 			})
-			sc.Place("dot", dot.Place(dot.H*0.5, dot.H*0.5, 0.5, 0.5), func(p *Pixels, r Rect) {
+			sc.Place("dot", dot.Anchor(dot.H*0.5, dot.H*0.5, 0.5, 0.5), func(p *Pixels, r Rect) {
 				x, y := r.Center()
 				p.Disc(x, y, r.W/2, th.Good, 1)
 			})

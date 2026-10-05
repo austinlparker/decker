@@ -19,13 +19,10 @@ type Slide struct {
 	// Zero uses the -hold flag.
 	Hold float64
 
-	// Transition is how this slide enters; zero uses DefaultTransition.
-	// Going back to it plays it again, backwards.
+	// Transition is how this slide enters, and for how long
+	// (TransitionWipe.Over(0.6)); zero uses DefaultTransition. Going back to
+	// it plays it again, backwards.
 	Transition Transition
-
-	// TransitionTime is how many seconds Transition takes; zero uses
-	// TransitionDuration. A morph often wants longer, around 0.8.
-	TransitionTime float64
 
 	HideChrome bool
 
@@ -38,10 +35,3 @@ type Slide struct {
 }
 
 func (s Slide) steps() int { return max(s.Steps, 1) }
-
-func (s Slide) transitionTime() float64 {
-	if s.TransitionTime > 0 {
-		return s.TransitionTime
-	}
-	return TransitionDuration
-}

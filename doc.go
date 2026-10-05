@@ -39,7 +39,8 @@
 //   - [Block], [FigFont]: FIGlet block letters scaled to fill a box ([FitBlock]).
 //   - [GlyphEffect], [BlockEffect]: per-letter and per-cell animations,
 //     combined with [Chain] and [BlockChain].
-//   - [Transition]: how a slide enters (push, dissolve, wipe, morph, none).
+//   - [Transition]: how a slide enters (push, dissolve, wipe, morph, none),
+//     and for how long ([Transition.Over]).
 //
 // Stock components ([Panel], [Arrow], [CycleDiagram], [BulletList]) and
 // easing helpers ([Ease], [Spring]) are in draw.go and anim.go. The package

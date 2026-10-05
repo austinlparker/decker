@@ -26,7 +26,8 @@ func TestFramesAreOpaque(t *testing.T) {
 		}
 	}
 	d := testDeck()
-	for tr := range transitions {
+	for kind := range transitions {
+		tr := Transition{kind: kind}
 		sc := mixSlides(tr, d.Slides[0], d.Slides[1], 0, 2, w, h, 0.5, true)
 		check("transition", sc.Render(), h)
 	}

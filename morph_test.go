@@ -97,27 +97,41 @@ func TestPlaceOffscreen(t *testing.T) {
 	}
 }
 
-// TestTransitionTime checks a slide's TransitionTime sets how long the live
-// deck mixes, and how long video holds its first step.
-func TestTransitionTime(t *testing.T) {
+// TestTransitionOver checks Over sets how long the live deck mixes, and how
+// long video holds a slide's first step.
+func TestTransitionOver(t *testing.T) {
 	ms := morphSlides()
-	ms[1].TransitionTime = 1.2
+	ms[1].Transition = TransitionMorph.Over(1.2)
 	d := &Deck{Name: "slow", Theme: testTheme, Slides: ms}
 	m := testModel(d, 0, 0, 80, 24, Settled, nil)
 	m.goTo(1, 0, true)
 	m.advance(m.now.Add(time.Second))
 	if m.transFrom == nil {
-		t.Fatal("the transition ended before its TransitionTime")
+		t.Fatal("the transition ended before its time")
 	}
 	m.advance(m.now.Add(300 * time.Millisecond))
 	if m.transFrom != nil {
-		t.Error("the transition outlasted its TransitionTime")
+		t.Error("the transition outlasted its time")
 	}
 	if got := videoTiming(ms[1], 0, 2); got != 3.2 {
 		t.Errorf("video holds the first step %vs, want 3.2", got)
 	}
-	if got := videoTiming(ms[0], 0, 2); got != 2+TransitionDuration {
-		t.Errorf("with no TransitionTime, video holds the first step %vs", got)
+	for _, c := range []struct {
+		tr   Transition
+		want float64
+	}{
+		{TransitionMorph, MorphDuration},
+		{TransitionWipe, TransitionDuration},
+		{TransitionDefault, TransitionDuration},
+		{TransitionDefault.Over(2), 2},
+		{TransitionPush.Over(-1), TransitionDuration},
+	} {
+		if got := videoTiming(Slide{Transition: c.tr}, 0, 2); got != 2+c.want {
+			t.Errorf("%v: video holds the first step %vs, want %v", c.tr, got, 2+c.want)
+		}
+	}
+	if got := TransitionDefault.Over(2).resolve(); got != DefaultTransition.Over(2) {
+		t.Errorf("the default with a time resolves to %v", got)
 	}
 }
 

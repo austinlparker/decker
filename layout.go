@@ -2,7 +2,7 @@ package decker
 
 // Rect is a box on the pixel canvas: X, Y is its top-left corner and W, H its
 // size, all in pixels. Layout is cutting rects out of rects: start from
-// Ctx.Frame or Ctx.Rect, then Inset, Cut, Rows, Cols or Grid, and hand the
+// Ctx.Frame or Ctx.Rect, then Inset, Cut, Rows, Cols, Grid or Anchor, and hand the
 // pieces to whatever draws there. Every method returns new rects; widths and
 // heights never go below zero.
 //
@@ -111,10 +111,10 @@ func (r Rect) Grid(cols, rows int, gap float64) []Rect {
 	return out
 }
 
-// Place returns a w×h box inside r, positioned by ax and ay: 0 against r's
+// Anchor returns a w×h box inside r, positioned by ax and ay: 0 against r's
 // left or top edge, 0.5 centered, 1 against its right or bottom edge. A box
 // bigger than r overhangs it by the same rule.
-func (r Rect) Place(w, h, ax, ay float64) Rect {
+func (r Rect) Anchor(w, h, ax, ay float64) Rect {
 	return Rect{r.X + (r.W-w)*ax, r.Y + (r.H-h)*ay, w, h}
 }
 

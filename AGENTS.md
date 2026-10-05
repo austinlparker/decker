@@ -64,13 +64,15 @@ frame-pure `View`s. Each recipe ends the same way: exercise the addition there,
 run `go test ./...`, and re-record only the new keys
 (`UPDATE_GOLDEN=1 go test -run TestGalleryGolden`).
 
-**Add a transition** (`transition.go`). Append a constant to the `Transition`
-block (at the end, so existing values keep their numbers). Write one
+**Add a transition** (`transition.go`). Append a kind to the `transitionKind`
+block (at the end, so existing kinds keep their numbers and the goldens their
+keys) and an exported `Transition` var for it; if its default time isn't
+`TransitionDuration`, add a case to `Transition.Duration`. Write one
 `transitionFunc` (`from, to *Scene, p float64, forward bool, t *Theme`) that
 mixes `from` into `to` in place: the pixels, and the character layer through
 `moveChars`. The terminal, snapshots and video all use it. Size bands and
 blocks from the frame's width, not in fixed cells, so it looks the same at
-any resolution. Register it in the `transitions` map wrapped in `finished`,
+any resolution. Register it in the `transitions` map, keyed by kind and wrapped in `finished`,
 which draws both slides' placed elements first; only a transition that moves
 elements itself, like `morph`, goes in unwrapped. A kind with no entry cuts
 straight to the new frame. Add the
