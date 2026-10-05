@@ -2,6 +2,7 @@ package decker
 
 import (
 	"math"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -122,6 +123,26 @@ func TestDeckCheck(t *testing.T) {
 	} {
 		if d.check() == nil {
 			t.Errorf("%s: accepted", name)
+		}
+	}
+}
+
+func TestSnapshotRange(t *testing.T) {
+	d := testDeck()
+	png := filepath.Join(t.TempDir(), "s.png")
+	ok := options{slide: 2, step: 3, at: Settled, width: 40, height: 12, png: png}
+	if err := runSnapshot(d, ok); err != nil {
+		t.Fatal(err)
+	}
+	for _, o := range []options{
+		{slide: 0, step: 1},
+		{slide: len(d.Slides) + 1, step: 1},
+		{slide: 2, step: 0},
+		{slide: 2, step: 4},
+	} {
+		o.at, o.width, o.height, o.png = Settled, 40, 12, png
+		if err := runSnapshot(d, o); err == nil {
+			t.Errorf("-slide %d -step %d: accepted", o.slide, o.step)
 		}
 	}
 }

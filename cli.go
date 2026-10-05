@@ -120,6 +120,12 @@ func runSheet(d *Deck, o options) error {
 }
 
 func runSnapshot(d *Deck, o options) error {
+	if o.slide < 1 || o.slide > len(d.Slides) {
+		return fmt.Errorf("-slide %d: the deck has slides 1 to %d", o.slide, len(d.Slides))
+	}
+	if n := d.Slides[o.slide-1].steps(); o.step < 1 || o.step > n {
+		return fmt.Errorf("-step %d: slide %d has steps 1 to %d", o.step, o.slide, n)
+	}
 	g := stillFrame(d, o.slide-1, o.step-1, o.at, o.width, o.height)
 	if o.png != "" {
 		return writePNG(g, o.png)
