@@ -251,6 +251,7 @@ Everything here is in package `decker`.
 
 | Want | Use |
 | --- | --- |
+| Layout | `Rect`: start from `c.Frame()` or `c.Rect(fx, fy, fw, fh)`, then `Inset`, `CutTop`/`CutBottom`/`CutLeft`/`CutRight`, `Rows`/`Cols` (by weight), `Grid`, `Sub` (fractions of the rect) and `Place` (anchor a box inside it); `LerpRect` animates between two |
 | Big type | `Text{Font, Size, Color, To (gradient), Glow, Shine, FX, MaxW}.Draw(p, s, x, y)` with `Align`; returns width and height. `DrawMid` centers a line's ink on a y |
 | Sizing text to a box | `font.Fit(...)`, `FitAll(...)` for several lines at one size |
 | Small labels | `c.SmallText(font)`: the smallest readable size; `Label`, `Chip`, `LineLabel` (text sitting on an arrow) |
@@ -293,6 +294,7 @@ invariants, the golden tests, and a recipe for each kind of addition.
 | File | What's in it |
 | --- | --- |
 | `deck.go`, `slide.go`, `ctx.go` | `Deck`, `Slide`, and `Ctx` with its layout in screen fractions |
+| `layout.go` | `Rect`: boxes cut from the canvas for layout |
 | `cli.go` | `Main`: the command line (live, dev, presenter, list, snapshot, sheet, video) |
 | `theme.go`, `color.go` | `Theme`; `RGB`, `Hex`, `Mix` |
 | `draw.go` | stock components: `Panel`, `Arrow`, `Label`, `Chip`, `CycleDiagram`, `BulletList`… |

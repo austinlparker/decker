@@ -28,6 +28,8 @@
 //   - [Deck], [Slide]: the talk, and one slide with its steps, notes and
 //     [Transition].
 //   - [Ctx]: what changes between frames (T, Step, StepT), plus layout helpers.
+//   - [Rect]: a box on the canvas; layout cuts and splits rects
+//     ([Rect.CutTop], [Rect.Cols], [Rect.Grid]).
 //   - [Theme]: colors, typefaces and an optional overlay the engine uses.
 //   - [Scene], [Pixels]: what a View draws on (the engine makes the scene and
 //     draws the theme's overlay on it), and the cells above the pixels.
