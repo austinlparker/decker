@@ -17,13 +17,13 @@ type videoOptions struct {
 }
 
 // videoTiming is how long step (0-based) of s stays on screen; step 0 adds the
-// entrance transition.
+// entrance transition's time.
 func videoTiming(s Slide, step int, hold float64) float64 {
 	if s.Hold > 0 {
 		hold = s.Hold
 	}
 	if step == 0 {
-		hold += TransitionDuration
+		hold += s.transitionTime()
 	}
 	return hold
 }
@@ -82,7 +82,7 @@ func writeVideoFrames(d *Deck, o videoOptions, w io.Writer) error {
 	start, frames := time.Now(), 0
 	for i := o.first; i <= o.last; i++ {
 		s := d.Slides[i]
-		kind := s.Transition.resolve()
+		kind, tdur := s.Transition.resolve(), s.transitionTime()
 		fmt.Fprintf(os.Stderr, "\rslide %d/%d  %-40.40s", i+1, o.last+1, s.Title)
 		if from != nil {
 			from.Release()
@@ -97,8 +97,8 @@ func writeVideoFrames(d *Deck, o videoOptions, w io.Writer) error {
 			for t := 0.0; t < dur-dt/2; t += dt {
 				c := Ctx{W: cw, H: ch, T: slideT + t, Step: step, StepT: t, Theme: d.Theme}
 				sc := drawSlide(s, c)
-				if step == 0 && from != nil && t < TransitionDuration {
-					mixTransition(kind, from, sc, t/TransitionDuration, true, d.Theme)
+				if step == 0 && from != nil && t < tdur {
+					mixTransition(kind, from, sc, t/tdur, true, d.Theme)
 				}
 				sc.finish()
 				toRGB24(sc.Px, frame)

@@ -969,11 +969,11 @@ func slideLayout() Slide {
 // it, so the elements both place (title, box, dot) glide to their new rects
 // while "before" fades out and "after" fades in.
 func slideMorph(after bool) Slide {
-	title, tr := "Morph A", TransitionDefault
+	title, tr, dur := "Morph A", TransitionDefault, 0.0
 	if after {
-		title, tr = "Morph B", TransitionMorph
+		title, tr, dur = "Morph B", TransitionMorph, 0.8
 	}
-	return Slide{Title: title, Transition: tr,
+	return Slide{Title: title, Transition: tr, TransitionTime: dur,
 		View: func(c Ctx, sc *Scene) {
 			th := c.Theme
 			sc.Px.VGradient(0, sc.Px.H-1, th.Background, th.Panel)
@@ -1001,9 +1001,9 @@ func slideMorph(after bool) Slide {
 				x, y := r.Center()
 				p.Disc(x, y, r.W/2, th.Good, 1)
 			})
-			only, label := "before", Rect{page.X, page.Bottom() - c.Y(0.1), page.W * 0.3, c.Y(0.1)}
+			only, label := "before", NewRect(page.X, page.Bottom()-c.Y(0.1), page.W*0.3, c.Y(0.1))
 			if after {
-				only, label = "after", Rect{page.Right() - page.W*0.3, page.Bottom() - c.Y(0.1), page.W * 0.3, c.Y(0.1)}
+				only, label = "after", NewRect(page.Right()-page.W*0.3, page.Bottom()-c.Y(0.1), page.W*0.3, c.Y(0.1))
 			}
 			sc.Place(only, label, func(p *Pixels, r Rect) { Label(c, p, only+" only", r.X, r.Y, th.Muted, Left) })
 			sc.Place("", c.Rect(0.9, 0.9, 0.05, 0.05), func(p *Pixels, r Rect) { p.Rect(r.X, r.Y, r.W, r.H, th.Warn, 1) })

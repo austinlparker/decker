@@ -97,6 +97,30 @@ func TestPlaceOffscreen(t *testing.T) {
 	}
 }
 
+// TestTransitionTime checks a slide's TransitionTime sets how long the live
+// deck mixes, and how long video holds its first step.
+func TestTransitionTime(t *testing.T) {
+	ms := morphSlides()
+	ms[1].TransitionTime = 1.2
+	d := &Deck{Name: "slow", Theme: testTheme, Slides: ms}
+	m := testModel(d, 0, 0, 80, 24, Settled, nil)
+	m.goTo(1, 0, true)
+	m.advance(m.now.Add(time.Second))
+	if m.transFrom == nil {
+		t.Fatal("the transition ended before its TransitionTime")
+	}
+	m.advance(m.now.Add(300 * time.Millisecond))
+	if m.transFrom != nil {
+		t.Error("the transition outlasted its TransitionTime")
+	}
+	if got := videoTiming(ms[1], 0, 2); got != 3.2 {
+		t.Errorf("video holds the first step %vs, want 3.2", got)
+	}
+	if got := videoTiming(ms[0], 0, 2); got != 2+TransitionDuration {
+		t.Errorf("with no TransitionTime, video holds the first step %vs", got)
+	}
+}
+
 // TestModelKeepsElements checks the live deck hands a morph the outgoing
 // slide with its elements still to draw, except mid-transition, when the
 // frame on screen is already a mix.

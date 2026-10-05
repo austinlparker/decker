@@ -25,6 +25,7 @@ type model struct {
 
 	// Active transition, if transFrom != nil.
 	trans      Transition
+	transDur   float64 // seconds
 	transFrom  *Scene
 	transStart time.Time
 	transFwd   bool
@@ -60,7 +61,7 @@ func (m model) tick() tea.Cmd {
 
 func (m *model) advance(now time.Time) {
 	m.now = now
-	if m.transFrom != nil && now.Sub(m.transStart).Seconds() >= TransitionDuration {
+	if m.transFrom != nil && now.Sub(m.transStart).Seconds() >= m.transDur {
 		m.transFrom = nil
 	}
 }
@@ -217,7 +218,7 @@ func (m *model) goTo(idx, step int, forward bool) {
 		past := m.now.Add(-Settled * time.Second)
 		m.enter, m.stepStart = past, past
 	}
-	m.trans = m.cur().Transition.resolve()
+	m.trans, m.transDur = m.cur().Transition.resolve(), m.cur().transitionTime()
 	if m.trans == TransitionNone {
 		m.transFrom = nil
 	}
@@ -241,7 +242,7 @@ func (m model) ctx(h int) Ctx {
 func (m model) body(h int) *Scene {
 	sc := drawSlide(m.cur(), m.ctx(h))
 	if m.transFrom != nil {
-		p := m.now.Sub(m.transStart).Seconds() / TransitionDuration
+		p := m.now.Sub(m.transStart).Seconds() / m.transDur
 		mixTransition(m.trans, m.transFrom, sc, p, m.transFwd, m.theme)
 	}
 	return sc

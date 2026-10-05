@@ -201,10 +201,11 @@ A slide draws everything itself:
 ```go
 func mySlide() decker.Slide {
 	return decker.Slide{
-		Title:      "Something",           // window title and slide list
-		Steps:      2,                     // "next" presses before moving on (build steps)
-		Notes:      "say the thing",       // shown in the presenter view
-		Transition: decker.TransitionWipe, // Push (default), Dissolve, Wipe, Morph, None
+		Title:          "Something",           // window title and slide list
+		Steps:          2,                     // "next" presses before moving on (build steps)
+		Notes:          "say the thing",       // shown in the presenter view
+		Transition:     decker.TransitionWipe, // Push (default), Dissolve, Wipe, Morph, None
+		TransitionTime: 0.6,                   // seconds; zero is decker.TransitionDuration (0.45)
 		View: func(c decker.Ctx, sc *decker.Scene) {
 			p := sc.Px // the pixel canvas; c.PW() × c.PH() pixels
 
@@ -253,7 +254,8 @@ after `View` returns, above everything `View` drew. On a slide that enters
 with `decker.TransitionMorph`, an element whose key the slide before it also
 placed glides from its old rect to its new one, cross-fading from the old
 `draw` to the new. Elements on only one side fade out or in, and the rest of
-both slides cross-fades.
+both slides cross-fades. The default 0.45s is quick for a morph: set the
+slide's `TransitionTime` (around 0.8) to let it breathe.
 
 ```go
 sc.Place("headline", head, func(p *decker.Pixels, r decker.Rect) {
@@ -275,7 +277,7 @@ Everything here is in package `decker`.
 
 | Want | Use |
 | --- | --- |
-| Layout | `Rect`: start from `c.Frame()` or `c.Rect(fx, fy, fw, fh)`, then `Inset`, `CutTop`/`CutBottom`/`CutLeft`/`CutRight`, `Rows`/`Cols` (by weight), `Grid`, `Sub` (fractions of the rect) and `Place` (anchor a box inside it); `LerpRect` animates between two |
+| Layout | `Rect` (or `NewRect(x, y, w, h)` in pixels): start from `c.Frame()` or `c.Rect(fx, fy, fw, fh)`, then `Inset`, `CutTop`/`CutBottom`/`CutLeft`/`CutRight`, `Rows`/`Cols` (by weight), `Grid`, `Sub` (fractions of the rect) and `Place` (anchor a box inside it); `LerpRect` animates between two |
 | Magic move | `sc.Place(key, rect, draw)` on both slides, `Transition: TransitionMorph` on the second; see [Magic move](#magic-move) |
 | Big type | `Text{Font, Size, Color, To (gradient), Glow, Shine, FX, MaxW}.Draw(p, s, x, y)` with `Align`; returns width and height. `DrawMid` centers a line's ink on a y |
 | Sizing text to a box | `font.Fit(...)`, `FitAll(...)` for several lines at one size |

@@ -23,6 +23,10 @@ type Slide struct {
 	// Going back to it plays it again, backwards.
 	Transition Transition
 
+	// TransitionTime is how many seconds Transition takes; zero uses
+	// TransitionDuration. A morph often wants longer, around 0.8.
+	TransitionTime float64
+
 	HideChrome bool
 
 	// View draws one frame onto sc, a Ctx.W x Ctx.H scene already filled
@@ -34,3 +38,10 @@ type Slide struct {
 }
 
 func (s Slide) steps() int { return max(s.Steps, 1) }
+
+func (s Slide) transitionTime() float64 {
+	if s.TransitionTime > 0 {
+		return s.TransitionTime
+	}
+	return TransitionDuration
+}

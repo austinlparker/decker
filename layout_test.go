@@ -53,6 +53,9 @@ func TestRectPlace(t *testing.T) {
 	if x, y := r.Center(); x != 50 || y != 25 {
 		t.Errorf("Center: %v %v", x, y)
 	}
+	if got := NewRect(1, 2, 3, 4); got != (Rect{1, 2, 3, 4}) {
+		t.Errorf("NewRect: %v", got)
+	}
 	if got := LerpRect(r, Rect{100, 50, 0, 0}, 0.5); got != (Rect{50, 25, 50, 25}) {
 		t.Errorf("LerpRect: %v", got)
 	}

@@ -34,7 +34,7 @@ func BenchmarkLive(b *testing.B) {
 				if tc.trans != TransitionNone {
 					// Stay mid-transition: restart it every frame.
 					m.transFrom = drawSlide(d.Slides[0], m.ctx(m.h))
-					m.trans, m.transFwd = tc.trans, true
+					m.trans, m.transFwd, m.transDur = tc.trans, true, TransitionDuration
 					m.transStart = m.now.Add(-time.Duration(TransitionDuration / 2 * float64(time.Second)))
 				}
 				tw.write(m.frame(), "", false)

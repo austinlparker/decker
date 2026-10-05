@@ -10,6 +10,9 @@ package decker
 //	left, right := body.CutLeft(body.W * 0.4)
 type Rect struct{ X, Y, W, H float64 }
 
+// NewRect returns the w×h box with its top-left corner at (x, y), in pixels.
+func NewRect(x, y, w, h float64) Rect { return Rect{X: x, Y: y, W: w, H: h} }
+
 // Frame returns the whole canvas as a Rect.
 func (c Ctx) Frame() Rect { return Rect{0, 0, c.PW(), c.PH()} }
 

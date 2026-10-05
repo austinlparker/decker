@@ -646,7 +646,7 @@ func goldenModelTransitions(t *testing.T, g *goldenEntries) {
 				m := testModel(d, tc.from, tc.fstep, size[0], size[1], Settled, dev)
 				m.goTo(tc.to, tc.tstep, tc.forward)
 				m.now = goldenBase.Add(time.Duration(p * TransitionDuration * float64(time.Second)))
-				if m.transFrom != nil && m.now.Sub(m.transStart).Seconds() >= TransitionDuration {
+				if m.transFrom != nil && m.now.Sub(m.transStart).Seconds() >= m.transDur {
 					m.transFrom = nil // what the tick does
 				}
 				g.addString(fmt.Sprintf("modelTrans/%dx%d/%s/p=%v", size[0], size[1], tc.name, p),
@@ -707,6 +707,23 @@ func goldenMorph(t *testing.T, g *goldenEntries) {
 		t.Fatal(err)
 	}
 	g.add("morph/videoloop", hw.h.Sum(nil))
+
+	// A slower morph: TransitionTime stretches the same frames over 0.9s,
+	// in the live model and in video.
+	slow := &Deck{Name: "slow", Theme: testTheme, Slides: append([]Slide(nil), d.Slides...)}
+	slow.Slides[1].TransitionTime = 0.9
+	for _, p := range []float64{0.2, 0.5, 0.8} {
+		m := testModel(slow, 0, 0, 100, 30, Settled, nil)
+		m.goTo(1, 0, true)
+		m.advance(goldenBase.Add(time.Duration(p * 0.9 * float64(time.Second))))
+		g.addString(fmt.Sprintf("morph/model/slow/p=%v", p), view(m))
+	}
+	hw = &hashWriter{h: sha256.New(), size: 3 * o.width * o.height}
+	if err := writeVideoFrames(slow, o, hw); err != nil {
+		t.Fatal(err)
+	}
+	g.addString("morph/videoloop/slow/frames", fmt.Sprint(hw.frames))
+	g.add("morph/videoloop/slow", hw.h.Sum(nil))
 }
 
 func goldenTermWriter(t *testing.T, g *goldenEntries) {
@@ -727,7 +744,7 @@ func goldenTermWriter(t *testing.T, g *goldenEntries) {
 		if f == 100 {
 			m.goTo(2, 0, true) // and a Wipe, to slide 3
 		}
-		if m.transFrom != nil && m.now.Sub(m.transStart).Seconds() >= TransitionDuration {
+		if m.transFrom != nil && m.now.Sub(m.transStart).Seconds() >= m.transDur {
 			m.transFrom = nil
 		}
 		fr := m.frame()

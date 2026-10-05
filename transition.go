@@ -16,7 +16,8 @@ const (
 // DefaultTransition applies to slides that don't set Transition.
 var DefaultTransition = TransitionPush
 
-// TransitionDuration is how long every transition takes, in seconds.
+// TransitionDuration is how long a transition takes, in seconds, unless the
+// slide sets TransitionTime.
 const TransitionDuration = 0.45
 
 func (k Transition) resolve() Transition {
