@@ -155,6 +155,9 @@ func gallery() Deck {
 		slideCode(),
 		slideCodeFocus(),
 		slideCodeDiff(),
+		slideCharts(),
+		slideChartOptions(),
+		slideDonutStats(),
 	}}
 }
 
@@ -1337,5 +1340,97 @@ func slideCodeDiff() Slide {
 				Source: " func greet(names []string) int {\n-\tn := 0\n+\tcount := 0\n \tfor _, name := range names {\n-\t\tn++\n+\t\tcount++\n \t}\nfunc after()",
 				Lang:   "go", Diff: true, Title: "greet.go",
 			}.Draw(c, p, Rect{c.X(0.03), top + c.Y(0.02), c.X(0.7), c.Y(0.6)})
+		}}
+}
+
+// chartPage is the area under a slide's heading, split into two columns.
+func chartPage(c Ctx, p *Pixels, title string) (left, right Rect) {
+	top := heading(c, p, title)
+	_, page := c.Frame().Inset(c.X(0.03), c.Y(0.02)).CutTop(top)
+	cols := page.Cols(c.Unit(0.08), 1, 1)
+	return cols[0], cols[1]
+}
+
+// slideCharts shows a grouped BarChart with a negative value and a LineChart
+// with two series and points, each growing in on its own step.
+func slideCharts() Slide {
+	return Slide{Title: "Bar and line charts", Steps: 2, Hold: 2, Transition: TransitionDefault,
+		View: func(c Ctx, sc *Scene) {
+			p := sc.Px
+			left, right := chartPage(c, p, "Bar and line charts")
+			BarChart{
+				Labels: []string{"Q1", "Q2", "Q3", "Q4"},
+				Series: [][]float64{{12, 19, 8, 24}, {9, 14, -4, 17}},
+				Names:  []string{"2024", "2025"}, ShowValues: true, Step: 0,
+			}.Draw(c, p, left)
+			w, h := LineChart{
+				Labels: []string{"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"},
+				Series: [][]float64{{3, 5, 4, 8, 7, 11, 9}, {2, 2.5, 4.5, 5, 6.5, 6, 8}},
+				Names:  []string{"requests", "errors"}, Points: true, Step: 1,
+			}.Draw(c, p, right)
+			Label(c, p, fmt.Sprintf("%.0fx%.0f", w, h), right.Right(), c.Y(0.02), c.Theme.Muted, Right)
+		}}
+}
+
+// slideChartOptions shows a horizontal BarChart with an explicit Max, wrapped
+// labels and a custom Format, and a LineChart with a fixed range, a gap in its
+// data and no points.
+func slideChartOptions() Slide {
+	return Slide{Title: "Chart options", Steps: 2, Hold: 2, Transition: TransitionDefault,
+		View: func(c Ctx, sc *Scene) {
+			p := sc.Px
+			left, right := chartPage(c, p, "Chart options")
+			w, h := BarChart{
+				Labels: []string{"Search", "Direct", "Referral and social media links", "Email"},
+				Values: []float64{4200, 2650.5, 980, 15000}, Max: 20000, Horizontal: true, ShowValues: true, Step: 0,
+				Stagger: 0.15, Format: func(v float64) string { return fmt.Sprintf("%.1fk", v/1000) },
+			}.Draw(c, p, left)
+			Label(c, p, fmt.Sprintf("%.0fx%.0f", w, h), c.X(0.97), c.Y(0.02), c.Theme.Muted, Right)
+			LineChart{
+				Labels: []string{"Jan", "Feb", "Mar", "Apr", "May"},
+				Series: [][]float64{{40, 55, math.NaN(), 70, 95}},
+				Min:    0, Max: 100, Step: 1,
+			}.Draw(c, p, right)
+		}}
+}
+
+// slideDonutStats shows DonutChart, a row of Stats and Sparklines.
+func slideDonutStats() Slide {
+	return Slide{Title: "Donut and stats", Steps: 3, Hold: 2, Transition: TransitionDefault,
+		View: func(c Ctx, sc *Scene) {
+			p, th := sc.Px, c.Theme
+			top := heading(c, p, "Donut and stats")
+			_, page := c.Frame().Inset(c.X(0.03), c.Y(0.02)).CutTop(top)
+			upper, lower := page.CutTop(page.H * 0.62)
+			donut, rest := upper.CutLeft(upper.W * 0.6)
+			w, h := DonutChart{
+				Labels: []string{"Go", "Rust", "Zig", "Everything else"},
+				Values: []float64{52, 31, 4, 13}, Center: "100 repos", Step: 0,
+			}.Draw(c, p, donut)
+			Label(c, p, fmt.Sprintf("%.0fx%.0f", w, h), c.X(0.97), c.Y(0.02), th.Muted, Right)
+
+			// Sparklines draw on at step 2, beside names, plus the odd cases: a
+			// constant series, a gap, and a single value.
+			prog := Ease(c.Since(2), 1)
+			names := []string{"commits", "bugs", "flat"}
+			rows := rest.Inset(c.Unit(0.04), c.Unit(0.03)).Rows(c.Unit(0.03), 1, 1, 1, 1)
+			for i, series := range [][]float64{
+				{3, 4, 3, 5, 8, 7, 9, 12},
+				{9, 7, 8, 4, 5, 2, 3, 1},
+				{5, 5, 5, 5},
+				{1, math.NaN(), 3, 2, 4},
+			} {
+				name, spark := rows[i].CutLeft(rows[i].W * 0.3)
+				if i < len(names) {
+					Label(c, p, names[i], name.X, name.Y, th.Muted, Left)
+				}
+				Sparkline(c, p, spark, series, th.SeriesColor(i), prog)
+			}
+			Sparkline(c, p, rows[3].Anchor(rows[3].H, rows[3].H, 0, 0.5), []float64{2}, th.Warn, prog)
+
+			cells := lower.Inset(0, c.Unit(0.02)).Cols(c.Unit(0.04), 1, 1, 1)
+			Stat{Value: 1284, Label: "deploys", Step: 1}.Draw(c, p, cells[0])
+			Stat{Value: 99.95, Decimals: 2, Suffix: "%", Label: "uptime this quarter", Step: 1, Duration: 2}.Draw(c, p, cells[1])
+			Stat{Value: 4.2, Decimals: 1, Prefix: "$", Suffix: "M", Label: "saved", Step: 1, Duration: 0.6}.Draw(c, p, cells[2])
 		}}
 }

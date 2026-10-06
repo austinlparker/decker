@@ -338,6 +338,8 @@ Everything here is in package `decker`.
 | Block letters | `f, lines, scale := FitBlock(s, maxW, maxH, maxLines, gap, fonts...)` picks a font and scale for a pixel box; `Block{Font, Scale, Color, To, Shadow, Drop, Align, Glow, FX}.Draw(p, s, x, y)`; `BlockEffect`s for `Block.FX`: `BlockDecrypt`, `BlockRain`, `BlockBeam`, `BlockSlide`, `BlockType`, `BlockGlitch`, `BlockFade`, combined with `BlockChain` |
 | Diagrams | `Panel`, `Arrow`, `CycleDiagram` (numbered ring with a legend), `BulletList`, `SpeechBubble` |
 | Code | `Code{Source, Lang, LineNumbers, Title, Focus, FirstStep, Diff, Size}.Draw(c, p, rect)`: syntax-highlighted (chroma) in `Theme.Mono` on a plate, sized to fit the rect; `Focus` is one `LineRange{From, To}` per step from `FirstStep`, dimming the other lines behind a highlight bar that glides between ranges; `Diff` reads a unified diff. Colors from `Theme.Syntax`, or derived from the theme |
+| Charts | `BarChart{Labels, Values or Series, Max, Horizontal, ShowValues, Step}`, `LineChart{Labels, Series, Names, Min, Max, Points, Step}`, `DonutChart{Labels, Values, Thickness, Center, Step}`, each with `.Draw(c, p, rect)`: they grow in on their step, take colors from `Theme.Series` (`t.SeriesColor(i)`; default Accent, Accent2, Good, Warn, Muted) and survive empty, zero, negative and NaN data. `Sparkline(c, p, rect, values, col, prog)` is a tiny inline line |
+| A counting number | `Stat{Value, Prefix, Suffix, Decimals, Label, Step, Duration}.Draw(c, p, rect)`: counts up from 0 on its step, at a steady width |
 | Unfinished material | `PlaceholderBox` (dashed frame) and `IllustrativeTag` (made-up data) mark what to replace before the talk |
 | Letter animations | `GlyphEffect`s for `Text.FX` and `Rich.FX`: `RiseIn`, `DropIn`, `Decode` (scramble), `TypeOn`, `FadeUp`, `Wave`, `Jitter`, combined with `Chain` |
 | A moving highlight | `Shine: ShineBand(t, dur, strength)` |
@@ -408,6 +410,7 @@ invariants, the golden tests, and a recipe for each kind of addition.
 | `theme.go`, `color.go` | `Theme`; `RGB`, `Hex`, `Mix` |
 | `draw.go` | stock components: `Panel`, `Arrow`, `Label`, `PageNumber`, `ProgressBar`, `Chip`, `CycleDiagram`, `BulletList`… |
 | `code.go` | the `Code` component: chroma lexing (cached per source and language), the token-to-color palette (`SyntaxColors`), focus ranges per step, diffs |
+| `chart.go` | `BarChart`, `LineChart`, `DonutChart`, `Sparkline`, `Stat`, and `Theme.SeriesColor` |
 | `font.go`, `fit.go`, `text.go`, `coverage.go`, `memo.go`, `fonts/` | smooth type: font loading and glyphs, fitting and wrapping, drawing with glow and gradients, coverage masks, cached fits |
 | `rich.go`, `richmarkup.go` | `Rich` text: spans with their own font, color and decoration laid out and drawn on the `Text` machinery, fitted to a box; `ParseSpans` markup |
 | `figlet.go`, `block.go`, `blockfit.go`, `blockglyph.go`, `fonts/figlet/` | block letters: FIGlet font loading, drawing, fitting to a box, block-character glyphs |

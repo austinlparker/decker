@@ -31,7 +31,8 @@
 //     (Index, Count, Section), plus layout helpers.
 //   - [Rect]: a box on the canvas; layout cuts and splits rects
 //     ([Rect.CutTop], [Rect.Cols], [Rect.Grid]).
-//   - [Theme]: colors, typefaces and an optional overlay the engine uses.
+//   - [Theme]: colors, typefaces, chart series colors and an optional overlay
+//     the engine uses.
 //   - [Scene], [Pixels]: what a View draws on (the engine makes the scene and
 //     draws the theme's overlay on it), and the cells above the pixels.
 //     [Scene.Place] hands the engine a keyed element to draw instead, which
@@ -53,6 +54,8 @@
 // Stock components ([Panel], [Arrow], [CycleDiagram], [BulletList],
 // [PageNumber], [ProgressBar], and [Code] with its [SyntaxColors] and
 // [LineRange] focus) and easing helpers ([Ease], [CubicBezier], [Spring]) are
-// in draw.go, code.go and anim.go. The package README is the full guide, with
-// the command line, keys and presenter view.
+// in draw.go, code.go and anim.go. Charts ([BarChart], [LineChart],
+// [DonutChart], [Sparkline]) and the counting [Stat] are in chart.go; their
+// series colors are [Theme.Series]. The package README is the full guide,
+// with the command line, keys and presenter view.
 package decker

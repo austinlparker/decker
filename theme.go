@@ -16,6 +16,11 @@ type Theme struct {
 	Good       RGB // positive status, such as the presenter's "on pace"
 	Panel      RGB // inset plates and the help box, a shade off Background
 
+	// Series are the colors of chart series, in order, for BarChart, LineChart
+	// and DonutChart; see Theme.SeriesColor. Empty uses Accent, Accent2, Good,
+	// Warn and Muted.
+	Series []RGB
+
 	Display *Font // headlines and numbers
 	Body    *Font // supporting lines, labels, chips
 	Mono    *Font // code
