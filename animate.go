@@ -43,8 +43,8 @@ func offset(c Ctx, d Direction, dist float64) (dx, dy float64) {
 }
 
 // FlyIn slides an element in over dur seconds from dist of the screen away in
-// direction from (DirLeft starts it left of its place), fading in over the
-// first half. dist 1 starts it just off the screen.
+// direction from (DirLeft starts it left of its place; DirDefault below it),
+// fading in over the first half. dist 1 starts it just off the screen.
 func FlyIn(c Ctx, t, dur float64, from Direction, dist float64) Composite {
 	p := Progress(t, 0, dur)
 	k := shown(Clamp01(2 * p))
@@ -114,8 +114,8 @@ func wipeTrim(edge Direction, v float64) Composite {
 }
 
 // WipeIn reveals an element over dur seconds from the edge in direction from
-// across to the opposite one: DirLeft uncovers it left to right. It is a
-// clip, so nothing moves.
+// across to the opposite one: DirLeft uncovers it left to right, DirDefault
+// bottom to top. It is a clip, so nothing moves.
 func WipeIn(t, dur float64, from Direction) Composite {
 	return wipeTrim(from, EaseInOutCubic(Progress(t, 0, dur)))
 }
