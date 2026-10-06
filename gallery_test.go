@@ -137,6 +137,17 @@ func gallery() Deck {
 		slideMorph(true),
 		slideImageAlpha(ims),
 		slidePosition(),
+		slideTransition("Fade", TransitionFade, 0),
+		slideTransition("Fade through", TransitionFadeThrough, 1),
+		slideTransition("Cover", TransitionCover, 2),
+		slideTransition("Uncover", TransitionUncover.From(DirLeft), 3),
+		slideTransition("Split", TransitionSplit, 4),
+		slideTransition("Iris", TransitionIris, 5),
+		slideTransition("Zoom", TransitionZoom, 6),
+		slideTransition("Pixelate", TransitionPixelate, 7),
+		slideTransition("Glitch", TransitionGlitch, 8),
+		slideTransition("Push from top", TransitionPush.From(DirUp), 9),
+		slideTransition("Wipe from bottom", TransitionWipe.From(DirDown), 10),
 	}}
 }
 
@@ -1099,5 +1110,23 @@ func slidePosition() Slide {
 			bare.Count = 0
 			PageNumber(bare, p, c.X(0.03), c.Y(0.75), Left, th.Warn)
 			ProgressBar(bare, p, c.Rect(0.5, 0.75, 0.3, 0.02), th.Warn, th.Faint)
+		}}
+}
+
+// slideTransition is a slide that enters with tr, with a gradient, big type, a
+// shape and a line of characters of its own, so a transition has pixels and
+// characters to move; n varies its colors.
+func slideTransition(title string, tr Transition, n int) Slide {
+	return Slide{Title: title, Transition: tr.Over(0.6),
+		View: func(c Ctx, sc *Scene) {
+			th := c.Theme
+			sc.Px.VGradient(0, sc.Px.H-1, Mix(th.Background, th.Accent2, 0.1*float64(n%4)), Mix(th.Panel, th.Accent, 0.06*float64(1+n%5)))
+			size, s := th.Display.Fit(title, c.X(0.8), c.Y(0.3), c.Size(0.3), 0)
+			Text{Font: th.Display, Size: size, Color: th.Text, Align: Center, Glow: 0.3, FX: FadeUp(c.StepT, 0.4, size)}.Draw(sc.Px, s, c.X(0.5), c.Y(0.3))
+			x, y := c.X(0.5), c.Y(0.72)
+			sc.Px.Disc(x, y, c.Unit(0.06), th.Good, 1)
+			sc.Px.Disc(x+c.Unit(0.1)*math.Sin(c.T), y, c.Unit(0.03), th.Warn, 1)
+			sc.Px.RoundRect(c.X(0.1), c.Y(0.08), c.X(0.8), c.Y(0.84), c.Unit(0.03), 2, th.Accent2, 0.8)
+			sc.Text(c.W/2-8, c.H-4, "enters with "+strings.ToLower(title), th.Muted.Color())
 		}}
 }
