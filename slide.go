@@ -8,8 +8,9 @@ type Slide struct {
 	// Title is shown in the footer, the window title and -list.
 	Title string
 
-	// Steps is how many times "next" stays on this slide: Ctx.Step runs from
-	// 0 to Steps-1. Zero means 1.
+	// Steps is the number of build states: Ctx.Step runs from 0 to Steps-1.
+	// For Steps: 2, one "next" reveals step 1 and the next advances to the
+	// following slide. Zero means 1.
 	Steps int
 
 	// Notes are speaker notes, shown in the presenter view and with the n key.
@@ -31,6 +32,8 @@ type Slide struct {
 	// and the presenter view show it.
 	Section string
 
+	// HideChrome hides the dev-mode footer on this slide. Theme.Overlay still
+	// draws, and presenter notes and previews remain available.
 	HideChrome bool
 
 	// View draws one frame onto sc, a Ctx.W x Ctx.H scene already filled

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">Decker</title>
+  <desc id="desc">Three stacked slides with a terminal prompt on the front slide.</desc>
+  <g fill="none" stroke="#40c0ff" stroke-width="6" stroke-linejoin="round">
+    <path d="M24 24h80a8 8 0 0 1 8 8v56"/>
+    <path d="M16 36h80a8 8 0 0 1 8 8v56"/>
+    <rect x="8" y="48" width="88" height="64" rx="8" fill="#101820"/>
+    <path d="m28 68 12 12-12 12" stroke="#f0f0f0" stroke-linecap="round"/>
+    <path d="M52 92h20" stroke="#ffb000" stroke-linecap="round"/>
+  </g>
+</svg>

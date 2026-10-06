@@ -10,7 +10,7 @@ import (
 // each font cell becomes a Scale×(2·Scale) pixel box, so block letters are as
 // big on stage at 682 columns as at 240. FitBlock picks a font and scale.
 type Block struct {
-	Font  *FigFont
+	Font  *FigletFont
 	Scale float64 // pixel width of one font cell, at least 0.5; it is twice as tall
 
 	Color  RGB  // solid parts (█ ▀ ▄ ▌ ▐ ░ …)

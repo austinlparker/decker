@@ -67,7 +67,7 @@ func TestGalleryPanics(t *testing.T) {
 		"rich without a font": {func() { Rich{Size: 10}.Draw(NewPixels(10, 10, th.Background), []Span{{Text: "x"}}, 0, 0) }, "Font is required"},
 		"missing font file":   {func() { LoadFont(fstest.MapFS{}, "nope.ttf") }, "nope.ttf"},
 		"broken font":         {func() { LoadFont(fstest.MapFS{"x.ttf": {Data: []byte("junk")}}, "x.ttf") }, "x.ttf"},
-		"missing fig font":    {func() { LoadFigFont(fstest.MapFS{}, "nope.flf") }, "nope.flf"},
+		"missing fig font":    {func() { LoadFigletFont(fstest.MapFS{}, "nope.flf") }, "nope.flf"},
 	} {
 		func() {
 			defer func() {
@@ -122,7 +122,7 @@ func gallery() Deck {
 		slideBlockOptions(),
 		slideBlockFXA(),
 		slideBlockFXB(),
-		slideFigFont(),
+		slideFigletFont(),
 		slideComponents(),
 		slideCycle(),
 		slideCycleRing(),
@@ -164,7 +164,39 @@ func gallery() Deck {
 		slideTable(),
 		slideTableRows(),
 		slideTableCols(),
+		slideBlockCatalog(),
 	}}
+}
+
+func slideBlockCatalog() Slide {
+	fonts := make([]*FigletFont, 0, 5)
+	for _, name := range StockFigletFontNames() {
+		if strings.HasPrefix(name, "Decker ") {
+			font := StockFigletFont(name)
+			if name == "Decker Square" {
+				data, err := os.ReadFile("fonts/figlet/" + name + ".flf")
+				if err != nil {
+					panic(err)
+				}
+				font, err = ParseFigletFont("Consumer square", data)
+				if err != nil {
+					panic(err)
+				}
+			}
+			fonts = append(fonts, font)
+		}
+	}
+	return Slide{Title: "Block font catalog", Steps: len(fonts), Transition: TransitionPush,
+		View: func(c Ctx, sc *Scene) {
+			p, th := sc.Px, c.Theme
+			top := heading(c, p, "Block font catalog")
+			font := fonts[c.Step]
+			_, labelHeight := tag(c, p, font.Name, c.X(0.03), top, th.Muted)
+			y := top + labelHeight + c.Y(0.04)
+			f, lines, scale := FitBlock("Hello, Go!", c.X(0.9), c.Y(0.9)-y, 2, 0, font)
+			Block{Font: f, Scale: scale, Color: th.Accent, Drop: th.Faint}.
+				Draw(p, strings.Join(lines, "\n"), c.X(0.03), y)
+		}}
 }
 
 // ---- helpers ----
@@ -399,7 +431,7 @@ func slideBlockStockA() Slide {
 		View: func(c Ctx, sc *Scene) {
 			p, th := sc.Px, c.Theme
 			top := heading(c, p, "Block stock A")
-			for i, f := range []*FigFont{BlockShadow, BlockSolid, BlockSmall} {
+			for i, f := range []*FigletFont{BlockShadow, BlockSolid, BlockSmall} {
 				y := rowY(c, top, 3, i)
 				ff, lines, scale := FitBlock("Block "+f.Name[:3], c.X(0.8), (c.Y(0.97)-top)/3-c.Unit(0.02), 1, 0, f)
 				tag(c, p, fmt.Sprintf("%s rows=%d scale=%.1f", ff.Name, ff.Rows(), scale), c.X(0.03), y, th.Muted)
@@ -414,7 +446,7 @@ func slideBlockStockB() Slide {
 		View: func(c Ctx, sc *Scene) {
 			p, th := sc.Px, c.Theme
 			top := heading(c, p, "Block stock B")
-			for i, f := range []*FigFont{BlockHuge, BlockFancy} {
+			for i, f := range []*FigletFont{BlockHuge, BlockFancy} {
 				y := rowY(c, top, 2, i)
 				ff, lines, scale := FitBlock("Deck "+f.Name[:3], c.X(0.8), (c.Y(0.97)-top)/2-c.Unit(0.03), 1, 0, f)
 				tag(c, p, fmt.Sprintf("%s rows=%d scale=%.1f", ff.Name, ff.Rows(), scale), c.X(0.03), y, th.Muted)
@@ -512,7 +544,7 @@ func slideBlockFXB() Slide {
 		}}
 }
 
-func slideFigFont() Slide {
+func slideFigletFont() Slide {
 	return Slide{Title: "FigFont API", Transition: TransitionNone,
 		View: func(c Ctx, sc *Scene) {
 			p, th := sc.Px, c.Theme
@@ -525,7 +557,7 @@ func slideFigFont() Slide {
 			}
 			quote := "Agents aren't users"
 			line(fmt.Sprintf("DropQuotes %q", BlockSolid.DropQuotes(quote)), th.Text)
-			for _, f := range []*FigFont{BlockShadow, BlockSolid, BlockSmall, BlockHuge, BlockFancy} {
+			for _, f := range []*FigletFont{BlockShadow, BlockSolid, BlockSmall, BlockHuge, BlockFancy} {
 				line(fmt.Sprintf("%-22s rows=%d height=%d width=%d has(digits)=%v has(quote)=%v has(punct)=%v",
 					f.Name, f.Rows(), f.Height, f.Width("Hello"), f.Has("2025"), f.Has(quote), f.Has("a, b! c?")), th.Muted)
 			}
@@ -541,13 +573,13 @@ func slideFigFont() Slide {
 
 			// Lowercase and missing characters fall back (to the capital, or to ?).
 			lx := c.X(0.6)
-			for i, f := range []*FigFont{BlockShadow, BlockSolid, BlockSmall, BlockHuge, BlockFancy} {
+			for i, f := range []*FigletFont{BlockShadow, BlockSolid, BlockSmall, BlockHuge, BlockFancy} {
 				Block{Font: f, Scale: 0.5, Color: th.Muted}.Draw(p, "abc é~", lx, c.Y(0.3)+float64(i)*c.Y(0.05)*1.4)
 			}
 
-			// A font loaded from disk through LoadFigFont, and a face from
+			// A font loaded from disk through LoadFigletFont, and a face from
 			// ParseFont, which is what LoadFont wraps.
-			fig := LoadFigFont(os.DirFS("fonts/figlet"), "ANSI Shadow.flf")
+			fig := LoadFigletFont(os.DirFS("fonts/figlet"), "Spleen 6x12 Shadow.flf")
 			Block{Font: fig, Scale: 1, Color: th.Good}.Draw(p, "Disk", c.X(0.6), top)
 			data, err := os.ReadFile("fonts/SpaceGrotesk-Bold.ttf")
 			if err != nil {
