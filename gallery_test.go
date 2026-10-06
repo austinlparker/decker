@@ -64,6 +64,7 @@ func TestGalleryPanics(t *testing.T) {
 		want string
 	}{
 		"text without a font": {func() { Text{Size: 10}.Draw(NewPixels(10, 10, th.Background), "x", 0, 0) }, "Font is required"},
+		"rich without a font": {func() { Rich{Size: 10}.Draw(NewPixels(10, 10, th.Background), []Span{{Text: "x"}}, 0, 0) }, "Font is required"},
 		"missing font file":   {func() { LoadFont(fstest.MapFS{}, "nope.ttf") }, "nope.ttf"},
 		"broken font":         {func() { LoadFont(fstest.MapFS{"x.ttf": {Data: []byte("junk")}}, "x.ttf") }, "x.ttf"},
 		"missing fig font":    {func() { LoadFigFont(fstest.MapFS{}, "nope.flf") }, "nope.flf"},
@@ -135,6 +136,25 @@ func gallery() Deck {
 		slideLayout(),
 		slideMorph(false),
 		slideMorph(true),
+		slideImageAlpha(ims),
+		slidePosition(),
+		slideTransition("Fade", TransitionFade, 0),
+		slideTransition("Fade through", TransitionFadeThrough, 1),
+		slideTransition("Cover", TransitionCover, 2),
+		slideTransition("Uncover", TransitionUncover.From(DirLeft), 3),
+		slideTransition("Split", TransitionSplit, 4),
+		slideTransition("Iris", TransitionIris, 5),
+		slideTransition("Zoom", TransitionZoom, 6),
+		slideTransition("Pixelate", TransitionPixelate, 7),
+		slideTransition("Glitch", TransitionGlitch, 8),
+		slideTransition("Push from top", TransitionPush.From(DirUp), 9),
+		slideTransition("Wipe from bottom", TransitionWipe.From(DirDown), 10),
+		slideElementAnimations(),
+		slideEasings(),
+		slideRich(),
+		slideCode(),
+		slideCodeFocus(),
+		slideCodeDiff(),
 		slideCharts(),
 		slideChartOptions(),
 		slideDonutStats(),
@@ -195,10 +215,30 @@ func galleryImages() fstest.MapFS {
 		}
 	}
 	return fstest.MapFS{
+		"img/logo.png": enc(logoImage(48)),
 		"img/grad.png": enc(grad),
 		"img/wide.png": enc(wide),
 		"img/ramp.png": enc(ramp),
 	}
+}
+
+// logoImage is a transparent-background mark: an opaque disc with a
+// half-transparent ring around it, the shape a logo PNG usually has.
+func logoImage(n int) *image.NRGBA {
+	img := image.NewNRGBA(image.Rect(0, 0, n, n))
+	h := float64(n) / 2
+	for y := 0; y < n; y++ {
+		for x := 0; x < n; x++ {
+			d := math.Hypot(float64(x)+0.5-h, float64(y)+0.5-h) / h
+			switch {
+			case d < 0.5:
+				img.SetNRGBA(x, y, color.NRGBA{255, 120, 0, 255})
+			case d < 0.9:
+				img.SetNRGBA(x, y, color.NRGBA{255, 255, 255, 128})
+			}
+		}
+	}
+	return img
 }
 
 // ---- slides ----
@@ -769,6 +809,46 @@ func slideImages(ims *Images) Slide {
 		}}
 }
 
+// slideImageAlpha draws a transparent logo over stripes (so the see-through
+// parts show), then wide.png cover-cropped into a tall, a wide and a tiny box.
+func slideImageAlpha(ims *Images) Slide {
+	return Slide{Title: "Image alpha", Transition: TransitionDefault,
+		View: func(c Ctx, sc *Scene) {
+			p, th := sc.Px, c.Theme
+			top := heading(c, p, "Transparent images and cover")
+			for i := 0; i < 12; i++ {
+				col := th.Panel
+				if i%2 == 0 {
+					col = th.Faint
+				}
+				p.Rect(c.X(0.03)+float64(i)*c.X(0.02), top, c.X(0.02), c.Y(0.4), col, 1)
+			}
+			for i, a := range []float64{1, 0.5} {
+				ims.Draw(p, "logo.png", c.X(0.03)+float64(i)*c.X(0.12), top+c.Y(0.05), c.X(0.1), c.Y(0.3), a)
+			}
+			// A shrunk copy: edges must stay bright, not darken toward black.
+			ims.Draw(p, "logo.png", c.X(0.28), top+c.Y(0.05), c.X(0.03), c.Y(0.05), 1)
+
+			boxes := []struct {
+				x, y, w, h float64
+				alpha      float64
+			}{
+				{c.X(0.4), top, c.X(0.12), c.Y(0.4), 1},
+				{c.X(0.55), top, c.X(0.4), c.Y(0.15), 1},
+				{c.X(0.55), top + c.Y(0.2), c.X(0.2), c.Y(0.2), 0.6},
+				{c.X(0.8), top + c.Y(0.2), 3, 2, 1},
+			}
+			for _, b := range boxes {
+				p.RoundRect(b.x-1, b.y-1, b.w+2, b.h+2, 1, 1, th.Accent, 1)
+				ims.DrawCover(p, "wide.png", b.x, b.y, b.w, b.h, b.alpha)
+			}
+			// Cover a transparent image: the logo fills the box and crops its sides.
+			ims.DrawCover(p, "logo.png", c.X(0.03), top+c.Y(0.5), c.X(0.4), c.Y(0.2), 1)
+			_, _, _, _, ok := ims.DrawCover(p, "missing.png", 0, 0, 10, 10, 1)
+			Label(c, p, fmt.Sprintf("cover missing ok=%v", ok), c.X(0.5), c.Y(0.9), th.Muted, Left)
+		}}
+}
+
 func slideMotion() Slide {
 	return Slide{Title: "Motion", Transition: TransitionWipe,
 		View: func(c Ctx, sc *Scene) {
@@ -1010,6 +1090,256 @@ func slideMorph(after bool) Slide {
 			}
 			sc.Place(only, label, func(p *Pixels, r Rect) { Label(c, p, only+" only", r.X, r.Y, th.Muted, Left) })
 			sc.Place("", c.Rect(0.9, 0.9, 0.05, 0.05), func(p *Pixels, r Rect) { p.Rect(r.X, r.Y, r.W, r.H, th.Warn, 1) })
+		}}
+}
+
+// slidePosition draws what an overlay would from Ctx's position: the page
+// number in each alignment, the progress bar and the section. The theme's own
+// Overlay stays as it was, so the other slides' frames don't change.
+func slidePosition() Slide {
+	return Slide{Title: "Position", Section: "Overlays",
+		View: func(c Ctx, sc *Scene) {
+			p, th := sc.Px, c.Theme
+			top := heading(c, p, "Position")
+			tag(c, p, fmt.Sprintf("Index %d  Count %d  Section %q", c.Index, c.Count, c.Section), c.X(0.03), top, th.Muted)
+
+			y := top + c.Y(0.15)
+			PageNumber(c, p, c.X(0.03), y, Left, th.Text)
+			PageNumber(c, p, c.X(0.5), y, Center, th.Accent2)
+			PageNumber(c, p, c.X(0.97), y, Right, th.Good)
+			ProgressBar(c, p, c.Rect(0.03, 0.55, 0.94, 0.03), th.Accent, th.Faint)
+			ProgressBar(c, p, c.Rect(0.03, 0.65, 0.4, 0.015), th.Good, th.Panel)
+
+			// A bar and a page number in the corner, as an overlay would.
+			ProgressBar(c, p, NewRect(0, c.PH()-c.Unit(0.01), c.PW(), c.Unit(0.01)), th.Accent2, th.Faint)
+			Label(c, p, c.Section, c.X(0.03), c.Y(0.9), th.Muted, Left)
+			PageNumber(c, p, c.X(0.97), c.Y(0.9), Right, th.Muted)
+
+			// An unpositioned Ctx draws no number and an empty track.
+			bare := c
+			bare.Count = 0
+			PageNumber(bare, p, c.X(0.03), c.Y(0.75), Left, th.Warn)
+			ProgressBar(bare, p, c.Rect(0.5, 0.75, 0.3, 0.02), th.Warn, th.Faint)
+		}}
+}
+
+// slideTransition is a slide that enters with tr, with a gradient, big type, a
+// shape and a line of characters of its own, so a transition has pixels and
+// characters to move; n varies its colors.
+func slideTransition(title string, tr Transition, n int) Slide {
+	return Slide{Title: title, Transition: tr.Over(0.6),
+		View: func(c Ctx, sc *Scene) {
+			th := c.Theme
+			sc.Px.VGradient(0, sc.Px.H-1, Mix(th.Background, th.Accent2, 0.1*float64(n%4)), Mix(th.Panel, th.Accent, 0.06*float64(1+n%5)))
+			size, s := th.Display.Fit(title, c.X(0.8), c.Y(0.3), c.Size(0.3), 0)
+			Text{Font: th.Display, Size: size, Color: th.Text, Align: Center, Glow: 0.3, FX: FadeUp(c.StepT, 0.4, size)}.Draw(sc.Px, s, c.X(0.5), c.Y(0.3))
+			x, y := c.X(0.5), c.Y(0.72)
+			sc.Px.Disc(x, y, c.Unit(0.06), th.Good, 1)
+			sc.Px.Disc(x+c.Unit(0.1)*math.Sin(c.T), y, c.Unit(0.03), th.Warn, 1)
+			sc.Px.RoundRect(c.X(0.1), c.Y(0.08), c.X(0.8), c.Y(0.84), c.Unit(0.03), 2, th.Accent2, 0.8)
+			sc.Text(c.W/2-8, c.H-4, "enters with "+strings.ToLower(title), th.Muted.Color())
+		}}
+}
+
+// slideElementAnimations shows every entrance, exit and emphasis on a panel,
+// across three steps: step 0 builds eight elements in (one waits for step 1),
+// step 1 exits one, shakes, dims and grows others, step 2 exits more.
+func slideElementAnimations() Slide {
+	return Slide{Title: "Element animations", Steps: 3, Transition: TransitionDefault,
+		View: func(c Ctx, sc *Scene) {
+			p, th := sc.Px, c.Theme
+			top := heading(c, p, "Element animations")
+			_, body := c.Frame().Inset(c.X(0.04), 0).CutTop(top + c.Y(0.04))
+			grid := body.Inset(0, c.Unit(0.02)).Grid(4, 2, c.Unit(0.05))
+			dist := 0.15
+			fly := func(from Direction) func(float64) Composite {
+				return func(t float64) Composite { return FlyIn(c, t, 0.5, from, dist) }
+			}
+			// Each element starts 0.12s after the one before it.
+			late := func(i int, f func(float64) Composite) func(float64) Composite {
+				return func(t float64) Composite { return f(t - 0.12*float64(i)) }
+			}
+			type element struct {
+				label string
+				fx    Composite
+			}
+			els := []element{
+				{"FadeIn, FadeOut", AppearAt(c, 0, 1, late(0, func(t float64) Composite { return FadeIn(t, 0.5) }),
+					func(t float64) Composite { return FadeOut(t, 0.5) })},
+				{"FlyIn, FlyOut", AppearAt(c, 0, 2, late(1, fly(DirLeft)),
+					func(t float64) Composite { return FlyOut(c, t, 0.5, DirRight, dist) })},
+				{"ZoomIn, ZoomOut", AppearAt(c, 0, 2, late(2, func(t float64) Composite { return ZoomIn(t, 0.5, 0.5) }),
+					func(t float64) Composite { return ZoomOut(t, 0.5, 0.5) })},
+				{"Pop, Grow", AppearAt(c, 0, -1, late(3, func(t float64) Composite { return Pop(t, 0.6) }), nil).
+					Then(Grow(c.Since(1), 0.6, 1.15))},
+				{"WipeIn, Dim, WipeOut", AppearAt(c, 0, 2, late(4, func(t float64) Composite { return WipeIn(t, 0.6, DirLeft) }),
+					func(t float64) Composite { return WipeOut(t, 0.6, DirLeft) }).Then(Dim(c.Since(1), 0.4, 0.35))},
+				{"FlyIn up, Shake", AppearAt(c, 0, -1, late(5, fly(DirDown)), nil).Then(Shake(c.Since(1), 0.6, c.Unit(0.02)))},
+				{"Combine, Clipped", Combine(FlyIn(c, c.Since(0)-0.6, 0.5, DirUp, 0.1), ZoomIn(c.Since(0)-0.6, 0.5, 0.8)).
+					Clipped(grid[6], grid[6].Inset(0, grid[6].H*0.12))},
+				{"Pivot at a corner", AppearAt(c, 1, -1, func(t float64) Composite {
+					k := Pop(t, 0.6)
+					k.PivotX, k.PivotY = -0.5, -0.5
+					return k
+				}, nil)},
+			}
+			for i, e := range els {
+				r := grid[i].Inset(c.Unit(0.02), c.Unit(0.02))
+				e.fx.Draw(p, r, func(p *Pixels) {
+					Panel(c, p, r.X, r.Y, r.W, r.H, e.label, th.Panel, th.Accent2, th.Text, 1)
+					p.Glow(r.Right(), r.Y, c.Unit(0.03), th.Accent, 0.6)
+					p.Disc(r.X+c.Unit(0.03), r.Y+c.Unit(0.03), c.Unit(0.012), th.Good, 1)
+				})
+			}
+		}}
+}
+
+// slideEasings plots the easings added for element animations, and a CSS
+// "ease" curve, each with a marker running on a loop.
+func slideEasings() Slide {
+	ease := CubicBezier(0.25, 0.1, 0.25, 1)
+	overshoot := CubicBezier(0.34, 1.56, 0.64, 1)
+	curves := []struct {
+		name string
+		f    func(float64) float64
+	}{
+		{"InQuad", EaseInQuad}, {"OutQuad", EaseOutQuad}, {"InOutQuad", EaseInOutQuad},
+		{"InCubic", EaseInCubic}, {"OutExpo", EaseOutExpo}, {"InOutExpo", EaseInOutExpo},
+		{"OutElastic", EaseOutElastic}, {"OutBounce", EaseOutBounce},
+		{"Bezier ease", ease}, {"Bezier back", overshoot},
+	}
+	return Slide{Title: "Easings", Transition: TransitionWipe,
+		View: func(c Ctx, sc *Scene) {
+			p, th := sc.Px, c.Theme
+			top := heading(c, p, "Easings: the Ease family and CubicBezier")
+			cw, ch := c.X(0.2), c.Y(0.15)
+			clock := math.Mod(c.T/2.5, 1)
+			for i, cv := range curves {
+				x0 := c.X(0.03) + float64(i%4)*(cw+c.X(0.04))
+				y0 := top + c.Y(0.02) + float64(i/4)*(ch+c.Y(0.1))
+				p.RoundRect(x0, y0, cw, ch, 1, 1, th.Faint, 1)
+				at := func(x float64) float64 { return y0 + ch - cv.f(x)*ch*0.6 - ch*0.2 }
+				for k := 0; k <= 60; k++ {
+					x := float64(k) / 60
+					p.Disc(x0+x*cw, at(x), 1, th.Accent2, 1)
+				}
+				p.Disc(x0+clock*cw, at(clock), 2.5, th.Accent, 1)
+				Label(c, p, cv.name, x0, y0+ch+2, th.Muted, Left)
+			}
+		}}
+}
+
+// slideRich draws mixed styles within a line: markup, hand-built spans with
+// every decoration, wrapping across spans, fitting, glow and an effect.
+func slideRich() Slide {
+	return Slide{Title: "Rich text", Notes: "Rich, Span and ParseSpans", Transition: TransitionDefault,
+		View: func(c Ctx, sc *Scene) {
+			p, th := sc.Px, c.Theme
+			top := heading(c, p, "Rich text")
+			bs := max(c.Size(0.055), c.SmallText(th.Body))
+
+			// Markup: bold, muted, code, color tags, escapes, wrapped in a column.
+			md := ParseSpans("Spans mix *bold*, _muted_ and {accent:colored} words with `inline_code()` in one line, "+
+				"wrap across {accent2:span boundaries}, and escape a \\*star\\*.", th)
+			col := Rich{Font: th.Body, Size: bs, Color: th.Text, MaxW: c.X(0.44), Leading: 1.35}
+			_, h := col.Draw(p, md, c.X(0.03), top)
+
+			// Every decoration, built by hand; Mark paints a highlighter plate.
+			y := top + h + c.Y(0.04)
+			warn, good, hi := th.Warn, th.Good, Hex("#FFD23F")
+			dark := th.Background
+			deco := []Span{
+				{Text: "Mark ", Mark: &hi, Color: &dark},
+				{Text: "under ", Underline: true, Color: &good},
+				{Text: "strike ", Strike: true, Color: &warn},
+				{Text: "both", Underline: true, Strike: true},
+				{Text: " and "},
+				{Text: "mono", Font: th.Mono, Mark: rgbp(th.Panel)},
+			}
+			dr := Rich{Font: th.Display, Size: bs, Color: th.Text}
+			dw, dh := dr.Draw(p, deco, c.X(0.03), y)
+			p.Rect(c.X(0.03), y+dr.Baseline(), dw, 1, th.Faint, 0.8) // one baseline for every font
+
+			// Alignment and glow in span colors, an effect, and DrawMid in a box.
+			y += dh + c.Y(0.05)
+			cx := c.X(0.27)
+			glow := []Span{{Text: "two "}, {Text: "glowing", Color: &th.Accent}, {Text: " colors", Color: &th.Accent2}}
+			Rich{Font: th.Display, Size: bs, Color: th.Text, Glow: 0.8, Align: Center}.Draw(p, glow, cx, y)
+			fx := ParseSpans("*typed* and {good:risen} per glyph", th)
+			Rich{Font: th.Body, Size: bs, Color: th.Text, Align: Right, FX: Chain(RiseIn(c.T, 0.04, bs), TypeOn(c.T, 60))}.
+				Draw(p, fx, c.X(0.97), c.Y(0.22))
+			boxY := y + c.Y(0.14)
+			p.RoundRect(c.X(0.03), boxY, c.X(0.48), c.Unit(0.12), 3, 1, th.Faint, 1)
+			Rich{Font: th.Body, Size: bs, Color: th.Muted, Align: Center}.
+				DrawMid(p, ParseSpans("centered on its {accent:ink} with `gjpqy`", th), c.X(0.27), boxY+c.Unit(0.06))
+
+			// Fit: the largest size at which the spans fill a box.
+			bx, by, bw, bh := c.X(0.55), c.Y(0.38), c.X(0.42), c.Y(0.5)
+			p.RoundRect(bx, by, bw, bh, 2, 1, th.Faint, 1)
+			fit := ParseSpans("Fit finds the *largest size* at which a {accent:rich} block, wrapped to its box, still fits.", th)
+			fr := Rich{Font: th.Display, Color: th.Text, Leading: 1.05}
+			fr.Size, fr.MaxW = fr.Fit(fit, bw, bh, c.Size(0.3)), bw
+			fr.Draw(p, fit, bx, by)
+		}}
+}
+
+// ---- code ----
+
+const gallerySrc = `package main
+
+import "fmt"
+
+// greet says hello, in the tab-indented style gofmt writes.
+func greet(names []string) int {
+	n := 0
+	for _, name := range names {
+		if name == "" {
+			continue
+		}
+		fmt.Println("hello,", name, 3.5)
+		n++
+	}
+	return n
+}
+`
+
+func slideCode() Slide {
+	return Slide{Title: "Code", Transition: TransitionDefault,
+		View: func(c Ctx, sc *Scene) {
+			p, th := sc.Px, c.Theme
+			top := heading(c, p, "Code")
+			area := Rect{c.X(0.03), top + c.Y(0.02), c.X(0.55), c.Y(0.97) - top - c.Y(0.02)}
+			w, h := Code{Source: gallerySrc, Lang: "go", Title: "greet.go", LineNumbers: true}.Draw(c, p, area)
+			// A second block at a fixed size in a language with no lexer.
+			x := area.X + w + c.Unit(0.04)
+			Code{Source: "no lexer\nfor this\n\tone", Lang: "no-such-language", Size: c.SmallText(th.Mono)}.
+				Draw(c, p, Rect{x, area.Y, c.X(0.97) - x, c.Y(0.3)})
+			Label(c, p, fmt.Sprintf("plate %.0fx%.0f", w, h), x, area.Y+c.Y(0.35), th.Muted, Left)
+		}}
+}
+
+func slideCodeFocus() Slide {
+	return Slide{Title: "Code focus", Steps: 4, Transition: TransitionPush,
+		View: func(c Ctx, sc *Scene) {
+			p := sc.Px
+			top := heading(c, p, "Code focus")
+			Code{
+				Source: gallerySrc, Lang: "go", LineNumbers: true,
+				Focus:     []LineRange{{6, 8}, {9, 14}, {}},
+				FirstStep: 1,
+			}.Draw(c, p, Rect{c.X(0.03), top + c.Y(0.02), c.X(0.9), c.Y(0.97) - top - c.Y(0.02)})
+		}}
+}
+
+func slideCodeDiff() Slide {
+	return Slide{Title: "Code diff", Transition: TransitionDissolve,
+		View: func(c Ctx, sc *Scene) {
+			p := sc.Px
+			top := heading(c, p, "Code diff")
+			Code{
+				Source: " func greet(names []string) int {\n-\tn := 0\n+\tcount := 0\n \tfor _, name := range names {\n-\t\tn++\n+\t\tcount++\n \t}\nfunc after()",
+				Lang:   "go", Diff: true, Title: "greet.go",
+			}.Draw(c, p, Rect{c.X(0.03), top + c.Y(0.02), c.X(0.7), c.Y(0.6)})
 		}}
 }
 

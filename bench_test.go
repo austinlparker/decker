@@ -42,3 +42,29 @@ func BenchmarkLive(b *testing.B) {
 		})
 	}
 }
+
+// BenchmarkTransitions measures each transition's mix of two 682×171 frames,
+// 40% of the way. A frame is drawn for the new slide each time, since mixing
+// changes it, so "cut" (no mixing) is the baseline to subtract.
+func BenchmarkTransitions(b *testing.B) {
+	deck := testDeck().Slides
+	wide := wideSlide()
+	for _, tr := range append([]Transition{TransitionNone}, transitionKinds[2:]...) {
+		name := transitionNames[tr]
+		if tr == TransitionNone {
+			name = "cut"
+		}
+		b.Run(name, func(b *testing.B) {
+			const w, h = 682, 171
+			from := drawSlide(deck[0], Ctx{W: w, H: h, T: Settled, StepT: Settled, Theme: testTheme})
+			defer from.Release()
+			from.finish()
+			b.ReportAllocs()
+			for range b.N {
+				to := drawSlide(wide, Ctx{W: w, H: h, T: 0.4, StepT: 0.4, Theme: testTheme})
+				mixTransition(tr, from, to, 0.4, true, testTheme)
+				to.Release()
+			}
+		})
+	}
+}

@@ -25,6 +25,9 @@ type Theme struct {
 	Body    *Font // supporting lines, labels, chips
 	Mono    *Font // code
 
+	// Syntax colors [Code] with; nil derives a palette from the colors above.
+	Syntax *SyntaxColors
+
 	// Overlay, if set, draws after every slide into the full canvas p (a TV
 	// station's bug), with the slide's Ctx. Slides should leave its corner
 	// clear.

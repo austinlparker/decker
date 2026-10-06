@@ -20,9 +20,16 @@ type Slide struct {
 	Hold float64
 
 	// Transition is how this slide enters, and for how long
-	// (TransitionWipe.Over(0.6)); zero uses DefaultTransition. Going back to
-	// it plays it again, backwards.
+	// (TransitionWipe.Over(0.6)); zero uses DefaultTransition. The ones that
+	// move or sweep take a side (TransitionPush.From(DirUp)). Going back to
+	// it plays it again, backwards: from the opposite side.
 	Transition Transition
+
+	// Section names the chapter this slide belongs to. A slide with no
+	// Section inherits the nearest one before it, so only the first slide of
+	// a chapter needs to set it. Ctx.Section is the resolved name, and -list
+	// and the presenter view show it.
+	Section string
 
 	HideChrome bool
 
@@ -32,6 +39,17 @@ type Slide struct {
 	// Render or Release sc. A nil View is a blank
 	// slide, and a panic is caught and drawn on screen.
 	View func(c Ctx, sc *Scene)
+}
+
+// sectionAt resolves slide i's section: its own, else the nearest non-empty
+// one before it.
+func sectionAt(slides []Slide, i int) string {
+	for ; i >= 0; i-- {
+		if s := slides[i].Section; s != "" {
+			return s
+		}
+	}
+	return ""
 }
 
 func (s Slide) steps() int { return max(s.Steps, 1) }
