@@ -135,6 +135,7 @@ func gallery() Deck {
 		slideLayout(),
 		slideMorph(false),
 		slideMorph(true),
+		slideImageAlpha(ims),
 		slidePosition(),
 	}}
 }
@@ -193,10 +194,30 @@ func galleryImages() fstest.MapFS {
 		}
 	}
 	return fstest.MapFS{
+		"img/logo.png": enc(logoImage(48)),
 		"img/grad.png": enc(grad),
 		"img/wide.png": enc(wide),
 		"img/ramp.png": enc(ramp),
 	}
+}
+
+// logoImage is a transparent-background mark: an opaque disc with a
+// half-transparent ring around it, the shape a logo PNG usually has.
+func logoImage(n int) *image.NRGBA {
+	img := image.NewNRGBA(image.Rect(0, 0, n, n))
+	h := float64(n) / 2
+	for y := 0; y < n; y++ {
+		for x := 0; x < n; x++ {
+			d := math.Hypot(float64(x)+0.5-h, float64(y)+0.5-h) / h
+			switch {
+			case d < 0.5:
+				img.SetNRGBA(x, y, color.NRGBA{255, 120, 0, 255})
+			case d < 0.9:
+				img.SetNRGBA(x, y, color.NRGBA{255, 255, 255, 128})
+			}
+		}
+	}
+	return img
 }
 
 // ---- slides ----
@@ -764,6 +785,46 @@ func slideImages(ims *Images) Slide {
 				_ = dh
 			}
 			Label(c, p, fmt.Sprintf("has grad=%v missing=%v", ims.Has("grad.png"), ims.Has("missing.png")), c.X(0.3), c.Y(0.9), th.Muted, Left)
+		}}
+}
+
+// slideImageAlpha draws a transparent logo over stripes (so the see-through
+// parts show), then wide.png cover-cropped into a tall, a wide and a tiny box.
+func slideImageAlpha(ims *Images) Slide {
+	return Slide{Title: "Image alpha", Transition: TransitionDefault,
+		View: func(c Ctx, sc *Scene) {
+			p, th := sc.Px, c.Theme
+			top := heading(c, p, "Transparent images and cover")
+			for i := 0; i < 12; i++ {
+				col := th.Panel
+				if i%2 == 0 {
+					col = th.Faint
+				}
+				p.Rect(c.X(0.03)+float64(i)*c.X(0.02), top, c.X(0.02), c.Y(0.4), col, 1)
+			}
+			for i, a := range []float64{1, 0.5} {
+				ims.Draw(p, "logo.png", c.X(0.03)+float64(i)*c.X(0.12), top+c.Y(0.05), c.X(0.1), c.Y(0.3), a)
+			}
+			// A shrunk copy: edges must stay bright, not darken toward black.
+			ims.Draw(p, "logo.png", c.X(0.28), top+c.Y(0.05), c.X(0.03), c.Y(0.05), 1)
+
+			boxes := []struct {
+				x, y, w, h float64
+				alpha      float64
+			}{
+				{c.X(0.4), top, c.X(0.12), c.Y(0.4), 1},
+				{c.X(0.55), top, c.X(0.4), c.Y(0.15), 1},
+				{c.X(0.55), top + c.Y(0.2), c.X(0.2), c.Y(0.2), 0.6},
+				{c.X(0.8), top + c.Y(0.2), 3, 2, 1},
+			}
+			for _, b := range boxes {
+				p.RoundRect(b.x-1, b.y-1, b.w+2, b.h+2, 1, 1, th.Accent, 1)
+				ims.DrawCover(p, "wide.png", b.x, b.y, b.w, b.h, b.alpha)
+			}
+			// Cover a transparent image: the logo fills the box and crops its sides.
+			ims.DrawCover(p, "logo.png", c.X(0.03), top+c.Y(0.5), c.X(0.4), c.Y(0.2), 1)
+			_, _, _, _, ok := ims.DrawCover(p, "missing.png", 0, 0, 10, 10, 1)
+			Label(c, p, fmt.Sprintf("cover missing ok=%v", ok), c.X(0.5), c.Y(0.9), th.Muted, Left)
 		}}
 }
 
