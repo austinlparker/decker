@@ -421,9 +421,10 @@ Release; there are no binaries. It all happens on its own:
   merge themselves when CI passes (`.github/workflows/dependabot.yml`); the
   next daily run releases them.
 
-To hold a merge back, put `[skip release]` in its message; the next release
-picks it up. To release now, or as a version of your choosing (a `v1.0.0`, a
-`-rc.1`), run the Release workflow by hand from the Actions tab.
+To hold a merge back, put `[skip release]` in its title (the PR title, for a
+squash merge); the next release picks it up. To release now, or as a version
+of your choosing (a `v1.0.0`, a `-rc.1`), run the Release workflow by hand
+from the Actions tab.
 
 Each release ends by asking the Go module proxy for the new version, so
 `go get github.com/austinlparker/decker@latest` and pkg.go.dev see it at once.
