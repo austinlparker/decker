@@ -19,9 +19,10 @@ import "strings"
 // Markers toggle wherever they appear, so "*bo*ld" is bold inside a
 // word; write snake\_case with a backslash. Tags nest ({accent:a {u:b}}), and
 // the innermost style wins. Inside code, only \` is an escape. A "{" that
-// does not start a known tag, and a stray "}", are literal; a marker never
-// closed styles to the end. Text is otherwise kept as written, including
-// "\n".
+// does not start a known tag is literal along with the "}" that matches it,
+// so braces nest inside a tag ({accent:map{k}}); a stray "}" is literal too.
+// A marker never closed styles to the end. Text is otherwise kept as written,
+// including "\n".
 func ParseSpans(s string, t *Theme) []Span {
 	var (
 		out               []Span
@@ -47,7 +48,9 @@ func ParseSpans(s string, t *Theme) []Span {
 			sp.Font, sp.Mark = t.Mono, &m
 		}
 		for _, tag := range tags {
-			applyTag(&sp, tag, t)
+			if tag != literalBrace {
+				applyTag(&sp, tag, t)
+			}
 		}
 		out = append(out, sp)
 	}
@@ -87,10 +90,17 @@ func ParseSpans(s string, t *Theme) []Span {
 				i += n
 				break
 			}
+			// A literal "{" owns the next "}", so that one cannot close a
+			// tag opened around it.
+			tags = append(tags, literalBrace)
 			buf.WriteByte(c)
 			i++
 		case c == '}' && len(tags) > 0:
-			flush()
+			if tags[len(tags)-1] == literalBrace {
+				buf.WriteByte(c)
+			} else {
+				flush()
+			}
 			tags = tags[:len(tags)-1]
 			i++
 		default:
@@ -101,6 +111,10 @@ func ParseSpans(s string, t *Theme) []Span {
 	flush()
 	return out
 }
+
+// literalBrace marks a "{" that is plain text on the tag stack. Tag names
+// are never empty, so it cannot collide with one.
+const literalBrace = ""
 
 // tagAt reports the name of a "{name:" tag at the start of s and its length,
 // or 0 if s does not start with one that applyTag knows.
