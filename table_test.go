@@ -261,3 +261,57 @@ func TestTableDrawIsCached(t *testing.T) {
 		t.Error("different tables shared a fit")
 	}
 }
+
+// An entrance rises text from below its slot; it must not paint outside the
+// table, or over the next row, while it does.
+func TestTableEntranceStaysInRect(t *testing.T) {
+	bg := testTheme.Background
+	r := Rect{20, 20, 100, 14.78}
+	for _, st := range []float64{0, 0.01, 0.03, 0.06, 0.1, 0.2} {
+		c := Ctx{W: 240, H: 67, StepT: st, Theme: testTheme}
+		p := NewPixels(c.W, 2*c.H, bg)
+		Table{Rows: [][]string{{"gjpqy"}}}.Draw(c, p, r)
+		n := 0
+		for y := 0; y < p.H; y++ {
+			for x := 0; x < p.W; x++ {
+				// A pixel straddling the edge is partly inside.
+				if p.At(x, y) != bg && (float64(y)+1 <= r.Y || float64(y) >= r.Bottom() || float64(x)+1 <= r.X || float64(x) >= r.Right()) {
+					n++
+				}
+			}
+		}
+		if n != 0 {
+			t.Errorf("StepT %v: %d pixels beyond the table rect", st, n)
+		}
+	}
+}
+
+func TestTableEntranceStaysInRow(t *testing.T) {
+	bg := testTheme.Background
+	r := Rect{20, 10, 160, 100}
+	tb := Table{Header: []string{"gjpqy", "gjpqy"}, Rows: tableRows(4, 2), Reveal: TableRevealRows, Rules: true}
+	for step := 0; step < 4; step++ {
+		for _, st := range []float64{0.01, 0.03, 0.08, 0.15} {
+			c := Ctx{W: 240, H: 67, Step: step, StepT: st, Theme: testTheme}
+			l := tb.layout(c, r)
+			early := NewPixels(c.W, 2*c.H, bg)
+			tb.Draw(c, early, r)
+			c.StepT = Settled
+			done := NewPixels(c.W, 2*c.H, bg)
+			tb.Draw(c, done, r)
+			// Step 0 brings the header and the first row; later steps one row.
+			first, last := step+1, step+1
+			if step == 0 {
+				first, last = 0, 1
+			}
+			lo, hi := r.Y+l.rowY[first]-1, r.Y+l.rowY[last]+l.rowH[last]+1
+			for y := 0; y < early.H; y++ {
+				for x := 0; x < early.W; x++ {
+					if early.At(x, y) != done.At(x, y) && (float64(y) < lo || float64(y) > hi) {
+						t.Fatalf("step %d StepT %v: pixel (%d,%d) differs outside the arriving rows [%.1f, %.1f]", step, st, x, y, lo, hi)
+					}
+				}
+			}
+		}
+	}
+}

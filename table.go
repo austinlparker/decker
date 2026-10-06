@@ -374,11 +374,22 @@ func (t Table) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 			}
 			block := float64(len(ls)) * size * DefaultLeading
 			y := r.Y + l.rowY[row] + l.padY + (l.rowH[row]-2*l.padY-block)/2
+			// The rise can't leave the row: the fit budgets only the settled
+			// text, and nothing clips the glyphs, so a bigger rise would paint
+			// over the neighbouring row or beyond the rect.
+			slack := l.rowY[row] + l.rowH[row] - (y - r.Y + block)
 			Text{Font: f, Size: l.size, Color: col, Align: align,
-				FX: FadeUp(s-0.04*float64(j), 0.3, l.size)}.Draw(p, strings.Join(ls, "\n"), x, y)
+				FX: tableRise(s-0.04*float64(j), 0.3, min(size*0.4, max(slack, 0)))}.Draw(p, strings.Join(ls, "\n"), x, y)
 		}
 	}
 	return r.W, l.h
+}
+
+// tableRise fades a cell in over dur seconds while it rises by up to rise
+// pixels, as FadeUp does with a rise fixed at 0.4 of the size.
+func tableRise(t, dur, rise float64) GlyphEffect {
+	p := Ease(t, dur)
+	return func(int) GlyphFX { return GlyphFX{DY: (1 - p) * rise, Alpha: p} }
 }
 
 // rowStep is the step at which body row i appears.
