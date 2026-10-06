@@ -42,7 +42,8 @@
 //   - [Transition]: how a slide enters (push, dissolve, wipe, morph, none),
 //     and for how long ([Transition.Over]).
 //
-// Stock components ([Panel], [Arrow], [CycleDiagram], [BulletList]) and
-// easing helpers ([Ease], [Spring]) are in draw.go and anim.go. The package
+// Stock components ([Panel], [Arrow], [CycleDiagram], [BulletList], and [Code]
+// with its [SyntaxColors] and [LineRange] focus) and
+// easing helpers ([Ease], [Spring]) are in draw.go, code.go and anim.go. The package
 // README is the full guide, with the command line, keys and presenter view.
 package decker
