@@ -21,7 +21,7 @@ type Slide struct {
 
 	// Transition is how this slide enters, and for how long
 	// (TransitionWipe.Over(0.6)); zero uses DefaultTransition. The ones that
-	// move or sweep take a side (TransitionPush.From(FromTop)). Going back to
+	// move or sweep take a side (TransitionPush.From(DirUp)). Going back to
 	// it plays it again, backwards: from the opposite side.
 	Transition Transition
 

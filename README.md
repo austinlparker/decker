@@ -277,7 +277,7 @@ Everything here is in package `decker`.
 | Want | Use |
 | --- | --- |
 | Layout | `Rect` (or `NewRect(x, y, w, h)` in pixels): start from `c.Frame()` or `c.Rect(fx, fy, fw, fh)`, then `Inset`, `CutTop`/`CutBottom`/`CutLeft`/`CutRight`, `Rows`/`Cols` (by weight), `Grid`, `Sub` (fractions of the rect) and `Anchor` (a box of a given size inside it); `LerpRect` animates between two |
-| Transitions | `Slide.Transition`: `TransitionPush` (default), `Cover`, `Uncover`, `Wipe`, `Split`, `Fade`, `FadeThrough`, `Dissolve`, `Iris`, `Zoom`, `Pixelate`, `Glitch`, `Morph`, `None`. `.Over(secs)` sets the time; `.From(FromLeft / FromRight / FromTop / FromBottom)` sets the side of Push, Cover, Uncover and Wipe (and the axis of Split); going back plays from the opposite side. Vertical moves go in whole cell rows |
+| Transitions | `Slide.Transition`: `TransitionPush` (default), `Cover`, `Uncover`, `Wipe`, `Split`, `Fade`, `FadeThrough`, `Dissolve`, `Iris`, `Zoom`, `Pixelate`, `Glitch`, `Morph`, `None`. `.Over(secs)` sets the time; `.From(DirLeft / DirRight / DirUp / DirDown)` sets the side of Push, Cover, Uncover and Wipe (and the axis of Split); going back plays from the opposite side. Vertical moves go in whole cell rows |
 | Magic move | `sc.Place(key, rect, draw)` on both slides, `Transition: TransitionMorph` on the second; see [Magic move](#magic-move) |
 | Big type | `Text{Font, Size, Color, To (gradient), Glow, Shine, FX, MaxW}.Draw(p, s, x, y)` with `Align`; returns width and height. `DrawMid` centers a line's ink on a y |
 | Sizing text to a box | `font.Fit(...)`, `FitAll(...)` for several lines at one size |
@@ -332,7 +332,7 @@ invariants, the golden tests, and a recipe for each kind of addition.
 | `anim.go` | easing, springs, noise |
 | `scene.go`, `grid.go`, `pool.go` | combine the pixel canvas and character layer into terminal cells; reused frame buffers |
 | `render.go` | a slide's frame: the scene `View` draws on, then placed elements and the overlay, panics caught |
-| `transition.go`, `transfx.go`, `morph.go` | slide transitions: each mixes two scenes, for the terminal and video alike. `transition.go` has the kinds and directions and the ones that move or sweep frames (push, cover, uncover, split, wipe, dissolve); `transfx.go` the ones that rework pixels (fades, iris, zoom, pixelate, glitch); the morph moves placed elements |
+| `transition.go`, `transfx.go`, `morph.go`, `direction.go` | slide transitions: each mixes two scenes, for the terminal and video alike. `transition.go` has the kinds and directions and the ones that move or sweep frames (push, cover, uncover, split, wipe, dissolve); `transfx.go` the ones that rework pixels (fades, iris, zoom, pixelate, glitch); the morph moves placed elements |
 | `model.go`, `keys.go`, `termout.go`, `dev.go` | the app: navigation, the key table, writing frames, dev reload |
 | `presenter.go`, `link.go`, `preview.go` | the presenter view, the socket link to the deck, slide previews |
 | `png.go` | PNG snapshots and contact sheets, painted from cell grids |

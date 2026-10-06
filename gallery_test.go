@@ -138,14 +138,14 @@ func gallery() Deck {
 		slideTransition("Fade", TransitionFade, 0),
 		slideTransition("Fade through", TransitionFadeThrough, 1),
 		slideTransition("Cover", TransitionCover, 2),
-		slideTransition("Uncover", TransitionUncover.From(FromLeft), 3),
+		slideTransition("Uncover", TransitionUncover.From(DirLeft), 3),
 		slideTransition("Split", TransitionSplit, 4),
 		slideTransition("Iris", TransitionIris, 5),
 		slideTransition("Zoom", TransitionZoom, 6),
 		slideTransition("Pixelate", TransitionPixelate, 7),
 		slideTransition("Glitch", TransitionGlitch, 8),
-		slideTransition("Push from top", TransitionPush.From(FromTop), 9),
-		slideTransition("Wipe from bottom", TransitionWipe.From(FromBottom), 10),
+		slideTransition("Push from top", TransitionPush.From(DirUp), 9),
+		slideTransition("Wipe from bottom", TransitionWipe.From(DirDown), 10),
 	}}
 }
 

@@ -6,51 +6,30 @@ package decker
 // Transition is TransitionDefault.
 //
 //	Transition: decker.TransitionMorph.Over(1.2)
-//	Transition: decker.TransitionPush.From(decker.FromBottom)
+//	Transition: decker.TransitionPush.From(decker.DirDown)
 type Transition struct {
 	kind transitionKind
 	secs float64 // 0 is the kind's default
 	dir  Direction
 }
 
-// Direction is the side of the frame a transition starts from: the edge a
-// pushed or covering slide arrives from, the edge a wipe starts at, the axis
-// a split opens along. Going back to a slide plays its transition from the
-// opposite side. See Transition.From.
-type Direction int
-
-const (
-	// DirectionDefault is each transition's own side: TransitionPush,
-	// TransitionCover and TransitionUncover from the right,
-	// TransitionWipe from the left, TransitionSplit horizontal.
-	DirectionDefault Direction = iota
-	// FromRight is the right edge.
-	FromRight
-	// FromLeft is the left edge.
-	FromLeft
-	// FromTop is the top edge. Vertical motion moves whole cell rows.
-	FromTop
-	// FromBottom is the bottom edge.
-	FromBottom
-)
-
 // opposite is the side a transition plays from when going back.
 func (d Direction) opposite() Direction {
 	switch d {
-	case FromRight:
-		return FromLeft
-	case FromLeft:
-		return FromRight
-	case FromTop:
-		return FromBottom
-	case FromBottom:
-		return FromTop
+	case DirRight:
+		return DirLeft
+	case DirLeft:
+		return DirRight
+	case DirUp:
+		return DirDown
+	case DirDown:
+		return DirUp
 	}
 	return d
 }
 
 // horizontal reports whether d moves things along the x axis.
-func (d Direction) horizontal() bool { return d == FromRight || d == FromLeft }
+func (d Direction) horizontal() bool { return d == DirRight || d == DirLeft }
 
 // transitionKind picks the implementation. Each kind but default and none
 // needs an entry in transitions.
@@ -117,8 +96,9 @@ func (t Transition) Over(secs float64) Transition {
 // From returns t starting from side d. Push, Cover and Uncover bring the new
 // slide in from d (Uncover sends the old one out the opposite way), Wipe
 // sweeps from d, and Split opens along d's axis; the other transitions
-// ignore it. The zero Direction restores each one's own side, and going back
-// plays t from the opposite side.
+// ignore it. DirDefault restores each one's own side (Push, Cover and
+// Uncover from the right, Wipe from the left, Split horizontal), and going
+// back plays t from the opposite side.
 func (t Transition) From(d Direction) Transition {
 	t.dir = d
 	return t
@@ -150,7 +130,7 @@ func (t Transition) resolve() Transition {
 	if t.secs > 0 {
 		d.secs = t.secs
 	}
-	if t.dir != DirectionDefault {
+	if t.dir != DirDefault {
 		d.dir = t.dir
 	}
 	return d
@@ -160,10 +140,10 @@ func (t Transition) resolve() Transition {
 // It is the only direction a transitionFunc sees.
 func (t Transition) side(forward bool) Direction {
 	d := t.dir
-	if d == DirectionDefault {
-		d = FromRight
+	if d == DirDefault {
+		d = DirRight
 		if t.kind == kindWipe {
-			d = FromLeft
+			d = DirLeft
 		}
 	}
 	if !forward {
@@ -253,7 +233,7 @@ func slide(from, to *Scene, p float64, side Direction, moveNew, moveOld bool) {
 	}
 	o := LerpInt(0, n, EaseInOutCubic(p))
 	var spans [2]span
-	if side == FromRight || side == FromBottom {
+	if side == DirRight || side == DirDown {
 		spans[0] = span{lo: n - o, hi: n}
 		spans[1] = span{lo: 0, hi: n - o, old: true}
 		if moveNew {
@@ -383,7 +363,7 @@ func wipe(from, to *Scene, p float64, side Direction, t *Theme) {
 	// edge: below 0 still shows the old frame, band or more the new one, and
 	// in between the band.
 	behind := func(a int) float64 {
-		if side == FromRight || side == FromBottom {
+		if side == DirRight || side == DirDown {
 			a = n - 1 - a
 		}
 		return edge - float64(a)

@@ -318,22 +318,22 @@ var transitionNames = map[Transition]string{
 	TransitionUncover: "uncover", TransitionSplit: "split", TransitionIris: "iris",
 	TransitionZoom: "zoom", TransitionPixelate: "pixelate", TransitionGlitch: "glitch",
 
-	TransitionPush.From(FromTop):     "push-top",
-	TransitionPush.From(FromLeft):    "push-left",
-	TransitionWipe.From(FromTop):     "wipe-top",
-	TransitionWipe.From(FromRight):   "wipe-right",
-	TransitionCover.From(FromTop):    "cover-top",
-	TransitionUncover.From(FromLeft): "uncover-left",
-	TransitionSplit.From(FromTop):    "split-top",
+	TransitionPush.From(DirUp):      "push-top",
+	TransitionPush.From(DirLeft):    "push-left",
+	TransitionWipe.From(DirUp):      "wipe-top",
+	TransitionWipe.From(DirRight):   "wipe-right",
+	TransitionCover.From(DirUp):     "cover-top",
+	TransitionUncover.From(DirLeft): "uncover-left",
+	TransitionSplit.From(DirUp):     "split-top",
 }
 
 var transitionKinds = []Transition{
 	TransitionDefault, TransitionNone, TransitionPush, TransitionDissolve, TransitionWipe, TransitionMorph,
 	TransitionFade, TransitionFadeThrough, TransitionCover, TransitionUncover, TransitionSplit, TransitionIris,
 	TransitionZoom, TransitionPixelate, TransitionGlitch,
-	TransitionPush.From(FromTop), TransitionPush.From(FromLeft),
-	TransitionWipe.From(FromTop), TransitionWipe.From(FromRight),
-	TransitionCover.From(FromTop), TransitionUncover.From(FromLeft), TransitionSplit.From(FromTop),
+	TransitionPush.From(DirUp), TransitionPush.From(DirLeft),
+	TransitionWipe.From(DirUp), TransitionWipe.From(DirRight),
+	TransitionCover.From(DirUp), TransitionUncover.From(DirLeft), TransitionSplit.From(DirUp),
 }
 
 // ---- the test ----

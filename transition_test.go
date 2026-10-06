@@ -76,7 +76,7 @@ func TestTransitionDirectionEnds(t *testing.T) {
 	}
 	old, new := frame(from, 1, true), frame(to, 2, false)
 	for _, base := range []Transition{TransitionPush, TransitionWipe, TransitionCover, TransitionUncover, TransitionSplit} {
-		for _, d := range []Direction{DirectionDefault, FromRight, FromLeft, FromTop, FromBottom} {
+		for _, d := range []Direction{DirDefault, DirRight, DirLeft, DirUp, DirDown} {
 			for _, fwd := range []bool{true, false} {
 				for p, want := range map[float64]string{0: old, 1: new} {
 					sc := mixSlides(base.From(d), from, to, 1, 2, 90, 30, p, fwd)
@@ -104,10 +104,10 @@ func TestTransitionDirectionDefault(t *testing.T) {
 	for _, tc := range []struct {
 		zero, explicit Transition
 	}{
-		{TransitionPush, TransitionPush.From(FromRight)},
-		{TransitionWipe, TransitionWipe.From(FromLeft)},
-		{TransitionCover, TransitionCover.From(FromRight)},
-		{TransitionUncover, TransitionUncover.From(FromRight)},
+		{TransitionPush, TransitionPush.From(DirRight)},
+		{TransitionWipe, TransitionWipe.From(DirLeft)},
+		{TransitionCover, TransitionCover.From(DirRight)},
+		{TransitionUncover, TransitionUncover.From(DirRight)},
 	} {
 		for _, p := range []float64{0.2, 0.5, 0.8} {
 			if a, b := frame(tc.zero, p, true), frame(tc.explicit, p, true); a != b {
@@ -118,7 +118,7 @@ func TestTransitionDirectionDefault(t *testing.T) {
 			}
 		}
 	}
-	if TransitionDefault.From(FromTop).resolve() != TransitionPush.From(FromTop) {
+	if TransitionDefault.From(DirUp).resolve() != TransitionPush.From(DirUp) {
 		t.Error("a default transition lost its direction")
 	}
 }
@@ -134,7 +134,7 @@ func TestTransitionVerticalCells(t *testing.T) {
 		return sc
 	}
 	red, blue := RGB{R: 255}, RGB{B: 255}
-	for _, d := range []Direction{FromTop, FromBottom} {
+	for _, d := range []Direction{DirUp, DirDown} {
 		for p := 0.05; p < 1; p += 0.05 {
 			a, b := flat(red), flat(blue)
 			mixTransition(TransitionPush.From(d), a, b, p, true, testTheme)
