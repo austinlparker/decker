@@ -51,7 +51,8 @@
 //     ([Transition.From]).
 //
 // Stock components ([Panel], [Arrow], [CycleDiagram], [BulletList],
-// [PageNumber], [ProgressBar]) and easing helpers ([Ease], [CubicBezier],
-// [Spring]) are in draw.go and anim.go. The package README is the full guide,
-// with the command line, keys and presenter view.
+// [PageNumber], [ProgressBar], and [Code] with its [SyntaxColors] and
+// [LineRange] focus) and easing helpers ([Ease], [CubicBezier], [Spring]) are
+// in draw.go, code.go and anim.go. The package README is the full guide, with
+// the command line, keys and presenter view.
 package decker

@@ -152,6 +152,9 @@ func gallery() Deck {
 		slideElementAnimations(),
 		slideEasings(),
 		slideRich(),
+		slideCode(),
+		slideCodeFocus(),
+		slideCodeDiff(),
 	}}
 }
 
@@ -1274,5 +1277,65 @@ func slideRich() Slide {
 			fr := Rich{Font: th.Display, Color: th.Text, Leading: 1.05}
 			fr.Size, fr.MaxW = fr.Fit(fit, bw, bh, c.Size(0.3)), bw
 			fr.Draw(p, fit, bx, by)
+		}}
+}
+
+// ---- code ----
+
+const gallerySrc = `package main
+
+import "fmt"
+
+// greet says hello, in the tab-indented style gofmt writes.
+func greet(names []string) int {
+	n := 0
+	for _, name := range names {
+		if name == "" {
+			continue
+		}
+		fmt.Println("hello,", name, 3.5)
+		n++
+	}
+	return n
+}
+`
+
+func slideCode() Slide {
+	return Slide{Title: "Code", Transition: TransitionDefault,
+		View: func(c Ctx, sc *Scene) {
+			p, th := sc.Px, c.Theme
+			top := heading(c, p, "Code")
+			area := Rect{c.X(0.03), top + c.Y(0.02), c.X(0.55), c.Y(0.97) - top - c.Y(0.02)}
+			w, h := Code{Source: gallerySrc, Lang: "go", Title: "greet.go", LineNumbers: true}.Draw(c, p, area)
+			// A second block at a fixed size in a language with no lexer.
+			x := area.X + w + c.Unit(0.04)
+			Code{Source: "no lexer\nfor this\n\tone", Lang: "no-such-language", Size: c.SmallText(th.Mono)}.
+				Draw(c, p, Rect{x, area.Y, c.X(0.97) - x, c.Y(0.3)})
+			Label(c, p, fmt.Sprintf("plate %.0fx%.0f", w, h), x, area.Y+c.Y(0.35), th.Muted, Left)
+		}}
+}
+
+func slideCodeFocus() Slide {
+	return Slide{Title: "Code focus", Steps: 4, Transition: TransitionPush,
+		View: func(c Ctx, sc *Scene) {
+			p := sc.Px
+			top := heading(c, p, "Code focus")
+			Code{
+				Source: gallerySrc, Lang: "go", LineNumbers: true,
+				Focus:     []LineRange{{6, 8}, {9, 14}, {}},
+				FirstStep: 1,
+			}.Draw(c, p, Rect{c.X(0.03), top + c.Y(0.02), c.X(0.9), c.Y(0.97) - top - c.Y(0.02)})
+		}}
+}
+
+func slideCodeDiff() Slide {
+	return Slide{Title: "Code diff", Transition: TransitionDissolve,
+		View: func(c Ctx, sc *Scene) {
+			p := sc.Px
+			top := heading(c, p, "Code diff")
+			Code{
+				Source: " func greet(names []string) int {\n-\tn := 0\n+\tcount := 0\n \tfor _, name := range names {\n-\t\tn++\n+\t\tcount++\n \t}\nfunc after()",
+				Lang:   "go", Diff: true, Title: "greet.go",
+			}.Draw(c, p, Rect{c.X(0.03), top + c.Y(0.02), c.X(0.7), c.Y(0.6)})
 		}}
 }

@@ -203,9 +203,10 @@ func talk() decker.Deck {
 background painted behind every slide, the colors of the footer, help,
 notes, presenter view and wipe transition, the typefaces the stock
 components draw in, and an optional `Overlay` drawn over every slide (a
-logo or a handle in the corner, like a TV station's bug). Slides reach it as
-`c.Theme`. Everything else about the look (title treatment, backdrops,
-characters) is the talk's own code in `style.go`.
+logo or a handle in the corner, like a TV station's bug). An optional `Syntax`
+(`*SyntaxColors`) sets the colors `Code` highlights with; left nil, they are
+derived from the palette. Slides reach it as `c.Theme`. Everything else about
+the look (title treatment, backdrops, characters) is the talk's own code in `style.go`.
 
 ### Slides
 
@@ -336,6 +337,7 @@ Everything here is in package `decker`.
 | Small labels | `c.SmallText(font)`: the smallest readable size; `Label`, `Chip`, `LineLabel` (text sitting on an arrow) |
 | Block letters | `f, lines, scale := FitBlock(s, maxW, maxH, maxLines, gap, fonts...)` picks a font and scale for a pixel box; `Block{Font, Scale, Color, To, Shadow, Drop, Align, Glow, FX}.Draw(p, s, x, y)`; `BlockEffect`s for `Block.FX`: `BlockDecrypt`, `BlockRain`, `BlockBeam`, `BlockSlide`, `BlockType`, `BlockGlitch`, `BlockFade`, combined with `BlockChain` |
 | Diagrams | `Panel`, `Arrow`, `CycleDiagram` (numbered ring with a legend), `BulletList`, `SpeechBubble` |
+| Code | `Code{Source, Lang, LineNumbers, Title, Focus, FirstStep, Diff, Size}.Draw(c, p, rect)`: syntax-highlighted (chroma) in `Theme.Mono` on a plate, sized to fit the rect; `Focus` is one `LineRange{From, To}` per step from `FirstStep`, dimming the other lines behind a highlight bar that glides between ranges; `Diff` reads a unified diff. Colors from `Theme.Syntax`, or derived from the theme |
 | Unfinished material | `PlaceholderBox` (dashed frame) and `IllustrativeTag` (made-up data) mark what to replace before the talk |
 | Letter animations | `GlyphEffect`s for `Text.FX` and `Rich.FX`: `RiseIn`, `DropIn`, `Decode` (scramble), `TypeOn`, `FadeUp`, `Wave`, `Jitter`, combined with `Chain` |
 | A moving highlight | `Shine: ShineBand(t, dur, strength)` |
@@ -405,6 +407,7 @@ invariants, the golden tests, and a recipe for each kind of addition.
 | `cli.go` | `Main`: the command line (live, dev, presenter, list, snapshot, sheet, video) |
 | `theme.go`, `color.go` | `Theme`; `RGB`, `Hex`, `Mix` |
 | `draw.go` | stock components: `Panel`, `Arrow`, `Label`, `PageNumber`, `ProgressBar`, `Chip`, `CycleDiagram`, `BulletList`… |
+| `code.go` | the `Code` component: chroma lexing (cached per source and language), the token-to-color palette (`SyntaxColors`), focus ranges per step, diffs |
 | `font.go`, `fit.go`, `text.go`, `coverage.go`, `memo.go`, `fonts/` | smooth type: font loading and glyphs, fitting and wrapping, drawing with glow and gradients, coverage masks, cached fits |
 | `rich.go`, `richmarkup.go` | `Rich` text: spans with their own font, color and decoration laid out and drawn on the `Text` machinery, fitted to a box; `ParseSpans` markup |
 | `figlet.go`, `block.go`, `blockfit.go`, `blockglyph.go`, `fonts/figlet/` | block letters: FIGlet font loading, drawing, fitting to a box, block-character glyphs |
