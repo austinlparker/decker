@@ -6,16 +6,9 @@ package decker
 // slide's unmatched elements fade out and the new one's fade in. A slide
 // whose elements were drawn already (a frame captured mid-transition) just
 // cross-fades.
-func morph(from, to *Scene, p float64, _ bool, t *Theme) {
+func morph(from, to *Scene, p float64, _ Direction, t *Theme) {
 	e := EaseInOutCubic(p)
-	switch {
-	case e <= 0:
-		copy(to.Px.Pix, from.Px.Pix)
-	case e < 1:
-		for i, c := range to.Px.Pix {
-			to.Px.Pix[i] = Mix(from.Px.Pix[i], c, e)
-		}
-	}
+	blend(from.Px, to.Px, e)
 	moveChars(from, to, func(x, y int, old bool) (int, int, bool) { return x, y, old == (e < 0.5) })
 
 	var olds []placed

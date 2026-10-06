@@ -10,8 +10,23 @@ type Ctx struct {
 	Step  int     // current build step, 0-based
 	StepT float64 // seconds since the current step began
 
+	// Index is this slide's 0-based position in the deck and Count the number
+	// of slides, so an overlay can draw "12 / 40" or a progress bar. Section
+	// is the slide's resolved Slide.Section: its own, or the nearest one
+	// before it, empty before the first. All three are zero in a Ctx built by
+	// hand and not passed through the engine (Deck.Render and Deck.Draw fill
+	// them in from the slide index).
+	Index, Count int
+	Section      string
+
 	// Theme is the deck's theme; never nil inside View.
 	Theme *Theme
+}
+
+// at returns c positioned at slide i of slides.
+func (c Ctx) at(slides []Slide, i int) Ctx {
+	c.Index, c.Count, c.Section = i, len(slides), sectionAt(slides, i)
+	return c
 }
 
 // Reached reports whether the slide is at or past step.

@@ -27,7 +27,8 @@
 //
 //   - [Deck], [Slide]: the talk, and one slide with its steps, notes and
 //     [Transition].
-//   - [Ctx]: what changes between frames (T, Step, StepT), plus layout helpers.
+//   - [Ctx]: what changes between frames (T, Step, StepT), the slide's position
+//     (Index, Count, Section), plus layout helpers.
 //   - [Rect]: a box on the canvas; layout cuts and splits rects
 //     ([Rect.CutTop], [Rect.Cols], [Rect.Grid]).
 //   - [Theme]: colors, typefaces and an optional overlay the engine uses.
@@ -36,14 +37,22 @@
 //     [Scene.Place] hands the engine a keyed element to draw instead, which
 //     [TransitionMorph] can move from one slide to the next.
 //   - [Text], [Font]: smooth antialiased type, fitted and wrapped to a box.
+//   - [Rich], [Span]: the same type with mixed fonts, colors and decorations
+//     inside a line ([ParseSpans] reads a light markup).
 //   - [Block], [FigFont]: FIGlet block letters scaled to fill a box ([FitBlock]).
 //   - [GlyphEffect], [BlockEffect]: per-letter and per-cell animations,
 //     combined with [Chain] and [BlockChain].
-//   - [Transition]: how a slide enters (push, dissolve, wipe, morph, none),
-//     and for how long ([Transition.Over]).
+//   - [Composite]: a group drawn on a layer and faded, moved, scaled and
+//     clipped as one; [FadeIn], [FlyIn], [Pop], [WipeOut], [Shake] and the
+//     rest are its animations, built into a frame by [AppearAt].
+//   - [Transition], [Direction]: how a slide enters (push, cover, uncover,
+//     wipe, split, fade, fade-through, dissolve, iris, zoom, pixelate, glitch,
+//     morph, none), for how long ([Transition.Over]) and from which side
+//     ([Transition.From]).
 //
-// Stock components ([Panel], [Arrow], [CycleDiagram], [BulletList], and [Code]
-// with its [SyntaxColors] and [LineRange] focus) and
-// easing helpers ([Ease], [Spring]) are in draw.go, code.go and anim.go. The package
-// README is the full guide, with the command line, keys and presenter view.
+// Stock components ([Panel], [Arrow], [CycleDiagram], [BulletList],
+// [PageNumber], [ProgressBar], and [Code] with its [SyntaxColors] and
+// [LineRange] focus) and easing helpers ([Ease], [CubicBezier], [Spring]) are
+// in draw.go, code.go and anim.go. The package README is the full guide, with
+// the command line, keys and presenter view.
 package decker
