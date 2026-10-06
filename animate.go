@@ -2,18 +2,6 @@ package decker
 
 import "math"
 
-// Direction is a side of the screen or of an element: where a [FlyIn] comes
-// from, where a [FlyOut] goes, which edge a wipe starts or ends at.
-type Direction int
-
-// The four directions.
-const (
-	DirLeft Direction = iota
-	DirRight
-	DirUp
-	DirDown
-)
-
 // Element animations are Composites that are pure functions of t, the seconds
 // since the effect starts, like the letter effects. Entrances start hidden
 // (and stay so for t < 0) and end at [Identity]; exits start at Identity (for

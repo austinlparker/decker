@@ -364,7 +364,7 @@ invariants, the golden tests, and a recipe for each kind of addition.
 | `effects.go`, `blockfx.go` | letter animations: `GlyphEffect` for `Text`, `BlockEffect` for `Block` |
 | `pixels.go`, `pixelart.go`, `image.go` | the pixel canvas and shapes, pixel art, images |
 | `anim.go` | easing (`Ease*`, `CubicBezier`), springs, noise |
-| `layer.go`, `animate.go` | `Composite`: draw a group on a layer and fade, move, scale and clip it; the element animations (`FadeIn`, `FlyIn`, `Pop`, `WipeOut`, `Shake`, `AppearAt`...) built on it |
+| `layer.go`, `animate.go`, `direction.go` | `Composite`: draw a group on a layer and fade, move, scale and clip it; the element animations (`FadeIn`, `FlyIn`, `Pop`, `WipeOut`, `Shake`, `AppearAt`...) built on it; `Direction` |
 | `scene.go`, `grid.go`, `pool.go` | combine the pixel canvas and character layer into terminal cells; reused frame buffers |
 | `render.go` | a slide's frame: the scene `View` draws on, then placed elements and the overlay, panics caught |
 | `transition.go`, `morph.go` | slide transitions: each mixes two scenes, for the terminal and video alike; the morph moves placed elements |
