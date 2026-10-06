@@ -30,7 +30,7 @@ func layerDrawAt(p *Pixels, dx, dy float64, glow bool) {
 	}
 }
 
-func samePixels(t *testing.T, got, want *Pixels, tol float32) {
+func pixelsNear(t *testing.T, got, want *Pixels, tol float32) {
 	t.Helper()
 	for i := range want.Pix {
 		g, w := got.Pix[i], want.Pix[i]
@@ -46,7 +46,7 @@ func TestCompositeIdentityIsADirectDraw(t *testing.T) {
 	got, want := layerCanvas(), layerCanvas()
 	Identity().Draw(got, layerBox, layerDraw)
 	layerDraw(want)
-	samePixels(t, got, want, 0)
+	pixelsNear(t, got, want, 0)
 }
 
 func TestCompositeAlphaZeroDrawsNothing(t *testing.T) {
@@ -59,7 +59,7 @@ func TestCompositeAlphaZeroDrawsNothing(t *testing.T) {
 	if called {
 		t.Error("an invisible element was still drawn")
 	}
-	samePixels(t, got, want, 0)
+	pixelsNear(t, got, want, 0)
 }
 
 func TestCompositeAlphaMixesWholeElement(t *testing.T) {
@@ -102,7 +102,7 @@ func TestCompositeMovesWholePixelsExactly(t *testing.T) {
 	k.Draw(got, layerBox, func(p *Pixels) { layerDrawAt(p, 0, 0, false) })
 	// The same drawing, shifted: the canvas pattern stays put, the element moves.
 	layerDrawAt(want, 17, 9, false)
-	samePixels(t, got, want, 0.05)
+	pixelsNear(t, got, want, 0.05)
 }
 
 func TestCompositeLayeredEqualsDirectOnOpaque(t *testing.T) {
@@ -115,7 +115,7 @@ func TestCompositeLayeredEqualsDirectOnOpaque(t *testing.T) {
 	k.DX = 1e-9
 	k.Draw(got, layerBox, func(p *Pixels) { layerDrawAt(p, 0, 0, false) })
 	layerDrawAt(want, 0, 0, false)
-	samePixels(t, got, want, 0.05)
+	pixelsNear(t, got, want, 0.05)
 }
 
 func TestCompositeScaleAboutCenter(t *testing.T) {

@@ -154,8 +154,8 @@ func (k Composite) Draw(p *Pixels, bounds Rect, draw func(p *Pixels)) {
 	k.fade(p, src, [4]int{x0, y0, x1, y1}, win, g, draw)
 }
 
-// span is how much of the pixel [v, v+1] lies in [lo, hi].
-func span(v, lo, hi float64) float64 { return Clamp01(min(v+1, hi) - max(v, lo)) }
+// coverSpan is how much of the pixel [v, v+1] lies in [lo, hi].
+func coverSpan(v, lo, hi float64) float64 { return Clamp01(min(v+1, hi) - max(v, lo)) }
 
 // fade draws on a copy of p's region src and mixes it back into dst at
 // weight g within the window win: the weighted "over" of a layer, exactly,
@@ -169,12 +169,12 @@ func (k Composite) fade(p *Pixels, src, dst [4]int, win [4]float64, g float64, d
 	top.BG = p.BG
 	draw(top)
 	for y := max(dst[1], src[1]); y <= min(dst[3], src[3]); y++ {
-		wy := g * span(float64(y), win[1], win[3])
+		wy := g * coverSpan(float64(y), win[1], win[3])
 		if wy <= 0 {
 			continue
 		}
 		for x := max(dst[0], src[0]); x <= min(dst[2], src[2]); x++ {
-			w := wy * span(float64(x), win[0], win[2])
+			w := wy * coverSpan(float64(x), win[0], win[2])
 			if w <= 0 {
 				continue
 			}
@@ -256,13 +256,13 @@ func (k Composite) resample(p *Pixels, src [4]int, win [4]float64, g, s, px, py 
 
 	wt := 1 / float32(taps*taps)
 	for y := dy0; y <= dy1; y++ {
-		wy := g * span(float64(y), win[1], win[3])
+		wy := g * coverSpan(float64(y), win[1], win[3])
 		if wy <= 0 {
 			continue
 		}
 		ry := rows[(y-dy0)*taps : (y-dy0+1)*taps]
 		for x := dx0; x <= dx1; x++ {
-			gw := wy * span(float64(x), win[0], win[2])
+			gw := wy * coverSpan(float64(x), win[0], win[2])
 			if gw <= 0 {
 				continue
 			}
