@@ -425,8 +425,8 @@ To hold a merge back, put `[skip release]` in its message; the next release
 picks it up. To release now, or as a version of your choosing (a `v1.0.0`, a
 `-rc.1`), run the Release workflow by hand from the Actions tab.
 
-The repository is private, so a talk fetches decker with `GOPRIVATE=github.com/austinlparker/decker`
-and git credentials for GitHub.
+Each release ends by asking the Go module proxy for the new version, so
+`go get github.com/austinlparker/decker@latest` and pkg.go.dev see it at once.
 
 ## Where things live
 

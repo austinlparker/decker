@@ -100,3 +100,20 @@ jobs:
           args: release --clean --release-header=${{ runner.temp }}/api-changes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Ask the module proxy for the new version, so `go get` and pkg.go.dev
+      # see it at once instead of on first use.
+      - name: Warm the module proxy
+        if: steps.next.outputs.version != ''
+        env:
+          VERSION: ${{ steps.next.outputs.version }}
+        # From an empty directory: inside this repo the module is the main
+        # module, and go list can't ask for a version of that.
+        run: |
+          cd "$(mktemp -d)"
+          for i in 1 2 3 4 5; do
+            GOPROXY=https://proxy.golang.org GOFLAGS=-mod=mod \
+              go list -m "github.com/austinlparker/decker@$VERSION" && exit 0
+            sleep 15
+          done
+          echo "::warning::the proxy hasn't picked up $VERSION yet; it will on first use"
