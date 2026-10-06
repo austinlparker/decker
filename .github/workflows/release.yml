@@ -5,7 +5,7 @@ name: Release
 # version comes from the API diff against the last tag (see
 # .github/scripts/next-version.sh). The daily run catches pushes that started
 # no workflow, such as merges made with the workflow token (Dependabot
-# auto-merges). Put [skip release] in a merge's message to hold it back until
+# auto-merges). Put [skip release] in a merge's title to hold it back until
 # the next one. Running the workflow by hand releases now, optionally as a
 # given version.
 on:
@@ -51,8 +51,11 @@ jobs:
           FORCED: ${{ inputs.version }}
           NOTES: ${{ runner.temp }}/api-changes.md
         run: |
-          if [ "$GITHUB_EVENT_NAME" = push ] && git log -1 --format=%B | grep -qF '[skip release]'; then
-            echo "skipped: [skip release] in the head commit"
+          # Only the subject line: a squash merge's body carries every commit
+          # message in the PR, and one that merely mentions the marker must
+          # not hold the release back.
+          if [ "$GITHUB_EVENT_NAME" = push ] && git log -1 --format=%s | grep -qF '[skip release]'; then
+            echo "skipped: [skip release] in the head commit's title"
             echo "version=" >>"$GITHUB_OUTPUT"
             exit 0
           fi
