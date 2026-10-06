@@ -201,10 +201,10 @@ A slide draws everything itself:
 ```go
 func mySlide() decker.Slide {
 	return decker.Slide{
-		Title:      "Something",           // window title and slide list
-		Steps:      2,                     // "next" presses before moving on (build steps)
-		Notes:      "say the thing",       // shown in the presenter view
-		Transition: decker.TransitionWipe, // Push (default), Dissolve, Wipe, None
+		Title:      "Something",                     // window title and slide list
+		Steps:      2,                               // "next" presses before moving on (build steps)
+		Notes:      "say the thing",                 // shown in the presenter view
+		Transition: decker.TransitionWipe.Over(0.6), // Push (default), Dissolve, Wipe, Morph, None; Over sets seconds
 		View: func(c decker.Ctx, sc *decker.Scene) {
 			p := sc.Px // the pixel canvas; c.PW() × c.PH() pixels
 
@@ -245,12 +245,39 @@ resumed. Never use the clock or `math/rand` in a slide; `decker.Hash01` gives
 repeatable noise. If a slide panics, the deck draws the error in place of the
 slide, in the pixels, so a video or PNG shows it too.
 
+### Magic move
+
+A slide can hand the engine *elements* instead of drawing them itself:
+`sc.Place(key, rect, draw)` records one, and the engine calls `draw(p, rect)`
+after `View` returns, above everything `View` drew. On a slide that enters
+with `decker.TransitionMorph`, an element whose key the slide before it also
+placed glides from its old rect to its new one, cross-fading from the old
+`draw` to the new. Elements on only one side fade out or in, and the rest of
+both slides cross-fades. A morph takes `decker.MorphDuration` (0.8s), longer
+than the other transitions' 0.45s; `TransitionMorph.Over(1.2)` changes it.
+
+```go
+sc.Place("headline", head, func(p *decker.Pixels, r decker.Rect) {
+	size, s := c.Theme.Display.Fit("Agents", r.W, r.H, c.Size(0.3), 0)
+	decker.Text{Font: c.Theme.Display, Size: size, Color: c.Theme.Accent}.Draw(p, s, r.X, r.Y)
+})
+```
+
+`draw` should size itself from `r` (so it looks right at every rect in
+between) and stay inside it, give or take a glow. During a morph, drawing
+more than a tenth of the screen's height outside the rect is cut off. A
+transition is how a slide *enters*, so going back plays the transition of
+the slide you return to: give both slides `TransitionMorph` to morph both
+ways.
+
 ### Toolbox
 
 Everything here is in package `decker`.
 
 | Want | Use |
 | --- | --- |
+| Layout | `Rect` (or `NewRect(x, y, w, h)` in pixels): start from `c.Frame()` or `c.Rect(fx, fy, fw, fh)`, then `Inset`, `CutTop`/`CutBottom`/`CutLeft`/`CutRight`, `Rows`/`Cols` (by weight), `Grid`, `Sub` (fractions of the rect) and `Anchor` (a box of a given size inside it); `LerpRect` animates between two |
+| Magic move | `sc.Place(key, rect, draw)` on both slides, `Transition: TransitionMorph` on the second; see [Magic move](#magic-move) |
 | Big type | `Text{Font, Size, Color, To (gradient), Glow, Shine, FX, MaxW}.Draw(p, s, x, y)` with `Align`; returns width and height. `DrawMid` centers a line's ink on a y |
 | Sizing text to a box | `font.Fit(...)`, `FitAll(...)` for several lines at one size |
 | Small labels | `c.SmallText(font)`: the smallest readable size; `Label`, `Chip`, `LineLabel` (text sitting on an arrow) |
@@ -293,6 +320,7 @@ invariants, the golden tests, and a recipe for each kind of addition.
 | File | What's in it |
 | --- | --- |
 | `deck.go`, `slide.go`, `ctx.go` | `Deck`, `Slide`, and `Ctx` with its layout in screen fractions |
+| `layout.go` | `Rect`: boxes cut from the canvas for layout |
 | `cli.go` | `Main`: the command line (live, dev, presenter, list, snapshot, sheet, video) |
 | `theme.go`, `color.go` | `Theme`; `RGB`, `Hex`, `Mix` |
 | `draw.go` | stock components: `Panel`, `Arrow`, `Label`, `Chip`, `CycleDiagram`, `BulletList`… |
@@ -302,8 +330,8 @@ invariants, the golden tests, and a recipe for each kind of addition.
 | `pixels.go`, `pixelart.go`, `image.go` | the pixel canvas and shapes, pixel art, images |
 | `anim.go` | easing, springs, noise |
 | `scene.go`, `grid.go`, `pool.go` | combine the pixel canvas and character layer into terminal cells; reused frame buffers |
-| `render.go` | a slide's frame: the scene `View` draws on, the overlay, panics caught |
-| `transition.go` | slide transitions and the registry of their cell and video versions |
+| `render.go` | a slide's frame: the scene `View` draws on, then placed elements and the overlay, panics caught |
+| `transition.go`, `morph.go` | slide transitions: each mixes two scenes, for the terminal and video alike; the morph moves placed elements |
 | `model.go`, `keys.go`, `termout.go`, `dev.go` | the app: navigation, the key table, writing frames, dev reload |
 | `presenter.go`, `link.go`, `preview.go` | the presenter view, the socket link to the deck, slide previews |
 | `png.go` | PNG snapshots and contact sheets, painted from cell grids |

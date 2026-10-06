@@ -19,14 +19,17 @@ type Slide struct {
 	// Zero uses the -hold flag.
 	Hold float64
 
-	// Transition is how this slide enters; zero uses DefaultTransition.
+	// Transition is how this slide enters, and for how long
+	// (TransitionWipe.Over(0.6)); zero uses DefaultTransition. Going back to
+	// it plays it again, backwards.
 	Transition Transition
 
 	HideChrome bool
 
 	// View draws one frame onto sc, a Ctx.W x Ctx.H scene already filled
-	// with the theme's background; the engine draws Theme.Overlay after it
-	// returns; View must not Render or Release sc. A nil View is a blank
+	// with the theme's background; after it returns, the engine draws the
+	// elements it placed (Scene.Place), then Theme.Overlay. View must not
+	// Render or Release sc. A nil View is a blank
 	// slide, and a panic is caught and drawn on screen.
 	View func(c Ctx, sc *Scene)
 }

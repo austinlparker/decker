@@ -25,7 +25,8 @@ type model struct {
 
 	// Active transition, if transFrom != nil.
 	trans      Transition
-	transFrom  *grid
+	transDur   float64 // seconds
+	transFrom  *Scene
 	transStart time.Time
 	transFwd   bool
 
@@ -60,7 +61,7 @@ func (m model) tick() tea.Cmd {
 
 func (m *model) advance(now time.Time) {
 	m.now = now
-	if m.transFrom != nil && now.Sub(m.transStart).Seconds() >= TransitionDuration {
+	if m.transFrom != nil && now.Sub(m.transStart).Seconds() >= m.transDur {
 		m.transFrom = nil
 	}
 }
@@ -206,7 +207,7 @@ func (m *model) goTo(idx, step int, forward bool) {
 		return
 	}
 	if m.w > 0 && m.h > 0 {
-		// Start from what's on screen, even mid-transition. The grid is never
+		// Start from what's on screen, even mid-transition. The scene is never
 		// released to the pool, so it stays valid.
 		bodyH, _ := m.layout()
 		m.transFrom = m.body(bodyH)
@@ -218,6 +219,7 @@ func (m *model) goTo(idx, step int, forward bool) {
 		m.enter, m.stepStart = past, past
 	}
 	m.trans = m.cur().Transition.resolve()
+	m.transDur = m.trans.Duration()
 	if m.trans == TransitionNone {
 		m.transFrom = nil
 	}
@@ -235,21 +237,24 @@ func (m model) ctx(h int) Ctx {
 }
 
 // body draws the slide area at exactly m.w × h, mixed with the previous slide
-// during a transition.
-func (m model) body(h int) *grid {
-	g := renderSlideGrid(m.cur(), m.ctx(h))
-	if from := m.transFrom; from != nil && from.W == g.W && from.H == g.H {
-		p := m.now.Sub(m.transStart).Seconds() / TransitionDuration
-		mixed := composeGrid(m.trans, from, g, p, m.transFwd, m.theme)
-		g.release()
-		g = mixed
+// during a transition. Outside one it isn't finished yet, so a transition
+// that starts from it can still move its placed elements. The caller
+// releases it.
+func (m model) body(h int) *Scene {
+	sc := drawSlide(m.cur(), m.ctx(h))
+	if m.transFrom != nil {
+		p := m.now.Sub(m.transStart).Seconds() / m.transDur
+		mixTransition(m.trans, m.transFrom, sc, p, m.transFwd, m.theme)
 	}
-	return g
+	return sc
 }
 
 func (m model) frame() *grid {
 	bodyH, panels := m.layout()
-	body := m.body(bodyH)
+	sc := m.body(bodyH)
+	sc.finish()
+	body := sc.toGrid()
+	sc.Release()
 	if m.showHelp {
 		hb := m.helpBox()
 		w, h := lipgloss.Size(hb)

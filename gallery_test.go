@@ -132,6 +132,9 @@ func gallery() Deck {
 		slideMotion(),
 		slideScene(),
 		slideBuilds(),
+		slideLayout(),
+		slideMorph(false),
+		slideMorph(true),
 	}}
 }
 
@@ -907,5 +910,102 @@ func slideBuilds() Slide {
 				p.Glow(c.X(0.6), y+c.Y(0.12), c.Unit(0.2)*s, th.Good, 0.5*Pulse(c.StepT, 1.5))
 			}
 			p.Arc(c.X(0.9), c.Y(0.85), c.Unit(0.08), 3, 0, 2*math.Pi*Progress(c.StepT, 0, 2), th.Accent, 1)
+		}}
+}
+
+func slideLayout() Slide {
+	return Slide{Title: "Layout", Steps: 2, Transition: TransitionDefault,
+		View: func(c Ctx, sc *Scene) {
+			p, th := sc.Px, c.Theme
+			outline := func(r Rect, col RGB) { p.RoundRect(r.X, r.Y, r.W, r.H, 1, 1, col, 1) }
+
+			// A slide template: margins, a header strip, a sidebar, and a body.
+			page := c.Frame().Inset(c.X(0.03), c.Y(0.03))
+			head, body := page.CutTop(c.Y(0.14))
+			foot, body := body.CutBottom(c.Y(0.08))
+			side, body := body.CutLeft(body.W * 0.25)
+			_, body = body.CutLeft(c.Unit(0.03)) // a gutter
+			Text{Font: th.Display, Size: c.Size(0.08), Color: th.Accent}.Draw(p, "Layout", head.X, head.Y)
+			outline(head, th.Faint)
+			outline(foot, th.Faint)
+			Label(c, p, "foot", foot.X+c.Unit(0.01), foot.Y, th.Muted, Left)
+
+			// Weighted rows in the sidebar, a weighted column split and a grid
+			// in the body; the grid's cells fill in at step 1.
+			for i, r := range side.Rows(c.Unit(0.02), 1, 2, 1) {
+				Panel(c, p, r.X, r.Y, r.W, r.H, fmt.Sprintf("row %d", i), th.Panel, th.Accent2, th.Text, 1)
+			}
+			cols := body.Cols(c.Unit(0.02), 2, 1)
+			for i, r := range cols[0].Grid(3, 2, c.Unit(0.02)) {
+				outline(r, th.Muted)
+				if c.Reached(1) {
+					in := LerpRect(r.Anchor(0, 0, 0.5, 0.5), r.Inset(c.Unit(0.01), c.Unit(0.01)), Ease(c.Since(1)-0.05*float64(i), 0.4))
+					p.RoundRect(in.X, in.Y, in.W, in.H, c.Unit(0.02), 0, Mix(th.Accent, th.Good, float64(i)/5), 1)
+				}
+			}
+
+			// Place anchors a box at each corner and the middle of the column.
+			right := cols[1]
+			outline(right, th.Faint)
+			cw, ch := right.W*0.3, right.H*0.15
+			for _, a := range [][2]float64{{0, 0}, {1, 0}, {0.5, 0.5}, {0, 1}, {1, 1}} {
+				r := right.Anchor(cw, ch, a[0], a[1])
+				p.Rect(r.X, r.Y, r.W, r.H, th.Accent2, 0.6)
+			}
+			x, y := right.Center()
+			p.Disc(x, y, c.Unit(0.01), th.Warn, 1)
+			oversize := right.Anchor(right.W*1.2, ch, 0.5, 0.25) // overhangs both sides
+			p.Rect(oversize.X, oversize.Y, oversize.W, oversize.H, th.Good, 0.3)
+
+			// Ctx.Rect, Sub, Right and Bottom, with a negative Inset growing a box.
+			tag := c.Rect(0.8, 0.04, 0.17, 0.08)
+			outline(tag.Inset(-2, -2), th.Accent)
+			dot := tag.Sub(0.9, 0.1, 0.05, 0.3)
+			p.Disc(dot.Right(), dot.Bottom(), 2, th.Accent, 1)
+		}}
+}
+
+// slideMorph is a pair of slides for TransitionMorph: the second enters with
+// it, so the elements both place (title, box, dot) glide to their new rects
+// while "before" fades out and "after" fades in.
+func slideMorph(after bool) Slide {
+	title, tr := "Morph A", TransitionDefault
+	if after {
+		title, tr = "Morph B", TransitionMorph.Over(1)
+	}
+	return Slide{Title: title, Transition: tr,
+		View: func(c Ctx, sc *Scene) {
+			th := c.Theme
+			sc.Px.VGradient(0, sc.Px.H-1, th.Background, th.Panel)
+			page := c.Frame().Inset(c.X(0.04), c.Y(0.05))
+
+			head, body := page.CutTop(page.H * 0.5)
+			box, dot := body.Inset(0, c.Unit(0.03)).CutLeft(body.W * 0.6)
+			if after {
+				head, body = page.CutTop(page.H * 0.18)
+				dot, box = body.CutLeft(body.W * 0.25)
+				box = box.Inset(c.Unit(0.03), c.Unit(0.03))
+			}
+			sc.Place("title", head, func(p *Pixels, r Rect) {
+				size, s := th.Display.Fit(title, r.W, r.H, c.Size(0.3), 0)
+				Text{Font: th.Display, Size: size, Color: th.Accent, Align: Center, Glow: 0.4}.Draw(p, s, r.X+r.W/2, r.Y)
+			})
+			sc.Place("box", box, func(p *Pixels, r Rect) {
+				fill := th.Panel
+				if after {
+					fill = th.Accent2.Scale(0.5)
+				}
+				Panel(c, p, r.X, r.Y, r.W, r.H, "the same panel", fill, th.Accent2, th.Text, 1)
+			})
+			sc.Place("dot", dot.Anchor(dot.H*0.5, dot.H*0.5, 0.5, 0.5), func(p *Pixels, r Rect) {
+				x, y := r.Center()
+				p.Disc(x, y, r.W/2, th.Good, 1)
+			})
+			only, label := "before", NewRect(page.X, page.Bottom()-c.Y(0.1), page.W*0.3, c.Y(0.1))
+			if after {
+				only, label = "after", NewRect(page.Right()-page.W*0.3, page.Bottom()-c.Y(0.1), page.W*0.3, c.Y(0.1))
+			}
+			sc.Place(only, label, func(p *Pixels, r Rect) { Label(c, p, only+" only", r.X, r.Y, th.Muted, Left) })
+			sc.Place("", c.Rect(0.9, 0.9, 0.05, 0.05), func(p *Pixels, r Rect) { p.Rect(r.X, r.Y, r.W, r.H, th.Warn, 1) })
 		}}
 }
