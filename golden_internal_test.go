@@ -314,9 +314,27 @@ func testModel(d *Deck, idx, step, w, h int, age float64, dev *devState) model {
 var transitionNames = map[Transition]string{
 	TransitionDefault: "default", TransitionNone: "none", TransitionPush: "push",
 	TransitionDissolve: "dissolve", TransitionWipe: "wipe", TransitionMorph: "morph",
+	TransitionFade: "fade", TransitionFadeThrough: "fadeThrough", TransitionCover: "cover",
+	TransitionUncover: "uncover", TransitionSplit: "split", TransitionIris: "iris",
+	TransitionZoom: "zoom", TransitionPixelate: "pixelate", TransitionGlitch: "glitch",
+
+	TransitionPush.From(FromTop):     "push-top",
+	TransitionPush.From(FromLeft):    "push-left",
+	TransitionWipe.From(FromTop):     "wipe-top",
+	TransitionWipe.From(FromRight):   "wipe-right",
+	TransitionCover.From(FromTop):    "cover-top",
+	TransitionUncover.From(FromLeft): "uncover-left",
+	TransitionSplit.From(FromTop):    "split-top",
 }
 
-var transitionKinds = []Transition{TransitionDefault, TransitionNone, TransitionPush, TransitionDissolve, TransitionWipe, TransitionMorph}
+var transitionKinds = []Transition{
+	TransitionDefault, TransitionNone, TransitionPush, TransitionDissolve, TransitionWipe, TransitionMorph,
+	TransitionFade, TransitionFadeThrough, TransitionCover, TransitionUncover, TransitionSplit, TransitionIris,
+	TransitionZoom, TransitionPixelate, TransitionGlitch,
+	TransitionPush.From(FromTop), TransitionPush.From(FromLeft),
+	TransitionWipe.From(FromTop), TransitionWipe.From(FromRight),
+	TransitionCover.From(FromTop), TransitionUncover.From(FromLeft), TransitionSplit.From(FromTop),
+}
 
 // ---- the test ----
 

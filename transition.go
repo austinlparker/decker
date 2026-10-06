@@ -1,14 +1,56 @@
 package decker
 
 // Transition is how a slide enters: one of the kinds below, taking its
-// default time or the one Over gives it. Transitions are comparable values;
-// the zero Transition is TransitionDefault.
+// default time or the one Over gives it, and the side From gives the ones
+// that have a direction. Transitions are comparable values; the zero
+// Transition is TransitionDefault.
 //
 //	Transition: decker.TransitionMorph.Over(1.2)
+//	Transition: decker.TransitionPush.From(decker.FromBottom)
 type Transition struct {
 	kind transitionKind
 	secs float64 // 0 is the kind's default
+	dir  Direction
 }
+
+// Direction is the side of the frame a transition starts from: the edge a
+// pushed or covering slide arrives from, the edge a wipe starts at, the axis
+// a split opens along. Going back to a slide plays its transition from the
+// opposite side. See Transition.From.
+type Direction int
+
+const (
+	// DirectionDefault is each transition's own side: TransitionPush,
+	// TransitionCover and TransitionUncover from the right,
+	// TransitionWipe from the left, TransitionSplit horizontal.
+	DirectionDefault Direction = iota
+	// FromRight is the right edge.
+	FromRight
+	// FromLeft is the left edge.
+	FromLeft
+	// FromTop is the top edge. Vertical motion moves whole cell rows.
+	FromTop
+	// FromBottom is the bottom edge.
+	FromBottom
+)
+
+// opposite is the side a transition plays from when going back.
+func (d Direction) opposite() Direction {
+	switch d {
+	case FromRight:
+		return FromLeft
+	case FromLeft:
+		return FromRight
+	case FromTop:
+		return FromBottom
+	case FromBottom:
+		return FromTop
+	}
+	return d
+}
+
+// horizontal reports whether d moves things along the x axis.
+func (d Direction) horizontal() bool { return d == FromRight || d == FromLeft }
 
 // transitionKind picks the implementation. Each kind but default and none
 // needs an entry in transitions.
@@ -21,6 +63,15 @@ const (
 	kindDissolve
 	kindWipe
 	kindMorph
+	kindFade
+	kindFadeThrough
+	kindCover
+	kindUncover
+	kindSplit
+	kindIris
+	kindZoom
+	kindPixelate
+	kindGlitch
 )
 
 // The transitions. A slide's Transition is one of these, optionally with Over.
@@ -34,6 +85,16 @@ var (
 	// TransitionMorph moves elements placed with the same key (Scene.Place)
 	// to their new rects, and cross-fades the rest. It takes MorphDuration.
 	TransitionMorph = Transition{kind: kindMorph}
+
+	TransitionFade        = Transition{kind: kindFade}        // cross-fade; characters switch half-way
+	TransitionFadeThrough = Transition{kind: kindFadeThrough} // old fades to the background, then new fades in
+	TransitionCover       = Transition{kind: kindCover}       // new slide slides in over the old one, which stays put
+	TransitionUncover     = Transition{kind: kindUncover}     // old slide slides away off the new one, which stays put
+	TransitionSplit       = Transition{kind: kindSplit}       // old slide opens like barn doors from the center
+	TransitionIris        = Transition{kind: kindIris}        // a circle of the new slide grows from the center
+	TransitionZoom        = Transition{kind: kindZoom}        // old zooms in and fades out, new grows into place
+	TransitionPixelate    = Transition{kind: kindPixelate}    // old breaks into big blocks, new resolves from them
+	TransitionGlitch      = Transition{kind: kindGlitch}      // noisy slices jump sideways, split in color, and flip to new
 )
 
 // DefaultTransition applies to slides that don't set Transition.
@@ -50,6 +111,16 @@ const MorphDuration = 0.8
 // Over returns t taking secs seconds; zero or less restores its default.
 func (t Transition) Over(secs float64) Transition {
 	t.secs = max(secs, 0)
+	return t
+}
+
+// From returns t starting from side d. Push, Cover and Uncover bring the new
+// slide in from d (Uncover sends the old one out the opposite way), Wipe
+// sweeps from d, and Split opens along d's axis; the other transitions
+// ignore it. The zero Direction restores each one's own side, and going back
+// plays t from the opposite side.
+func (t Transition) From(d Direction) Transition {
+	t.dir = d
 	return t
 }
 
@@ -79,30 +150,61 @@ func (t Transition) resolve() Transition {
 	if t.secs > 0 {
 		d.secs = t.secs
 	}
+	if t.dir != DirectionDefault {
+		d.dir = t.dir
+	}
+	return d
+}
+
+// side is the side t plays from: its own or its kind's, flipped going back.
+// It is the only direction a transitionFunc sees.
+func (t Transition) side(forward bool) Direction {
+	d := t.dir
+	if d == DirectionDefault {
+		d = FromRight
+		if t.kind == kindWipe {
+			d = FromLeft
+		}
+	}
+	if !forward {
+		d = d.opposite()
+	}
 	return d
 }
 
 // transitionFunc mixes from into to, in place, at linear progress p from 0
-// (all from) to 1 (all to); each applies its own easing. Both are frames of
+// (all from) to 1 (all to); each applies its own easing. side is where it
+// plays from (Transition.side), which the ones without a direction ignore.
+// Both are frames of
 // the same size as drawSlide makes them: View has drawn, and placed elements
 // may not be (finish draws them). A transition moves both of a scene's
 // layers, so the terminal, snapshots and video all show the same one: cells
 // are made from the result, and video reads its pixels.
-type transitionFunc func(from, to *Scene, p float64, forward bool, t *Theme)
+type transitionFunc func(from, to *Scene, p float64, side Direction, t *Theme)
 
 var transitions = map[transitionKind]transitionFunc{
 	kindPush:     finished(push),
 	kindDissolve: finished(dissolve),
 	kindWipe:     finished(wipe),
 	kindMorph:    morph,
+
+	kindFade:        finished(crossfade),
+	kindFadeThrough: finished(fadeThrough),
+	kindCover:       finished(cover),
+	kindUncover:     finished(uncover),
+	kindSplit:       finished(split),
+	kindIris:        finished(iris),
+	kindZoom:        finished(zoom),
+	kindPixelate:    finished(pixelate),
+	kindGlitch:      finished(glitch),
 }
 
 // finished adapts a transition that mixes two finished frames.
 func finished(f transitionFunc) transitionFunc {
-	return func(from, to *Scene, p float64, forward bool, t *Theme) {
+	return func(from, to *Scene, p float64, side Direction, t *Theme) {
 		from.finish()
 		to.finish()
-		f(from, to, p, forward, t)
+		f(from, to, p, side, t)
 	}
 }
 
@@ -111,43 +213,145 @@ func finished(f transitionFunc) transitionFunc {
 // among them), and frames of different sizes, cut to to.
 func mixTransition(tr Transition, from, to *Scene, p float64, forward bool, t *Theme) {
 	if f, ok := transitions[tr.kind]; ok && from.W == to.W && from.H == to.H {
-		f(from, to, p, forward, t)
+		f(from, to, p, tr.side(forward), t)
 	}
 	to.finish()
 }
 
-func push(from, to *Scene, p float64, forward bool, _ *Theme) {
-	w := to.W
-	off := LerpInt(0, w, EaseInOutCubic(p))
-	// Going forward, the old frame moves left by off and the new one follows
-	// it in from the right; going back, both move right.
-	shiftOld, shiftNew := -off, w-off
-	if !forward {
-		shiftOld, shiftNew = off, off-w
+// span says what a stretch of the slide axis shows in a frame mid-way
+// through a push, cover, uncover or split: the cells [lo, hi) show the old
+// or the new slide, taken from shift cells back along the axis. Whole cells
+// keep the character layer and the pixels together; vertically a cell is two
+// pixel rows.
+type span struct {
+	lo, hi, shift int
+	old           bool
+}
+
+func push(from, to *Scene, p float64, side Direction, _ *Theme) {
+	slide(from, to, p, side, true, true)
+}
+
+// cover slides the new frame in over the old one, which stays put.
+func cover(from, to *Scene, p float64, side Direction, _ *Theme) {
+	slide(from, to, p, side, true, false)
+}
+
+// uncover slides the old frame away off the new one, which stays put.
+func uncover(from, to *Scene, p float64, side Direction, _ *Theme) {
+	slide(from, to, p, side, false, true)
+}
+
+// slide places both frames for push, cover and uncover: the new one enters
+// from side, the old one leaves the opposite way, and a frame that doesn't
+// move stays where it is.
+func slide(from, to *Scene, p float64, side Direction, moveNew, moveOld bool) {
+	horiz := side.horizontal()
+	n := to.H
+	if horiz {
+		n = to.W
 	}
-	for y := range to.Px.H {
-		row, old := to.Px.Pix[y*w:(y+1)*w], from.Px.Pix[y*w:(y+1)*w]
-		if forward {
-			copy(row[w-off:], row[:off])
-			copy(row[:w-off], old[off:])
-		} else {
-			copy(row[:off], row[w-off:])
-			copy(row[off:], old[:w-off])
+	o := LerpInt(0, n, EaseInOutCubic(p))
+	var spans [2]span
+	if side == FromRight || side == FromBottom {
+		spans[0] = span{lo: n - o, hi: n}
+		spans[1] = span{lo: 0, hi: n - o, old: true}
+		if moveNew {
+			spans[0].shift = n - o
+		}
+		if moveOld {
+			spans[1].shift = -o
+		}
+	} else {
+		spans[0] = span{lo: 0, hi: o}
+		spans[1] = span{lo: o, hi: n, old: true}
+		if moveNew {
+			spans[0].shift = o - n
+		}
+		if moveOld {
+			spans[1].shift = o
+		}
+	}
+	place(from, to, horiz, spans[:])
+}
+
+// split opens the old frame like barn doors: its halves slide apart, to the
+// sides or up and down by side's axis, and the new frame is behind them.
+func split(from, to *Scene, p float64, side Direction, _ *Theme) {
+	horiz := side.horizontal()
+	n := to.H
+	if horiz {
+		n = to.W
+	}
+	l := n / 2
+	e := EaseInOutCubic(p)
+	oL, oR := LerpInt(0, l, e), LerpInt(0, n-l, e)
+	spans := [3]span{
+		{lo: l - oL, hi: l + oR},
+		{lo: 0, hi: l - oL, shift: -oL, old: true},
+		{lo: l + oR, hi: n, shift: oR, old: true},
+	}
+	place(from, to, horiz, spans[:])
+}
+
+// place builds to from spans that don't overlap: the parts of the new frame
+// that move first, since they read to's own pixels, then the old frame's
+// parts (parts of the new frame that stay are in place already); and the
+// character layer the same way.
+func place(from, to *Scene, horiz bool, spans []span) {
+	for _, s := range spans {
+		if !s.old && s.shift != 0 {
+			copySpan(to.Px, to.Px, horiz, s)
+		}
+	}
+	for _, s := range spans {
+		if s.old {
+			copySpan(to.Px, from.Px, horiz, s)
 		}
 	}
 	moveChars(from, to, func(x, y int, old bool) (int, int, bool) {
-		if old {
-			x += shiftOld
-		} else {
-			x += shiftNew
+		a := x
+		if !horiz {
+			a = y
 		}
-		return x, y, x >= 0 && x < w
+		for _, s := range spans {
+			if s.old == old && a >= s.lo-s.shift && a < s.hi-s.shift {
+				if horiz {
+					return x + s.shift, y, true
+				}
+				return x, y + s.shift, true
+			}
+		}
+		return 0, 0, false
 	})
+}
+
+// copySpan copies src's pixels into dst over s; they may be the same pixels,
+// which is safe: a row copy handles overlap, and vertical moves go in the
+// order that reads each row before it is written.
+func copySpan(dst, src *Pixels, horiz bool, s span) {
+	w := dst.W
+	if horiz {
+		for y := range dst.H {
+			copy(dst.Pix[y*w+s.lo:y*w+s.hi], src.Pix[y*w+s.lo-s.shift:y*w+s.hi-s.shift])
+		}
+		return
+	}
+	lo, hi, shift := 2*s.lo, 2*s.hi, 2*s.shift
+	if shift > 0 {
+		for y := hi - 1; y >= lo; y-- {
+			copy(dst.Pix[y*w:(y+1)*w], src.Pix[(y-shift)*w:(y-shift+1)*w])
+		}
+		return
+	}
+	for y := lo; y < hi; y++ {
+		copy(dst.Pix[y*w:(y+1)*w], src.Pix[(y-shift)*w:(y-shift+1)*w])
+	}
 }
 
 // dissolve flips cells at random. In a frame wider than 400 cells (video) it
 // flips blocks of them, so a dissolve looks the same at any resolution.
-func dissolve(from, to *Scene, p float64, _ bool, _ *Theme) {
+func dissolve(from, to *Scene, p float64, _ Direction, _ *Theme) {
 	w := to.W
 	bs := max(w/400, 1)
 	old := func(x, y int) bool { return Hash01(x/bs, y/bs, 7) >= p }
@@ -164,27 +368,38 @@ func dissolve(from, to *Scene, p float64, _ bool, _ *Theme) {
 }
 
 // wipe sweeps an edge across in the theme's accent, fading to the background
-// over a band a sixtieth of the width; going back, it sweeps the other way.
-func wipe(from, to *Scene, p float64, forward bool, t *Theme) {
-	w := to.W
+// over a band a sixtieth of the width, from side; going back, it sweeps from
+// the other side. Vertically the band is as many pixel rows as it is columns
+// horizontally, and a cell shows a slide only once both its pixel rows do.
+func wipe(from, to *Scene, p float64, side Direction, t *Theme) {
+	w, horiz := to.W, side.horizontal()
+	n := to.Px.H
+	if horiz {
+		n = w
+	}
 	band := float64(w) / 60
-	edge := -band + (float64(w)+2*band)*EaseInOutCubic(p)
-	// behind is how far column x is behind the edge: below 0 still shows the
-	// old frame, band or more the new one, and in between the band.
-	behind := func(x int) float64 {
-		if !forward {
-			x = w - 1 - x
+	edge := -band + (float64(n)+2*band)*EaseInOutCubic(p)
+	// behind is how far position a (a column, or a pixel row) is behind the
+	// edge: below 0 still shows the old frame, band or more the new one, and
+	// in between the band.
+	behind := func(a int) float64 {
+		if side == FromRight || side == FromBottom {
+			a = n - 1 - a
 		}
-		return edge - float64(x)
+		return edge - float64(a)
 	}
 	pix, src := to.Px.Pix, from.Px.Pix
-	for x := range w {
-		d := behind(x)
+	for a := range n {
+		d := behind(a)
 		if d >= band {
 			continue
 		}
 		col := Mix(t.Accent, t.Background, d/band)
-		for k := x; k < len(pix); k += w {
+		lo, hi, step := a, len(pix), w // a column
+		if !horiz {
+			lo, hi, step = a*w, (a+1)*w, 1 // a row
+		}
+		for k := lo; k < hi; k += step {
 			if d < 0 {
 				pix[k] = src[k]
 			} else {
@@ -193,9 +408,13 @@ func wipe(from, to *Scene, p float64, forward bool, t *Theme) {
 		}
 	}
 	moveChars(from, to, func(x, y int, old bool) (int, int, bool) {
-		if old {
-			return x, y, behind(x) < 0
+		d0, d1 := behind(x), behind(x)
+		if !horiz {
+			d0, d1 = behind(2*y), behind(2*y+1)
 		}
-		return x, y, behind(x) >= band
+		if old {
+			return x, y, max(d0, d1) < 0
+		}
+		return x, y, min(d0, d1) >= band
 	})
 }
