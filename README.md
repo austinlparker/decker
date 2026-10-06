@@ -331,12 +331,13 @@ Everything here is in package `decker`.
 | Transitions | `Slide.Transition`: `TransitionPush` (default), `Cover`, `Uncover`, `Wipe`, `Split`, `Fade`, `FadeThrough`, `Dissolve`, `Iris`, `Zoom`, `Pixelate`, `Glitch`, `Morph`, `None`. `.Over(secs)` sets the time; `.From(DirLeft / DirRight / DirUp / DirDown)` sets the side of Push, Cover, Uncover and Wipe (and the axis of Split); going back plays from the opposite side. Vertical moves go in whole cell rows |
 | Magic move | `sc.Place(key, rect, draw)` on both slides, `Transition: TransitionMorph` on the second; see [Magic move](#magic-move) |
 | Big type | `Text{Font, Size, Color, To (gradient), Glow, Shine, FX, MaxW}.Draw(p, s, x, y)` with `Align`; returns width and height. `DrawMid` centers a line's ink on a y |
+| Mixed styles in a line | `Rich{Font, Size, Color, Glow, FX, MaxW}.Draw(p, spans, x, y)` with `[]Span{Text, Font, Color, Underline, Strike, Mark}`: bold a word, color a keyword, highlight, inline code, one baseline, wrapping across spans; ``ParseSpans("*bold* _muted_ `code` {accent:word}", theme)`` builds spans from light markup (see [Rich text](#rich-text)); `rich.Fit(spans, w, h, maxSize)` sizes them to a box |
 | Sizing text to a box | `font.Fit(...)`, `FitAll(...)` for several lines at one size |
 | Small labels | `c.SmallText(font)`: the smallest readable size; `Label`, `Chip`, `LineLabel` (text sitting on an arrow) |
 | Block letters | `f, lines, scale := FitBlock(s, maxW, maxH, maxLines, gap, fonts...)` picks a font and scale for a pixel box; `Block{Font, Scale, Color, To, Shadow, Drop, Align, Glow, FX}.Draw(p, s, x, y)`; `BlockEffect`s for `Block.FX`: `BlockDecrypt`, `BlockRain`, `BlockBeam`, `BlockSlide`, `BlockType`, `BlockGlitch`, `BlockFade`, combined with `BlockChain` |
 | Diagrams | `Panel`, `Arrow`, `CycleDiagram` (numbered ring with a legend), `BulletList`, `SpeechBubble` |
 | Unfinished material | `PlaceholderBox` (dashed frame) and `IllustrativeTag` (made-up data) mark what to replace before the talk |
-| Letter animations | `GlyphEffect`s for `Text.FX`: `RiseIn`, `DropIn`, `Decode` (scramble), `TypeOn`, `FadeUp`, `Wave`, `Jitter`, combined with `Chain` |
+| Letter animations | `GlyphEffect`s for `Text.FX` and `Rich.FX`: `RiseIn`, `DropIn`, `Decode` (scramble), `TypeOn`, `FadeUp`, `Wave`, `Jitter`, combined with `Chain` |
 | A moving highlight | `Shine: ShineBand(t, dur, strength)` |
 | Shapes | `p.Disc`, `p.Arc` (rings, gauges), `p.Line`, `p.Rect`, `p.RoundRect` (fill or outline), `p.Glow`, `p.VGradient`; `p.Box` and `Coverage` for shapes of your own |
 | Pixel art | `p.Art(PixelArt{Rows, Colors}, x, y, scale, alpha, flip)`; return a different frame for a different `t` to animate |
@@ -349,6 +350,31 @@ Everything here is in package `decker`.
 | Color | `Hex("#FFB000")`, `Mix`, `RGB.Scale` |
 | Off-screen drawing | `NewScene(w, h, theme)`, then `Render` it to a string (to `sc.Put` on the slide's own scene) or `Release` it when you've copied what you need |
 | Small native terminal text (rarely) | `sc.Text`, `sc.Put`, `sc.Sprite` draw on top of the pixels; videos only have the pixels |
+
+### Rich text
+
+`Text` draws one font and color. `Rich` takes `[]Span` and lets each span differ, on a shared baseline; it wraps at spaces across span boundaries and counts `FX` glyph indexes as `Text` does. `Rich.Fit` finds the largest size at which spans fill a box, remembered between frames like `Font.Fit`.
+
+```go
+spans := decker.ParseSpans("Call *Draw* with `[]Span`, {accent:not} a string.", c.Theme)
+r := decker.Rich{Font: c.Theme.Body, Color: c.Theme.Text}
+r.Size, r.MaxW = r.Fit(spans, w, h, c.Size(0.2)), w
+r.Draw(p, spans, x, y)
+```
+
+`ParseSpans` markup, with the theme supplying fonts and colors:
+
+| Write | Get |
+| --- | --- |
+| `*bold*` | the Display face (a theme has no bold cut) |
+| `_muted_` | `Theme.Muted` |
+| `` `code` `` | `Theme.Mono` on a plate; markup inside is literal |
+| `{accent:word}` | a color: `text`, `muted`, `faint`, `accent`, `accent2`, `warn`, `good`, `#rrggbb` or `#rgb` |
+| `{u:word}`, `{s:word}` | underline, strikethrough |
+| `{mark:word}` | highlighter pen: accent plate, background-colored ink |
+| `\*` | a literal marker; `\\`, `\_`, ``\` ``, `\{` and `\}` likewise |
+
+Markers toggle wherever they sit, so `*bo*ld` bolds half a word; write `snake\_case`. Build `Span`s by hand for anything else (`Underline`, `Strike`, `Mark`, any `Font` or `Color`).
 
 ### Tests
 
@@ -380,6 +406,7 @@ invariants, the golden tests, and a recipe for each kind of addition.
 | `theme.go`, `color.go` | `Theme`; `RGB`, `Hex`, `Mix` |
 | `draw.go` | stock components: `Panel`, `Arrow`, `Label`, `PageNumber`, `ProgressBar`, `Chip`, `CycleDiagram`, `BulletList`… |
 | `font.go`, `fit.go`, `text.go`, `coverage.go`, `memo.go`, `fonts/` | smooth type: font loading and glyphs, fitting and wrapping, drawing with glow and gradients, coverage masks, cached fits |
+| `rich.go`, `richmarkup.go` | `Rich` text: spans with their own font, color and decoration laid out and drawn on the `Text` machinery, fitted to a box; `ParseSpans` markup |
 | `figlet.go`, `block.go`, `blockfit.go`, `blockglyph.go`, `fonts/figlet/` | block letters: FIGlet font loading, drawing, fitting to a box, block-character glyphs |
 | `effects.go`, `blockfx.go` | letter animations: `GlyphEffect` for `Text`, `BlockEffect` for `Block` |
 | `pixels.go`, `pixelart.go`, `image.go` | the pixel canvas and shapes, pixel art, images |

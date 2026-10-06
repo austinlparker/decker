@@ -37,6 +37,8 @@
 //     [Scene.Place] hands the engine a keyed element to draw instead, which
 //     [TransitionMorph] can move from one slide to the next.
 //   - [Text], [Font]: smooth antialiased type, fitted and wrapped to a box.
+//   - [Rich], [Span]: the same type with mixed fonts, colors and decorations
+//     inside a line ([ParseSpans] reads a light markup).
 //   - [Block], [FigFont]: FIGlet block letters scaled to fill a box ([FitBlock]).
 //   - [GlyphEffect], [BlockEffect]: per-letter and per-cell animations,
 //     combined with [Chain] and [BlockChain].
