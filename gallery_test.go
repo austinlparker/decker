@@ -64,6 +64,7 @@ func TestGalleryPanics(t *testing.T) {
 		want string
 	}{
 		"text without a font": {func() { Text{Size: 10}.Draw(NewPixels(10, 10, th.Background), "x", 0, 0) }, "Font is required"},
+		"rich without a font": {func() { Rich{Size: 10}.Draw(NewPixels(10, 10, th.Background), []Span{{Text: "x"}}, 0, 0) }, "Font is required"},
 		"missing font file":   {func() { LoadFont(fstest.MapFS{}, "nope.ttf") }, "nope.ttf"},
 		"broken font":         {func() { LoadFont(fstest.MapFS{"x.ttf": {Data: []byte("junk")}}, "x.ttf") }, "x.ttf"},
 		"missing fig font":    {func() { LoadFigFont(fstest.MapFS{}, "nope.flf") }, "nope.flf"},
@@ -135,6 +136,7 @@ func gallery() Deck {
 		slideLayout(),
 		slideMorph(false),
 		slideMorph(true),
+		slideRich(),
 	}}
 }
 
@@ -1007,5 +1009,59 @@ func slideMorph(after bool) Slide {
 			}
 			sc.Place(only, label, func(p *Pixels, r Rect) { Label(c, p, only+" only", r.X, r.Y, th.Muted, Left) })
 			sc.Place("", c.Rect(0.9, 0.9, 0.05, 0.05), func(p *Pixels, r Rect) { p.Rect(r.X, r.Y, r.W, r.H, th.Warn, 1) })
+		}}
+}
+
+// slideRich draws mixed styles within a line: markup, hand-built spans with
+// every decoration, wrapping across spans, fitting, glow and an effect.
+func slideRich() Slide {
+	return Slide{Title: "Rich text", Notes: "Rich, Span and ParseSpans", Transition: TransitionDefault,
+		View: func(c Ctx, sc *Scene) {
+			p, th := sc.Px, c.Theme
+			top := heading(c, p, "Rich text")
+			bs := max(c.Size(0.055), c.SmallText(th.Body))
+
+			// Markup: bold, muted, code, color tags, escapes, wrapped in a column.
+			md := ParseSpans("Spans mix *bold*, _muted_ and {accent:colored} words with `inline_code()` in one line, "+
+				"wrap across {accent2:span boundaries}, and escape a \\*star\\*.", th)
+			col := Rich{Font: th.Body, Size: bs, Color: th.Text, MaxW: c.X(0.44), Leading: 1.35}
+			_, h := col.Draw(p, md, c.X(0.03), top)
+
+			// Every decoration, built by hand; Mark paints a highlighter plate.
+			y := top + h + c.Y(0.04)
+			warn, good, hi := th.Warn, th.Good, Hex("#FFD23F")
+			dark := th.Background
+			deco := []Span{
+				{Text: "Mark ", Mark: &hi, Color: &dark},
+				{Text: "under ", Underline: true, Color: &good},
+				{Text: "strike ", Strike: true, Color: &warn},
+				{Text: "both", Underline: true, Strike: true},
+				{Text: " and "},
+				{Text: "mono", Font: th.Mono, Mark: rgbp(th.Panel)},
+			}
+			dr := Rich{Font: th.Display, Size: bs, Color: th.Text}
+			dw, dh := dr.Draw(p, deco, c.X(0.03), y)
+			p.Rect(c.X(0.03), y+dr.Baseline(), dw, 1, th.Faint, 0.8) // one baseline for every font
+
+			// Alignment and glow in span colors, an effect, and DrawMid in a box.
+			y += dh + c.Y(0.05)
+			cx := c.X(0.27)
+			glow := []Span{{Text: "two "}, {Text: "glowing", Color: &th.Accent}, {Text: " colors", Color: &th.Accent2}}
+			Rich{Font: th.Display, Size: bs, Color: th.Text, Glow: 0.8, Align: Center}.Draw(p, glow, cx, y)
+			fx := ParseSpans("*typed* and {good:risen} per glyph", th)
+			Rich{Font: th.Body, Size: bs, Color: th.Text, Align: Right, FX: Chain(RiseIn(c.T, 0.04, bs), TypeOn(c.T, 60))}.
+				Draw(p, fx, c.X(0.97), c.Y(0.22))
+			boxY := y + c.Y(0.14)
+			p.RoundRect(c.X(0.03), boxY, c.X(0.48), c.Unit(0.12), 3, 1, th.Faint, 1)
+			Rich{Font: th.Body, Size: bs, Color: th.Muted, Align: Center}.
+				DrawMid(p, ParseSpans("centered on its {accent:ink} with `gjpqy`", th), c.X(0.27), boxY+c.Unit(0.06))
+
+			// Fit: the largest size at which the spans fill a box.
+			bx, by, bw, bh := c.X(0.55), c.Y(0.38), c.X(0.42), c.Y(0.5)
+			p.RoundRect(bx, by, bw, bh, 2, 1, th.Faint, 1)
+			fit := ParseSpans("Fit finds the *largest size* at which a {accent:rich} block, wrapped to its box, still fits.", th)
+			fr := Rich{Font: th.Display, Color: th.Text, Leading: 1.05}
+			fr.Size, fr.MaxW = fr.Fit(fit, bw, bh, c.Size(0.3)), bw
+			fr.Draw(p, fit, bx, by)
 		}}
 }
