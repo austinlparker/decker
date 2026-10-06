@@ -314,9 +314,27 @@ func testModel(d *Deck, idx, step, w, h int, age float64, dev *devState) model {
 var transitionNames = map[Transition]string{
 	TransitionDefault: "default", TransitionNone: "none", TransitionPush: "push",
 	TransitionDissolve: "dissolve", TransitionWipe: "wipe", TransitionMorph: "morph",
+	TransitionFade: "fade", TransitionFadeThrough: "fadeThrough", TransitionCover: "cover",
+	TransitionUncover: "uncover", TransitionSplit: "split", TransitionIris: "iris",
+	TransitionZoom: "zoom", TransitionPixelate: "pixelate", TransitionGlitch: "glitch",
+
+	TransitionPush.From(DirUp):      "push-top",
+	TransitionPush.From(DirLeft):    "push-left",
+	TransitionWipe.From(DirUp):      "wipe-top",
+	TransitionWipe.From(DirRight):   "wipe-right",
+	TransitionCover.From(DirUp):     "cover-top",
+	TransitionUncover.From(DirLeft): "uncover-left",
+	TransitionSplit.From(DirUp):     "split-top",
 }
 
-var transitionKinds = []Transition{TransitionDefault, TransitionNone, TransitionPush, TransitionDissolve, TransitionWipe, TransitionMorph}
+var transitionKinds = []Transition{
+	TransitionDefault, TransitionNone, TransitionPush, TransitionDissolve, TransitionWipe, TransitionMorph,
+	TransitionFade, TransitionFadeThrough, TransitionCover, TransitionUncover, TransitionSplit, TransitionIris,
+	TransitionZoom, TransitionPixelate, TransitionGlitch,
+	TransitionPush.From(DirUp), TransitionPush.From(DirLeft),
+	TransitionWipe.From(DirUp), TransitionWipe.From(DirRight),
+	TransitionCover.From(DirUp), TransitionUncover.From(DirLeft), TransitionSplit.From(DirUp),
+}
 
 // ---- the test ----
 
@@ -565,7 +583,7 @@ func goldenModel(t *testing.T, g *goldenEntries) {
 		b, _ := json.Marshal(cmd)
 		g.addString("model/link/"+string(b), fmt.Sprintf("s%d.%d", m.idx, m.step), view(m))
 	}
-	b, _ := json.Marshal(linkOutline{"t", 2})
+	b, _ := json.Marshal(linkOutline{Title: "t", Steps: 2})
 	g.add("link/outline", b)
 	var keys []string
 	for k, v := range keyActs {
@@ -605,6 +623,35 @@ func goldenModel(t *testing.T, g *goldenEntries) {
 	g.addString("model/update", upd.String(), view(um))
 	bodyH, _ := um.layout()
 	g.addString("model/cur", um.cur().Title, fmt.Sprint(bodyH, um.showChrome()))
+
+	// Blanked screens: black and white, with and without a dev footer, and
+	// the keys that bring the slide back.
+	for _, dev := range []string{"plain", "dev"} {
+		for _, size := range [][2]int{{80, 24}, {200, 56}} {
+			m := testModel(d, 2, 1, size[0], size[1], Settled, devs[dev]())
+			m = press(press(m, "n"), "?")
+			for _, k := range []string{"b", "w"} {
+				m = press(m, k)
+				g.addString(key(m, dev, "blank-"+m.blank.String()), view(m))
+			}
+		}
+	}
+	m = testModel(d, 1, 0, 120, 36, Settled, nil)
+	trail.Reset()
+	for _, k := range strings.Fields("b b w w . , , b x ctrl+l right w 5 enter w ] b [ w g b G b r w n b ? b esc") {
+		m = press(m, k)
+		fmt.Fprintf(&trail, "%s -> s%d.%d count=%q blank=%q notes=%v help=%v\n", k, m.idx, m.step, m.count, m.blank, m.showNotes, m.showHelp)
+	}
+	g.addString("model/blankKeys", trail.String())
+	m = press(m, "w")
+	st, _ = json.Marshal(m.linkState())
+	g.add("model/linkState/blank", st)
+	for _, cmd := range []linkCmd{{Key: "b"}, {Key: "right"}, {Key: "."}, {Key: "w"}, {Key: ","}} {
+		next, _ := m.Update(cmd)
+		m = next.(model)
+		b, _ := json.Marshal(cmd)
+		g.addString("model/blankLink/"+string(b), fmt.Sprintf("s%d.%d %q", m.idx, m.step, m.blank), view(m))
+	}
 
 	// A zero-size model draws nothing.
 	g.addString("model/empty", view(testModel(d, 0, 0, 0, 0, 0, nil)))
@@ -810,7 +857,7 @@ func presenterFor(d *Deck, w, h int, linked bool, slide, step int, previews map[
 	slides := d.Slides
 	outline := make([]linkOutline, len(slides))
 	for i, s := range slides {
-		outline[i] = linkOutline{s.Title, s.steps()}
+		outline[i] = linkOutline{Title: s.Title, Steps: s.steps()}
 	}
 	p := newPresenter(d, "/tmp/x.sock", 30*time.Minute)
 	p.previews, p.now, p.w, p.h, p.linked = previews, goldenBase, w, h, linked
@@ -869,6 +916,12 @@ func goldenPresenter(t *testing.T, g *goldenEntries) {
 		g.addString(key("small-deck"), p.View().Content)
 		p.st.W, p.st.H = 0, 0 // unreported: no previews
 		g.addString(key("no-deck-size"), p.View().Content)
+		// A blanked deck: the header says so, the notes and previews stay.
+		for _, color := range []string{"black", "white"} {
+			p = presenterFor(d, w, h, true, 1, 1, previews)
+			p.st.Blank = color
+			g.addString(key("blank-"+color), p.View().Content)
+		}
 		// Long notes are cut to fit.
 		p = presenterFor(d, w, h, true, 0, 0, previews)
 		p.st.Notes = strings.Repeat("a long line of speaker notes, which wraps over several lines\n", 20)
@@ -901,7 +954,7 @@ func goldenPresenter(t *testing.T, g *goldenEntries) {
 	g.addString("presenter/empty", presenterFor(d, 0, 0, true, 0, 0, previews).View().Content)
 
 	// The pieces.
-	outline := []linkOutline{{"a", 1}, {"b", 4}, {"c", 1}}
+	outline := []linkOutline{{Title: "a", Steps: 1}, {Title: "b", Steps: 4}, {Title: "c", Steps: 1}}
 	for _, c := range []struct {
 		slide, step int
 		el          time.Duration
@@ -917,8 +970,8 @@ func goldenPresenter(t *testing.T, g *goldenEntries) {
 	for _, i := range []int{0, 2, 5} {
 		for _, step := range []int{0, 1} {
 			g.addString(fmt.Sprintf("presenter/renderPreview/%d.%d", i, step),
-				renderPreview(d.Slides[i], previewKey{i, step, 50, 12, 682, 171}, testTheme),
-				renderPreview(d.Slides[i], previewKey{i, step, 30, 9, 120, 40}, testTheme))
+				renderPreview(d.Slides, previewKey{i, step, 50, 12, 682, 171}, testTheme),
+				renderPreview(d.Slides, previewKey{i, step, 30, 9, 120, 40}, testTheme))
 		}
 	}
 	g.addString("presenter/nextTarget", func() string {
