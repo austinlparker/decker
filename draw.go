@@ -54,6 +54,31 @@ func Label(c Ctx, p *Pixels, s string, x, y float64, col RGB, align Align) (floa
 	return Text{Font: c.Theme.Body, Size: size, Color: col, Align: align}.Draw(p, s, x, y)
 }
 
+// PageNumber draws the slide's position, like "12 / 40", in small body text at
+// (x, y) and returns its size. It draws nothing when c.Count is zero, so an
+// overlay can use it on a Ctx the engine didn't position. Meant for
+// Theme.Overlay.
+func PageNumber(c Ctx, p *Pixels, x, y float64, align Align, col RGB) (float64, float64) {
+	if c.Count <= 0 {
+		return 0, 0
+	}
+	return Label(c, p, strconv.Itoa(c.Index+1)+" / "+strconv.Itoa(c.Count), x, y, col, align)
+}
+
+// ProgressBar fills a share of the track r equal to the slides shown so far,
+// (c.Index+1)/c.Count, so the last slide is full. It counts slides, not build
+// steps: Ctx doesn't carry the other slides' step counts. With c.Count zero
+// only the track is drawn. Meant for Theme.Overlay.
+func ProgressBar(c Ctx, p *Pixels, r Rect, fill, track RGB) {
+	rad := min(r.W, r.H) / 2
+	p.RoundRect(r.X, r.Y, r.W, r.H, rad, 0, track, 1)
+	if c.Count <= 0 {
+		return
+	}
+	w := r.W * float64(min(c.Index+1, c.Count)) / float64(c.Count)
+	p.RoundRect(r.X, r.Y, w, r.H, min(rad, w/2), 0, fill, 1)
+}
+
 // LineLabel draws small text on a background plate centered on (cx, cy), so it
 // reads over a line.
 func LineLabel(c Ctx, p *Pixels, f *Font, s string, cx, cy float64, col RGB, alpha float64) {

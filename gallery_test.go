@@ -135,6 +135,7 @@ func gallery() Deck {
 		slideLayout(),
 		slideMorph(false),
 		slideMorph(true),
+		slidePosition(),
 	}}
 }
 
@@ -1007,5 +1008,35 @@ func slideMorph(after bool) Slide {
 			}
 			sc.Place(only, label, func(p *Pixels, r Rect) { Label(c, p, only+" only", r.X, r.Y, th.Muted, Left) })
 			sc.Place("", c.Rect(0.9, 0.9, 0.05, 0.05), func(p *Pixels, r Rect) { p.Rect(r.X, r.Y, r.W, r.H, th.Warn, 1) })
+		}}
+}
+
+// slidePosition draws what an overlay would from Ctx's position: the page
+// number in each alignment, the progress bar and the section. The theme's own
+// Overlay stays as it was, so the other slides' frames don't change.
+func slidePosition() Slide {
+	return Slide{Title: "Position", Section: "Overlays",
+		View: func(c Ctx, sc *Scene) {
+			p, th := sc.Px, c.Theme
+			top := heading(c, p, "Position")
+			tag(c, p, fmt.Sprintf("Index %d  Count %d  Section %q", c.Index, c.Count, c.Section), c.X(0.03), top, th.Muted)
+
+			y := top + c.Y(0.15)
+			PageNumber(c, p, c.X(0.03), y, Left, th.Text)
+			PageNumber(c, p, c.X(0.5), y, Center, th.Accent2)
+			PageNumber(c, p, c.X(0.97), y, Right, th.Good)
+			ProgressBar(c, p, c.Rect(0.03, 0.55, 0.94, 0.03), th.Accent, th.Faint)
+			ProgressBar(c, p, c.Rect(0.03, 0.65, 0.4, 0.015), th.Good, th.Panel)
+
+			// A bar and a page number in the corner, as an overlay would.
+			ProgressBar(c, p, NewRect(0, c.PH()-c.Unit(0.01), c.PW(), c.Unit(0.01)), th.Accent2, th.Faint)
+			Label(c, p, c.Section, c.X(0.03), c.Y(0.9), th.Muted, Left)
+			PageNumber(c, p, c.X(0.97), c.Y(0.9), Right, th.Muted)
+
+			// An unpositioned Ctx draws no number and an empty track.
+			bare := c
+			bare.Count = 0
+			PageNumber(bare, p, c.X(0.03), c.Y(0.75), Left, th.Warn)
+			ProgressBar(bare, p, c.Rect(0.5, 0.75, 0.3, 0.02), th.Warn, th.Faint)
 		}}
 }
