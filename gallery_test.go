@@ -148,6 +148,8 @@ func gallery() Deck {
 		slideTransition("Glitch", TransitionGlitch, 8),
 		slideTransition("Push from top", TransitionPush.From(DirUp), 9),
 		slideTransition("Wipe from bottom", TransitionWipe.From(DirDown), 10),
+		slideElementAnimations(),
+		slideEasings(),
 	}}
 }
 
@@ -1128,5 +1130,93 @@ func slideTransition(title string, tr Transition, n int) Slide {
 			sc.Px.Disc(x+c.Unit(0.1)*math.Sin(c.T), y, c.Unit(0.03), th.Warn, 1)
 			sc.Px.RoundRect(c.X(0.1), c.Y(0.08), c.X(0.8), c.Y(0.84), c.Unit(0.03), 2, th.Accent2, 0.8)
 			sc.Text(c.W/2-8, c.H-4, "enters with "+strings.ToLower(title), th.Muted.Color())
+		}}
+}
+
+// slideElementAnimations shows every entrance, exit and emphasis on a panel,
+// across three steps: step 0 builds eight elements in (one waits for step 1),
+// step 1 exits one, shakes, dims and grows others, step 2 exits more.
+func slideElementAnimations() Slide {
+	return Slide{Title: "Element animations", Steps: 3, Transition: TransitionDefault,
+		View: func(c Ctx, sc *Scene) {
+			p, th := sc.Px, c.Theme
+			top := heading(c, p, "Element animations")
+			_, body := c.Frame().Inset(c.X(0.04), 0).CutTop(top + c.Y(0.04))
+			grid := body.Inset(0, c.Unit(0.02)).Grid(4, 2, c.Unit(0.05))
+			dist := 0.15
+			fly := func(from Direction) func(float64) Composite {
+				return func(t float64) Composite { return FlyIn(c, t, 0.5, from, dist) }
+			}
+			// Each element starts 0.12s after the one before it.
+			late := func(i int, f func(float64) Composite) func(float64) Composite {
+				return func(t float64) Composite { return f(t - 0.12*float64(i)) }
+			}
+			type element struct {
+				label string
+				fx    Composite
+			}
+			els := []element{
+				{"FadeIn, FadeOut", AppearAt(c, 0, 1, late(0, func(t float64) Composite { return FadeIn(t, 0.5) }),
+					func(t float64) Composite { return FadeOut(t, 0.5) })},
+				{"FlyIn, FlyOut", AppearAt(c, 0, 2, late(1, fly(DirLeft)),
+					func(t float64) Composite { return FlyOut(c, t, 0.5, DirRight, dist) })},
+				{"ZoomIn, ZoomOut", AppearAt(c, 0, 2, late(2, func(t float64) Composite { return ZoomIn(t, 0.5, 0.5) }),
+					func(t float64) Composite { return ZoomOut(t, 0.5, 0.5) })},
+				{"Pop, Grow", AppearAt(c, 0, -1, late(3, func(t float64) Composite { return Pop(t, 0.6) }), nil).
+					Then(Grow(c.Since(1), 0.6, 1.15))},
+				{"WipeIn, Dim, WipeOut", AppearAt(c, 0, 2, late(4, func(t float64) Composite { return WipeIn(t, 0.6, DirLeft) }),
+					func(t float64) Composite { return WipeOut(t, 0.6, DirLeft) }).Then(Dim(c.Since(1), 0.4, 0.35))},
+				{"FlyIn up, Shake", AppearAt(c, 0, -1, late(5, fly(DirDown)), nil).Then(Shake(c.Since(1), 0.6, c.Unit(0.02)))},
+				{"Combine, Clipped", Combine(FlyIn(c, c.Since(0)-0.6, 0.5, DirUp, 0.1), ZoomIn(c.Since(0)-0.6, 0.5, 0.8)).
+					Clipped(grid[6], grid[6].Inset(0, grid[6].H*0.12))},
+				{"Pivot at a corner", AppearAt(c, 1, -1, func(t float64) Composite {
+					k := Pop(t, 0.6)
+					k.PivotX, k.PivotY = -0.5, -0.5
+					return k
+				}, nil)},
+			}
+			for i, e := range els {
+				r := grid[i].Inset(c.Unit(0.02), c.Unit(0.02))
+				e.fx.Draw(p, r, func(p *Pixels) {
+					Panel(c, p, r.X, r.Y, r.W, r.H, e.label, th.Panel, th.Accent2, th.Text, 1)
+					p.Glow(r.Right(), r.Y, c.Unit(0.03), th.Accent, 0.6)
+					p.Disc(r.X+c.Unit(0.03), r.Y+c.Unit(0.03), c.Unit(0.012), th.Good, 1)
+				})
+			}
+		}}
+}
+
+// slideEasings plots the easings added for element animations, and a CSS
+// "ease" curve, each with a marker running on a loop.
+func slideEasings() Slide {
+	ease := CubicBezier(0.25, 0.1, 0.25, 1)
+	overshoot := CubicBezier(0.34, 1.56, 0.64, 1)
+	curves := []struct {
+		name string
+		f    func(float64) float64
+	}{
+		{"InQuad", EaseInQuad}, {"OutQuad", EaseOutQuad}, {"InOutQuad", EaseInOutQuad},
+		{"InCubic", EaseInCubic}, {"OutExpo", EaseOutExpo}, {"InOutExpo", EaseInOutExpo},
+		{"OutElastic", EaseOutElastic}, {"OutBounce", EaseOutBounce},
+		{"Bezier ease", ease}, {"Bezier back", overshoot},
+	}
+	return Slide{Title: "Easings", Transition: TransitionWipe,
+		View: func(c Ctx, sc *Scene) {
+			p, th := sc.Px, c.Theme
+			top := heading(c, p, "Easings: the Ease family and CubicBezier")
+			cw, ch := c.X(0.2), c.Y(0.15)
+			clock := math.Mod(c.T/2.5, 1)
+			for i, cv := range curves {
+				x0 := c.X(0.03) + float64(i%4)*(cw+c.X(0.04))
+				y0 := top + c.Y(0.02) + float64(i/4)*(ch+c.Y(0.1))
+				p.RoundRect(x0, y0, cw, ch, 1, 1, th.Faint, 1)
+				at := func(x float64) float64 { return y0 + ch - cv.f(x)*ch*0.6 - ch*0.2 }
+				for k := 0; k <= 60; k++ {
+					x := float64(k) / 60
+					p.Disc(x0+x*cw, at(x), 1, th.Accent2, 1)
+				}
+				p.Disc(x0+clock*cw, at(clock), 2.5, th.Accent, 1)
+				Label(c, p, cv.name, x0, y0+ch+2, th.Muted, Left)
+			}
 		}}
 }
