@@ -17,19 +17,24 @@ import (
 //go:embed fonts/figlet/*.flf
 var figFiles embed.FS
 
-// The stock block fonts. Load more FIGlet fonts with LoadFigFont.
+// The default block fonts use Spleen under BSD-2-Clause; see fonts/figlet.
 var (
-	BlockShadow = stockFig("ANSI Shadow")          // █ with box-drawing shadow; 6 rows
-	BlockSolid  = stockFig("ANSI Regular")         // solid blocks; 5 rows
-	BlockSmall  = stockFig("Calvin S")             // thin box-drawing; 3 rows
-	BlockHuge   = stockFig("DOS Rebel")            // tall shaded blocks; 9 rows
-	BlockFancy  = stockFig("Delta Corps Priest 1") // dramatic; 8 rows
+	// BlockShadow is Spleen 6x12 with a baked-in shaded shadow.
+	BlockShadow = stockFig("Spleen 6x12 Shadow")
+	// BlockSolid is Spleen 6x12, solid pixel lettering for headings.
+	BlockSolid = stockFig("Spleen 6x12")
+	// BlockSmall is Spleen 5x8, compact pixel lettering.
+	BlockSmall = stockFig("Spleen 5x8")
+	// BlockHuge is Spleen 8x16, larger pixel lettering.
+	BlockHuge = stockFig("Spleen 8x16")
+	// BlockFancy is Spleen 12x24, more detailed pixel lettering.
+	BlockFancy = stockFig("Spleen 12x24")
 )
 
-// FigFont is a parsed FIGlet (.flf) font, classic terminal-character type drawn
+// FigletFont is a parsed FIGlet (.flf) font, classic terminal-character type drawn
 // by Block. Stock fonts' files and provenance are in fonts/figlet.
-type FigFont struct {
-	Name string // the font's file name without .flf
+type FigletFont struct {
+	Name string // display name; file loaders use the file name without .flf
 	// Height is the row count the font file declares. Rendered lines trim
 	// blank padding rows, so use Rows for the height of drawn text.
 	Height  int
@@ -41,28 +46,87 @@ type FigFont struct {
 // each other, until layout turns it into a space.
 const hardBlank = ' '
 
-func stockFig(name string) *FigFont { return LoadFigFont(figFiles, "fonts/figlet/"+name+".flf") }
+func stockFig(name string) *FigletFont { return StockFigletFont(name) }
 
-// LoadFigFont loads a FIGlet (.flf) font from fsys, named after its file. Fonts
+// StockFigletFont loads a bundled FIGlet font by name, without the .flf suffix.
+// StockFigletFontNames lists the available names. Load each font once, outside
+// frame functions, and pass it to Block.Font or FitBlock. It panics for an
+// unknown name. Bundled fonts retain BSD or OFL terms; see fonts/figlet.
+func StockFigletFont(name string) *FigletFont {
+	return LoadFigletFont(figFiles, "fonts/figlet/"+name+".flf")
+}
+
+// StockFigletFontNames returns the bundled FIGlet font names in alphabetical
+// order, without .flf suffixes. The returned slice belongs to the caller.
+func StockFigletFontNames() []string {
+	paths, err := fs.Glob(figFiles, "fonts/figlet/*.flf")
+	if err != nil {
+		panic(err)
+	}
+	names := make([]string, len(paths))
+	for i, path := range paths {
+		names[i] = strings.TrimSuffix(pathpkg.Base(path), ".flf")
+	}
+	slices.Sort(names)
+	return names
+}
+
+// LoadFigletFont loads a FIGlet (.flf) font from fsys, named after its file. Fonts
 // of block (█ ▀ ▄ ░) and box-drawing (═ ║ ╗) characters draw best. It panics if
-// the font is missing or broken.
-func LoadFigFont(fsys fs.FS, path string) *FigFont {
+// the font is missing or broken. fsys may be an embed.FS or an os.DirFS. Load
+// once, outside frame functions. For bytes and error handling, use ParseFigletFont.
+func LoadFigletFont(fsys fs.FS, path string) *FigletFont {
 	b, err := fs.ReadFile(fsys, path)
 	if err != nil {
 		panic(err)
 	}
 	name := strings.TrimSuffix(pathpkg.Base(path), ".flf")
-	f, err := parseFig(name, string(b))
+	f, err := ParseFigletFont(name, b)
 	if err != nil {
 		panic(path + ": " + err.Error())
 	}
 	return f
 }
 
+// ParseFigletFont parses a FIGlet (.flf) font from data, using name for FigletFont.Name.
+// It returns an error for missing or malformed ASCII glyph data. Only ASCII
+// input glyphs are loaded; selected Unicode blocks, shades and box-drawing
+// strokes are painted by Block. ASCII-art strokes such as / and _ are not.
+func ParseFigletFont(name string, data []byte) (*FigletFont, error) {
+	return parseFig(name, string(data))
+}
+
+// FigFont is an alias for FigletFont.
+//
+// Deprecated: Use FigletFont.
+type FigFont = FigletFont
+
+// StockFigFont loads a bundled FIGlet font.
+//
+// Deprecated: Use StockFigletFont.
+func StockFigFont(name string) *FigletFont { return StockFigletFont(name) }
+
+// StockFigFontNames lists the bundled FIGlet font names.
+//
+// Deprecated: Use StockFigletFontNames.
+func StockFigFontNames() []string { return StockFigletFontNames() }
+
+// LoadFigFont loads a FIGlet font from fsys.
+//
+// Deprecated: Use LoadFigletFont.
+func LoadFigFont(fsys fs.FS, path string) *FigletFont { return LoadFigletFont(fsys, path) }
+
+// ParseFigFont parses a FIGlet font from data.
+//
+// Deprecated: Use ParseFigletFont.
+func ParseFigFont(name string, data []byte) (*FigletFont, error) {
+	return ParseFigletFont(name, data)
+}
+
 // parseFig reads the .flf format: header, comment lines, then each character's
 // rows, which end with an end mark (usually '@', doubled on the last row). Only
 // ASCII is loaded.
-func parseFig(name, src string) (*FigFont, error) {
+func parseFig(name, src string) (*FigletFont, error) {
 	sc := bufio.NewScanner(strings.NewReader(src))
 	sc.Buffer(make([]byte, 1<<16), 1<<20)
 	if !sc.Scan() {
@@ -72,13 +136,28 @@ func parseFig(name, src string) (*FigFont, error) {
 	if len(hdr) < 6 || !strings.HasPrefix(hdr[0], "flf2a") {
 		return nil, fmt.Errorf("not a FIGlet font")
 	}
-	hardblank, _ := utf8.DecodeRuneInString(hdr[0][5:])
-	height, _ := strconv.Atoi(hdr[1])
-	oldLayout, _ := strconv.Atoi(hdr[4])
-	comments, _ := strconv.Atoi(hdr[5])
-	for i := 0; i < comments && sc.Scan(); i++ {
+	hardblank, size := utf8.DecodeRuneInString(hdr[0][5:])
+	if hardblank == utf8.RuneError || size != len(hdr[0][5:]) || size == 0 {
+		return nil, fmt.Errorf("invalid FIGlet hardblank")
 	}
-	f := &FigFont{Name: name, Height: height, kerning: oldLayout >= 0, glyphs: map[rune][][]rune{}}
+	height, err := strconv.Atoi(hdr[1])
+	if err != nil || height <= 0 || height > len(src) {
+		return nil, fmt.Errorf("invalid FIGlet height %q", hdr[1])
+	}
+	oldLayout, err := strconv.Atoi(hdr[4])
+	if err != nil {
+		return nil, fmt.Errorf("invalid FIGlet layout %q", hdr[4])
+	}
+	comments, err := strconv.Atoi(hdr[5])
+	if err != nil || comments < 0 {
+		return nil, fmt.Errorf("invalid FIGlet comment count %q", hdr[5])
+	}
+	for i := 0; i < comments; i++ {
+		if !sc.Scan() {
+			return nil, fmt.Errorf("truncated font comments")
+		}
+	}
+	f := &FigletFont{Name: name, Height: height, kerning: oldLayout >= 0, glyphs: map[rune][][]rune{}}
 	for r := rune(32); r <= 126; r++ {
 		rows := make([][]rune, 0, height)
 		for range height {
@@ -104,7 +183,7 @@ func parseFig(name, src string) (*FigFont, error) {
 }
 
 // lookup returns r's glyph, falling back to its uppercase.
-func (f *FigFont) lookup(r rune) ([][]rune, bool) {
+func (f *FigletFont) lookup(r rune) ([][]rune, bool) {
 	if g, ok := f.glyphs[r]; ok {
 		return g, true
 	}
@@ -112,7 +191,7 @@ func (f *FigFont) lookup(r rune) ([][]rune, bool) {
 	return g, ok
 }
 
-func (f *FigFont) glyph(r rune) [][]rune {
+func (f *FigletFont) glyph(r rune) [][]rune {
 	if g, ok := f.lookup(r); ok {
 		return g
 	}
@@ -144,18 +223,18 @@ func (l figLayout) width() int {
 }
 
 type figKey struct {
-	f *FigFont
+	f *FigletFont
 	s string
 }
 
 var figLayouts = memo[figKey, figLayout]{max: 4096}
 
 // render lays out one line of text. Callers must not modify the result.
-func (f *FigFont) render(s string) figLayout {
+func (f *FigletFont) render(s string) figLayout {
 	return figLayouts.get(figKey{f, s}, func() figLayout { return f.layout(s) })
 }
 
-func (f *FigFont) layout(s string) figLayout {
+func (f *FigletFont) layout(s string) figLayout {
 	rows := make(figLayout, f.Height)
 	for i, r := range []rune(s) {
 		g := f.glyph(r)
@@ -232,9 +311,9 @@ func trimBlankRows(rows figLayout) figLayout {
 }
 
 // Width returns the width in cells of s rendered on one line.
-func (f *FigFont) Width(s string) int { return f.render(s).width() }
+func (f *FigletFont) Width(s string) int { return f.render(s).width() }
 
-func (f *FigFont) widest(lines []string) int {
+func (f *FigletFont) widest(lines []string) int {
 	w := 0
 	for _, l := range lines {
 		w = max(w, f.Width(l))
@@ -244,18 +323,18 @@ func (f *FigFont) widest(lines []string) int {
 
 // Rows returns the height in cells of one rendered line, measured on a sample
 // with ascenders, descenders and capitals so it is the same for every line.
-func (f *FigFont) Rows() int { return len(f.render("AgjM")) }
+func (f *FigletFont) Rows() int { return len(f.render("AgjM")) }
 
 // Wrap breaks s into lines no wider than maxW cells, at spaces, keeping "\n".
 // Like Font.Wrap it balances the lines: each paragraph uses the narrowest
 // width needing no more lines than maxW does.
-func (f *FigFont) Wrap(s string, maxW int) []string {
+func (f *FigletFont) Wrap(s string, maxW int) []string {
 	return wrapBalanced(s, float64(maxW), func(l string) float64 { return float64(f.Width(l)) })
 }
 
 // Has reports whether the font has a visible glyph for each non-space rune of
 // s.
-func (f *FigFont) Has(s string) bool {
+func (f *FigletFont) Has(s string) bool {
 	for _, r := range s {
 		if r == ' ' || r == '\n' {
 			continue
@@ -273,7 +352,7 @@ func (f *FigFont) Has(s string) bool {
 // DropQuotes removes quote marks the font has no glyph for, which beats falling
 // back to a smaller font. FitBlock does this itself; call it before wrapping or
 // measuring a string FitBlock fitted.
-func (f *FigFont) DropQuotes(s string) string {
+func (f *FigletFont) DropQuotes(s string) string {
 	return strings.Map(func(r rune) rune {
 		switch r {
 		case '\'', '’', '‘', '"', '“', '”', '`':

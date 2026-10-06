@@ -1,0 +1,81 @@
+{
+  "retrieved_on": "2026-10-06",
+  "source": "https://github.com/google/fonts/tree/main/ofl",
+  "pillow_version": "12.3.0",
+  "fonttools_version": "4.61.1",
+  "freetype_version": "2.14.3",
+  "capital_ink_height_pixels": 18,
+  "threshold": 128,
+  "fonts": [
+    {
+      "source_directory": "bungee",
+      "source_filename": "Bungee-Regular.ttf",
+      "ttf_sha256": "c4f5361ce120af3e6b9156d0bf379fa19cda2ea0cd18ac01fd99596c6bf66e3f",
+      "ofl_sha256": "d5787a50dde5be6c6daecab9ed459939b1bc37cff0d0e00257eaf1ec2cf4c16c",
+      "height": 14,
+      "pixel_size": 25,
+      "ascii_glyphs": 95,
+      "copyright": "Copyright 2023 The Bungee Project Authors (https://github.com/djrrb/Bungee)",
+      "ttf_copyrights": [
+        "Copyright 2023 The Bungee Project Authors (https://github.com/djrrb/Bungee)"
+      ],
+      "bundled_file": "Decker Sign.flf"
+    },
+    {
+      "source_directory": "blackopsone",
+      "source_filename": "BlackOpsOne-Regular.ttf",
+      "ttf_sha256": "282a825b5f294377387e3969f765408157dbea8da0f5d0aae68c6bc704b145b3",
+      "ofl_sha256": "f67ca4a200424868ee8fcd5464d7b35ac1cbf7723f6bfdbd19a8524689fab9a8",
+      "height": 14,
+      "pixel_size": 28,
+      "ascii_glyphs": 95,
+      "copyright": "Copyright 2022 The Black-Ops Project Authors (https://github.com/googlefonts/googlefonts-project-template)",
+      "ttf_copyrights": [
+        "Copyright 2022 The PinyonScript Project Authors (https://github.com/SorkinType/Black-Ops)"
+      ],
+      "bundled_file": "Decker Stencil.flf"
+    },
+    {
+      "source_directory": "rubikmonoone",
+      "source_filename": "RubikMonoOne-Regular.ttf",
+      "ttf_sha256": "b22624b6a36e543e942106edfccd198c50b57b65b924bfe02a6f0a5699429e6b",
+      "ofl_sha256": "43d530580461a574f6dfed9e15af6a74e95f7c04d9bfa1174a63ff036e8eee07",
+      "height": 14,
+      "pixel_size": 26,
+      "ascii_glyphs": 95,
+      "copyright": "Copyright 2015 The Rubik Project Authors (mail@hubertfischer.com)",
+      "ttf_copyrights": [
+        "Copyright 2015 The Rubik Project Authors (mail@hubertfischer.com)"
+      ],
+      "bundled_file": "Decker Geometric.flf"
+    },
+    {
+      "source_directory": "alfaslabone",
+      "source_filename": "AlfaSlabOne-Regular.ttf",
+      "ttf_sha256": "28664afa698a3393bd5a29eec750230a0645c5301d62200e5f2d3a027fb2299d",
+      "ofl_sha256": "e315abc82a78710c7242e2f2e6529651fd631d4d50e6ad98ea194f9b54c3d701",
+      "height": 15,
+      "pixel_size": 23,
+      "ascii_glyphs": 95,
+      "copyright": "Copyright 2016 The Alfa Slab One Project Authors (http://www.jmsole.cl | info@jmsole.cl), with Reserved Font Name \"Alfa Slab\".",
+      "ttf_copyrights": [
+        "Copyright 2016 The Alfa Slab One Project Authors (http://www.jmsole.cl | info@jmsole.cl), with Reserved Font Name \"Alfa Slab\"."
+      ],
+      "bundled_file": "Decker Slab.flf"
+    },
+    {
+      "source_directory": "russoone",
+      "source_filename": "RussoOne-Regular.ttf",
+      "ttf_sha256": "bc0abcc660bd8b7ad3000ecb2898a27c58a29a50f7ec81652fa12e75148d09df",
+      "ofl_sha256": "3ac1301549523d9861fedca12871f24e575fbd26d520632fc00ba849b471d275",
+      "height": 15,
+      "pixel_size": 26,
+      "ascii_glyphs": 95,
+      "copyright": "Copyright (c) 2011-2012, Jovanny Lemonad (jovanny.ru), with Reserved Font Name \"Russo\"",
+      "ttf_copyrights": [
+        "Copyright (c) 2011-2012, Jovanny Lemonad (jovanny.ru), with Reserved Font Name \"Russo\""
+      ],
+      "bundled_file": "Decker Square.flf"
+    }
+  ]
+}

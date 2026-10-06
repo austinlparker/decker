@@ -2,8 +2,8 @@
 
 The Go library `github.com/austinlparker/decker`: a terminal slide-deck engine.
 A talk is a separate `main` package, usually in another repo, that builds a
-`Deck` and calls `Main`. Read `doc.go` for the model and `README.md` ("Where
-things live") for the file map.
+`Deck` and calls `Main`. Read `doc.go` for the model, `README.md` for the
+quick start, and `docs/architecture.md` for the file map.
 
 ## Invariants
 
@@ -59,7 +59,8 @@ UPDATE_GOLDEN=1 go test ./...       # re-record goldens: only for intended outpu
 Every exported identifier has a godoc comment that starts with its name. Other
 comments say *why*: a constraint, an invariant, a surprise. No narration of what
 the next line does, no history ("now we..."), no commented-out code. Keep the
-`doc.go` type map and the README tables in step with any file or type you add.
+`doc.go` type map and the guide and architecture tables in step with any
+file or type you add.
 
 ## Recipes
 
@@ -82,27 +83,27 @@ elements itself, like `morph`, goes in unwrapped. A kind with no entry cuts
 straight to the new frame. Add the
 kind to `transitionNames` and `transitionKinds` in `golden_internal_test.go`,
 and use it on a slide in `gallery_test.go`. Mention it in `Slide.Transition` docs
-and the README. Easing is the implementation's job: `p` is linear.
+and the guide. Easing is the implementation's job: `p` is linear.
 
 **Add a letter effect** (`effects.go`). Write `func Name(t, ...) GlyphEffect`
 returning `func(i int) GlyphFX`. `t` is seconds since the effect starts; the zero
 `GlyphFX` hides the glyph, `GlyphFX{Alpha: 1}` leaves it alone. Use `staggered`
 for per-letter delays and `Hash01` for noise. It composes through `Chain` with no
 more work. Add it to the "Letter effects" slide in `gallery_test.go` and to the
-README Toolbox row.
+guide Toolbox row.
 
 **Add a block effect** (`blockfx.go`). Write `func BlockName(t, ...) BlockEffect`
 returning `func(c BlockCell) BlockFX`; same rules as above, with `BlockCell`
 giving `Col`, `Row`, `U`, `Char`, `H` and `BlockFX` adding `Bright` and `Color`.
 It composes through `BlockChain`. Add it to the "Block effects" slides in
-`gallery_test.go` and to the README Toolbox row.
+`gallery_test.go` and to the guide Toolbox row.
 
 **Add a stock component** (`draw.go`). Follow the convention in `Panel`'s doc:
 take `(c Ctx, p *Pixels, ...)` with pixel coordinates, size from `c.Unit` and
 `c.SmallText`, take colors and fonts from `c.Theme`, reveal builds with
 `c.Reached` and `c.Since`, return the size drawn. Many options means a struct
 with a `Draw` method, like `CycleDiagram`. Draw into `p`, not into a new
-`Scene`. Add it to the "Components" slide in `gallery_test.go` and to the README
+`Scene`. Add it to the "Components" slide in `gallery_test.go` and to the guide
 Toolbox.
 
 **Add a key binding** (`keys.go`, `model.go`). Add one row to `bindings`: the
@@ -110,7 +111,7 @@ space-separated key names (as `tea.KeyPressMsg.String` reports them), an action
 name, `nav` true if the presenter view may press it on the deck's behalf, and
 the help-box text (empty to hide it). Handle the action name in the `switch` in
 `model.handleKey`. Presenter-only keys (`t`, `T`) are handled in
-`presenter.handleKey` instead. Update the README Keys table. The help box
+`presenter.handleKey` instead. Update the guide Keys table. The help box
 is generated from `bindings`.
 
 **Add a CLI flag or mode** (`cli.go`). Add a field to `options`, register it in
@@ -119,5 +120,5 @@ applies to one). For a mode, add a `case` to the `switch` in `run`, ordered
 before the cases it should win over, and write `runXxx(d *Deck, o options)
 error`. Rendering without a terminal should go through `stillFrame` or
 `renderSlideGrid`/`Deck.Render` (cells), or `renderSlide` (pixels), not a live
-model. Update "Running a deck" in the
-README.
+model. Update "Running a deck" in
+`docs/guide.md` and `docs/cli.md`.

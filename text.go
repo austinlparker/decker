@@ -9,9 +9,12 @@ import (
 type Align int
 
 const (
-	Left   Align = iota // x is the left edge
-	Center              // x is the center
-	Right               // x is the right edge
+	// Left aligns text's left edge to x.
+	Left Align = iota
+	// Center aligns text's center to x.
+	Center
+	// Right aligns text's right edge to x.
+	Right
 )
 
 func (a Align) shift(w float64) float64 {

@@ -16,7 +16,7 @@ type fitBlockKey struct {
 }
 
 type fitBlockResult struct {
-	f     *FigFont
+	f     *FigletFont
 	lines []string
 	scale float64
 }
@@ -28,7 +28,7 @@ var fitBlocks = memo[fitBlockKey, fitBlockResult]{max: 4096}
 // box. Fonts missing a character of s are skipped. Fonts are in order of
 // preference: a later one only wins if its letters come out 15%+ taller. Scales
 // snap to half pixels (whole from 4 up) for nearly crisp edges.
-func FitBlock(s string, maxW, maxH float64, maxLines, gap int, fonts ...*FigFont) (*FigFont, []string, float64) {
+func FitBlock(s string, maxW, maxH float64, maxLines, gap int, fonts ...*FigletFont) (*FigletFont, []string, float64) {
 	var ids strings.Builder
 	for _, f := range fonts {
 		fmt.Fprintf(&ids, "%p,", f)
@@ -39,7 +39,7 @@ func FitBlock(s string, maxW, maxH float64, maxLines, gap int, fonts ...*FigFont
 	return r.f, slices.Clone(r.lines), r.scale
 }
 
-func fitBlock(s string, maxW, maxH float64, maxLines, gap int, fonts []*FigFont) fitBlockResult {
+func fitBlock(s string, maxW, maxH float64, maxLines, gap int, fonts []*FigletFont) fitBlockResult {
 	var cands []fitBlockResult
 	for _, f := range fonts {
 		text := f.DropQuotes(s)
@@ -69,7 +69,7 @@ func fitBlock(s string, maxW, maxH float64, maxLines, gap int, fonts []*FigFont)
 
 // fitFont finds the wrap of text in f that scales up most inside maxW×maxH,
 // or nil if even one line is more than maxLines.
-func fitFont(f *FigFont, text string, maxW, maxH float64, maxLines, gap int) (best []string, bestScale float64) {
+func fitFont(f *FigletFont, text string, maxW, maxH float64, maxLines, gap int) (best []string, bestScale float64) {
 	bestWidest := 0
 	for tw := f.widest(strings.Split(text, "\n")); tw > 0; tw = tw * 94 / 100 {
 		lines := f.Wrap(text, tw)

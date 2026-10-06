@@ -6,7 +6,30 @@
 // the deck its command line: present, presenter view, dev reload, snapshots,
 // contact sheets and video.
 //
-//	func main() { decker.Main(talk()) }
+// A minimal talk loads its fonts once and draws from the frame's context:
+//
+//	func main() {
+//		theme := &decker.Theme{
+//			Background: decker.Hex("#101820"),
+//			Text:       decker.Hex("#F0F0F0"),
+//			Display:    decker.StockFont("SpaceGrotesk-Bold"),
+//			Body:       decker.StockFont("SpaceGrotesk-Medium"),
+//			Mono:       decker.StockFont("JetBrainsMono-ExtraBold"),
+//		}
+//		decker.Main(decker.Deck{Name: "hello", Theme: theme, Slides: []decker.Slide{{
+//			Title: "Hello",
+//			View: func(c decker.Ctx, sc *decker.Scene) {
+//				decker.Text{Font: c.Theme.Display, Size: c.Size(0.15), Color: c.Theme.Text}.
+//					Draw(sc.Px, "Hello", c.X(0.08), c.Y(0.2))
+//			},
+//		}}})
+//	}
+//
+// Import github.com/austinlparker/decker from a separate main package. See the
+// [hello example] for a complete program with animation and build steps, the
+// [guide] for slide authoring, and the [CLI reference] for flags and exports.
+// This checkout requires Go 1.27.0 or later and uses Unix signals and process
+// replacement. Video export additionally requires ffmpeg with libx264.
 //
 // # Pixel canvas
 //
@@ -32,15 +55,19 @@
 //   - [Rect]: a box on the canvas; layout cuts and splits rects
 //     ([Rect.CutTop], [Rect.Cols], [Rect.Grid]).
 //   - [Theme]: colors, typefaces, chart series colors and an optional overlay
-//     the engine uses.
+//     the engine uses. Display, Body and Mono fonts are required.
 //   - [Scene], [Pixels]: what a View draws on (the engine makes the scene and
-//     draws the theme's overlay on it), and the cells above the pixels.
+//     draws the theme's overlay on it), and its pixel canvas. Scene also has
+//     a native character layer; that layer is omitted from video exports.
 //     [Scene.Place] hands the engine a keyed element to draw instead, which
 //     [TransitionMorph] can move from one slide to the next.
 //   - [Text], [Font]: smooth antialiased type, fitted and wrapped to a box.
 //   - [Rich], [Span]: the same type with mixed fonts, colors and decorations
 //     inside a line ([ParseSpans] reads a light markup).
-//   - [Block], [FigFont]: FIGlet block letters scaled to fill a box ([FitBlock]).
+//   - [Block], [FigletFont]: FIGlet block letters scaled to fill a box ([FitBlock]);
+//     choose bundled faces with [StockFigletFont] and [StockFigletFontNames], or
+//     supply fonts with [LoadFigletFont] and [ParseFigletFont]. Smooth type also
+//     accepts consumer fonts through [LoadFont] and [ParseFont].
 //   - [GlyphEffect], [BlockEffect]: per-letter and per-cell animations,
 //     combined with [Chain] and [BlockChain].
 //   - [Table], [TableReveal]: a grid of text fitted to a [Rect] at one size,
@@ -63,6 +90,10 @@
 // [CubicBezier], [Spring]) are in draw.go, diagram.go, table.go, code.go and
 // anim.go. Charts ([BarChart], [LineChart], [DonutChart], [Sparkline]) and the
 // counting [Stat] are in chart.go; their series colors are [Theme.Series]. The
-// package README is the full guide, with the command line, keys and presenter
-// view.
+// guide covers the command line, keys and presenter view; the README starts
+// with a runnable talk.
+//
+// [hello example]: https://github.com/austinlparker/decker/blob/main/examples/hello/main.go
+// [guide]: https://github.com/austinlparker/decker/blob/main/docs/guide.md
+// [CLI reference]: https://github.com/austinlparker/decker/blob/main/docs/cli.md
 package decker
