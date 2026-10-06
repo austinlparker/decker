@@ -39,10 +39,13 @@
 //   - [Block], [FigFont]: FIGlet block letters scaled to fill a box ([FitBlock]).
 //   - [GlyphEffect], [BlockEffect]: per-letter and per-cell animations,
 //     combined with [Chain] and [BlockChain].
+//   - [Table], [TableReveal]: a grid of text fitted to a [Rect] at one size,
+//     built up by row or column over steps.
 //   - [Transition]: how a slide enters (push, dissolve, wipe, morph, none),
 //     and for how long ([Transition.Over]).
 //
-// Stock components ([Panel], [Arrow], [CycleDiagram], [BulletList]) and
-// easing helpers ([Ease], [Spring]) are in draw.go and anim.go. The package
+// Stock components ([Panel], [Arrow], [CycleDiagram], [BulletList]), the
+// [Table] in table.go, and easing helpers ([Ease], [Spring]) are in draw.go,
+// table.go and anim.go. The package
 // README is the full guide, with the command line, keys and presenter view.
 package decker
