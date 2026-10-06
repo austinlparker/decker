@@ -102,13 +102,17 @@ func listSlides(d *Deck) {
 		if s.steps() > 1 {
 			plural = "s"
 		}
-		fmt.Printf("%3d  %s (%d step%s)\n", i+1, s.Title, s.steps(), plural)
+		sec := ""
+		if name := sectionAt(d.Slides, i); name != "" {
+			sec = "  [" + name + "]"
+		}
+		fmt.Printf("%3d  %s (%d step%s)%s\n", i+1, s.Title, s.steps(), plural, sec)
 	}
 }
 
 // stillFrame renders slide idx at step, secs after it appeared, at w×h cells.
 func stillFrame(d *Deck, idx, step int, secs float64, w, h int) *grid {
-	return renderSlideGrid(d.Slides[idx], Ctx{W: w, H: h, T: secs, Step: step, StepT: secs, Theme: d.Theme})
+	return renderSlideGrid(d.Slides[idx], Ctx{W: w, H: h, T: secs, Step: step, StepT: secs, Theme: d.Theme}.at(d.Slides, idx))
 }
 
 func runSheet(d *Deck, o options) error {

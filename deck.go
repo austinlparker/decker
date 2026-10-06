@@ -17,28 +17,32 @@ type Deck struct {
 }
 
 // Render draws slide i (0-based) as a styled string of exactly c.W×c.H cells,
-// as -snapshot prints it. A nil c.Theme uses the deck's; a panic renders as its
-// error.
+// as -snapshot prints it. A nil c.Theme uses the deck's, and c.Index, c.Count
+// and c.Section are set from i and the deck; a panic renders as its error.
 func (d *Deck) Render(i int, c Ctx) string {
-	g := renderSlideGrid(d.Slides[i], d.withTheme(c))
+	g := renderSlideGrid(d.Slides[i], d.withTheme(i, c))
 	defer g.release()
 	return g.String()
 }
+
+// Section returns the section slide i (0-based) belongs to: its own
+// Slide.Section, else the nearest one before it, else "".
+func (d *Deck) Section(i int) string { return sectionAt(d.Slides, i) }
 
 // Steps returns how many build steps slide i (0-based) has.
 func (d *Deck) Steps(i int) int { return d.Slides[i].steps() }
 
 // Draw renders slide i into cells without encoding them: the live deck's
-// per-frame work, for benchmarks.
+// per-frame work, for benchmarks. Like Render it sets c's position from i.
 func (d *Deck) Draw(i int, c Ctx) {
-	renderSlideGrid(d.Slides[i], d.withTheme(c)).release()
+	renderSlideGrid(d.Slides[i], d.withTheme(i, c)).release()
 }
 
-func (d *Deck) withTheme(c Ctx) Ctx {
+func (d *Deck) withTheme(i int, c Ctx) Ctx {
 	if c.Theme == nil {
 		c.Theme = d.Theme
 	}
-	return c
+	return c.at(d.Slides, i)
 }
 
 func (d *Deck) check() error {
