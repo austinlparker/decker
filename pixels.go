@@ -61,10 +61,12 @@ func (p *Pixels) Add(x, y int, c RGB, a float64) {
 // Box returns inclusive pixel bounds covering [x0,x1]×[y0,y1], clipped to the
 // canvas.
 func (p *Pixels) Box(x0, y0, x1, y1 float64) (int, int, int, int) {
-	ix0 := max(int(math.Floor(x0)), 0)
-	iy0 := max(int(math.Floor(y0)), 0)
-	ix1 := min(int(math.Ceil(x1)), p.W-1)
-	iy1 := min(int(math.Ceil(y1)), p.H-1)
+	// Clip before converting: even finite off-screen coordinates can exceed
+	// the integer range. W/H and -1 preserve empty boxes outside the canvas.
+	ix0 := int(min(max(math.Floor(x0), 0), float64(p.W)))
+	iy0 := int(min(max(math.Floor(y0), 0), float64(p.H)))
+	ix1 := int(max(min(math.Ceil(x1), float64(p.W-1)), -1))
+	iy1 := int(max(min(math.Ceil(y1), float64(p.H-1)), -1))
 	return ix0, iy0, ix1, iy1
 }
 

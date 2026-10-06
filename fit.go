@@ -80,7 +80,7 @@ const minFitSize = 6
 
 type fitKey struct {
 	f          *Font
-	text       string // the parts of a FitAll joined by NUL
+	text       string // text, or length-prefixed FitAll parts
 	maxW, maxH float64
 	maxSize    int
 	leading    float64
@@ -127,7 +127,7 @@ func (f *Font) Fit(s string, maxW, maxH float64, maxSize int, leading float64) (
 // FitAll is Fit for several parts stacked at DefaultLeading; it returns the
 // size and all the wrapped lines in order.
 func FitAll(f *Font, parts []string, maxW, maxH float64, maxSize int) (int, []string) {
-	r := fitted.get(fitKey{f, strings.Join(parts, "\x00"), maxW, maxH, maxSize, DefaultLeading, true}, func() fitResult {
+	r := fitted.get(fitKey{f, labelsKey(parts), maxW, maxH, maxSize, DefaultLeading, true}, func() fitResult {
 		size, lines := f.fit(parts, maxW, maxH, maxSize, DefaultLeading)
 		return fitResult{size, lines}
 	})

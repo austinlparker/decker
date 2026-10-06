@@ -173,12 +173,14 @@ func LerpInt(a, b int, p float64) int { return int(math.Round(Lerp(float64(a), f
 // 1/60 s steps; it stops at settling or after 10 seconds.
 func Spring(from, to, t, freq, damping float64) float64 {
 	const fps = 60
+	// Check the settling cutoff before converting to an integer: a large
+	// finite time can overflow the frame count and look like a negative time.
+	if t >= 10 {
+		return to
+	}
 	n := int(t * fps)
 	if n <= 0 {
 		return from
-	}
-	if n >= 10*fps { // any spring worth using has settled by 10s
-		return to
 	}
 	// Harmonica's step is the exact solution for any dt, so n steps of 1/60 s
 	// are one step of n/60 s.
