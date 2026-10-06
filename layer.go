@@ -3,7 +3,8 @@ package decker
 import "math"
 
 // Trim hides the outer fractions of an element's bounds, from each side in:
-// {Right: 0.25} shows the left three quarters. The zero Trim shows it all.
+// {Right: 0.25} shows the left three quarters. The zero Trim shows it all, and
+// one whose opposite sides add up to 1 or more shows nothing, glow included.
 type Trim struct{ Left, Top, Right, Bottom float64 }
 
 // Composite draws a group of things as one: onto a layer of its own, then
@@ -125,20 +126,36 @@ func (k Composite) Draw(p *Pixels, bounds Rect, draw func(p *Pixels)) {
 	tw, th := bounds.W*s, bounds.H*s
 	const open = 1e9
 	win := [4]float64{-open, -open, open, open}
-	if t := Clamp01(k.Trim.Left); t > 0 {
-		win[0] = tx0 + t*tw
-	}
-	if t := Clamp01(k.Trim.Top); t > 0 {
-		win[1] = ty0 + t*th
-	}
-	if t := Clamp01(k.Trim.Right); t > 0 {
-		win[2] = tx0 + tw - t*tw
-	}
-	if t := Clamp01(k.Trim.Bottom); t > 0 {
-		win[3] = ty0 + th - t*th
-	}
-	if win[2] <= win[0] || win[3] <= win[1] {
+	// On a trimmed axis the window follows the bounds: a trimmed side sits at
+	// its cut, and the other side reaches past the bounds (for a glow) only
+	// as far as the share of the axis left showing, so nothing strays out of
+	// a side that is hidden, and a fully cut axis shows nothing at all.
+	reach := margin * s
+	l, r := Clamp01(k.Trim.Left), Clamp01(k.Trim.Right)
+	if l+r >= 1 {
 		return
+	}
+	if l+r > 0 {
+		win[0], win[2] = tx0-reach*(1-l-r), tx0+tw+reach*(1-l-r)
+		if l > 0 {
+			win[0] = tx0 + l*tw
+		}
+		if r > 0 {
+			win[2] = tx0 + tw - r*tw
+		}
+	}
+	t, b := Clamp01(k.Trim.Top), Clamp01(k.Trim.Bottom)
+	if t+b >= 1 {
+		return
+	}
+	if t+b > 0 {
+		win[1], win[3] = ty0-reach*(1-t-b), ty0+th+reach*(1-t-b)
+		if t > 0 {
+			win[1] = ty0 + t*th
+		}
+		if b > 0 {
+			win[3] = ty0 + th - b*th
+		}
 	}
 
 	src := [4]int{sx0, sy0, sx1, sy1}

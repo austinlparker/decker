@@ -98,6 +98,9 @@ func Pop(t, dur float64) Composite {
 // wipeTrim is the trim that leaves the fraction v of an element visible,
 // anchored at its edge side.
 func wipeTrim(edge Direction, v float64) Composite {
+	if v <= 0 {
+		return Composite{}
+	}
 	k := Identity()
 	hidden := 1 - v
 	switch edge {
