@@ -360,6 +360,9 @@ func (f focusState) bar() (y0, y1, alpha float64) {
 // Draw renders the block inside r, anchored at its top-left, and returns the
 // size of the plate. The plate hugs the code, and is never larger than r.
 func (k Code) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
+	if r.W <= 0 || r.H <= 0 {
+		return 0, 0
+	}
 	th := c.Theme
 	f := th.Mono
 	lx := lexCode(k.Source, k.Lang, k.Diff)
@@ -389,7 +392,7 @@ func (k Code) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 
 	fillPlate(p, r.X, r.Y, w, h, min(c.Unit(0.03), w/3, h/3), th.Panel)
 	if k.Title != "" {
-		k.drawTab(c, p, r.X+pad, r.Y+pad*0.6, float64(tabSize))
+		k.drawTab(c, p, r.X+pad, r.Y+pad*0.6, float64(tabSize), r.X+w-pad, r.Y+h-pad*0.3)
 	}
 
 	left, top := r.X+pad, r.Y+head
@@ -472,15 +475,38 @@ func (s SyntaxColors) color(role codeRole, plain RGB) RGB {
 }
 
 // drawTab draws the filename tab with its top-left at (x, y); size is the
-// small Mono size.
-func (k Code) drawTab(c Ctx, p *Pixels, x, y, size float64) {
+// small Mono size. The tab stays left of maxX and above maxY (the plate's
+// padded edges): a title too long for the room is cut short with an ellipsis,
+// and a tab with no room for even that is skipped. The cut is drawn as two
+// strings so a frame allocates nothing.
+func (k Code) drawTab(c Ctx, p *Pixels, x, y, size, maxX, maxY float64) {
 	th := c.Theme
-	f := th.Mono
-	w, h := f.Measure(k.Title, int(size))+size*1.4, size*1.8
+	rf, rs := th.Mono.resolve(int(size))
+	adv := rf.Measure("0", rs)
+	pad := size * 0.7
+	h := size * 1.8
+	room := int((maxX - x - 2*pad) / adv) // columns of title the tab can hold
+	if room < 2 || y+h > maxY {
+		return
+	}
+	title, cols, cut := k.Title, utf8.RuneCountInString(k.Title), false
+	if cols > room {
+		i := 0
+		for range room - 1 {
+			_, sz := utf8.DecodeRuneInString(title[i:])
+			i += sz
+		}
+		title, cols, cut = title[:i], room, true
+	}
+	w := float64(cols)*adv + 2*pad
+	line := max(c.Unit(0.005), 1.5)
 	p.RoundRect(x, y, w, h, min(c.Unit(0.015), h/2), 0, Mix(th.Panel, th.Text, 0.09), 1)
-	p.Rect(x+size*0.4, y+h-max(c.Unit(0.005), 1.5), w-size*0.8, max(c.Unit(0.005), 1.5), th.Accent, 1)
-	rf, rs := f.resolve(int(size))
-	drawMono(p, rf, rs, k.Title, x+size*0.7, y+h/2+rf.CapHeight(rs)/2, rf.Measure("0", rs), x+w, th.Text)
+	p.Rect(x+size*0.4, y+h-line, w-size*0.8, line, th.Accent, 1)
+	base := y + h/2 + rf.CapHeight(rs)/2
+	drawMono(p, rf, rs, title, x+pad, base, adv, x+w, th.Text)
+	if cut {
+		drawMono(p, rf, rs, "\u2026", x+pad+float64(cols-1)*adv, base, adv, x+w, th.Text)
+	}
 }
 
 // drawMono paints s one glyph per column of width adv starting at x, with the

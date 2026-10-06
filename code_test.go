@@ -256,6 +256,60 @@ func TestCodeFrame(t *testing.T) {
 	}
 }
 
+// outsideChanged counts pixels that differ from bg outside r.
+func outsideChanged(p *Pixels, bg RGB, r Rect) (n int) {
+	for y := 0; y < p.H; y++ {
+		for x := 0; x < p.W; x++ {
+			inside := float64(x) >= r.X && float64(x) < r.Right() && float64(y) >= r.Y && float64(y) < r.Bottom()
+			if !inside && p.At(x, y) != bg {
+				n++
+			}
+		}
+	}
+	return n
+}
+
+// TestCodeStaysInRect: the plate, the title tab and the text never paint
+// outside the rect they were given, however long the title or small the rect.
+func TestCodeStaysInRect(t *testing.T) {
+	c := Ctx{W: 240, H: 67, T: 5, Step: 1, StepT: 5, Theme: testTheme}
+	long := "a_very_long_filename_that_cannot_fit.go"
+	for name, tc := range map[string]struct {
+		k Code
+		r Rect
+	}{
+		"long title":     {Code{Source: "x", Title: long}, Rect{20, 20, 70, 30}},
+		"narrow":         {Code{Source: "x", Title: long, LineNumbers: true}, Rect{20, 20, 20, 60}},
+		"short":          {Code{Source: "x\ny\nz", Title: long}, Rect{20, 20, 200, 20}},
+		"tiny":           {Code{Source: "x", Title: "t"}, Rect{20, 20, 3, 3}},
+		"no title":       {Code{Source: strings.Repeat("long line ", 20)}, Rect{20, 20, 70, 30}},
+		"diff and focus": {Code{Source: "+aaaaaaaaaaaaaaaaaaaa\n-b", Diff: true, Title: long, Focus: []LineRange{{1, 2}}}, Rect{20, 20, 60, 40}},
+	} {
+		p := NewPixels(c.W, 2*c.H, testTheme.Background)
+		w, h := tc.k.Draw(c, p, tc.r)
+		if w > tc.r.W || h > tc.r.H {
+			t.Errorf("%s: plate %.1fx%.1f larger than the rect", name, w, h)
+		}
+		if n := outsideChanged(p, testTheme.Background, tc.r); n != 0 {
+			t.Errorf("%s: %d pixels painted outside %v", name, n, tc.r)
+		}
+	}
+}
+
+func TestCodeEmptyRectDrawsNothing(t *testing.T) {
+	c := Ctx{W: 240, H: 67, T: 5, Theme: testTheme}
+	for _, r := range []Rect{{}, {20, 20, 0, 40}, {20, 20, 40, 0}, {20, 20, -5, 40}} {
+		p := NewPixels(c.W, 2*c.H, testTheme.Background)
+		w, h := Code{Source: "x := 1", Title: "main.go", LineNumbers: true, Focus: []LineRange{{1, 1}}}.Draw(c, p, r)
+		if w != 0 || h != 0 {
+			t.Errorf("%v: returned %vx%v", r, w, h)
+		}
+		if n := outsideChanged(p, testTheme.Background, Rect{}); n != 0 {
+			t.Errorf("%v: painted %d pixels", r, n)
+		}
+	}
+}
+
 // TestFillPlate pins fillPlate to RoundRect, which it only speeds up.
 func TestFillPlate(t *testing.T) {
 	bg, col := Hex("#101820"), Hex("#FF7A00")
