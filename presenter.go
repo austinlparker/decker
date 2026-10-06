@@ -212,6 +212,9 @@ func (p presenter) mainView() string {
 	if !p.linked {
 		right = append(right, p.sty.warn.Render("○ reconnecting to the deck…"))
 	}
+	if p.st.Blank != "" {
+		right = append(right, p.sty.warn.Bold(true).Render("BLANK")+p.sty.muted.Render(" ("+p.st.Blank+")"))
+	}
 	if p.count != "" {
 		right = append(right, p.sty.accent2.Render("go to "+p.count+"…"))
 	}
