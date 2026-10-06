@@ -270,6 +270,39 @@ transition is how a slide *enters*, so going back plays the transition of
 the slide you return to: give both slides `TransitionMorph` to morph both
 ways.
 
+### Element animations
+
+`Text` animates letter by letter; everything else (a panel, an image, a
+diagram) animates as a whole through a `Composite`: its drawing goes onto a
+layer, and the layer is put back faded, moved, scaled about a pivot and
+clipped. Animations are pure functions of `t`, the seconds since they start,
+and return a `Composite`; they come in three kinds. Entrances start hidden and
+end untouched, exits start untouched and end hidden, and emphasis (`Grow`,
+`Shake`, `Dim`) leaves the element as it was. `AppearAt` turns the build
+steps an element comes and goes at into this frame's `Composite`, including
+"hidden until its step".
+
+```go
+r := c.Rect(0.1, 0.3, 0.3, 0.3)
+fx := decker.AppearAt(c, 1, 3, // in at step 1, out at step 3
+	func(t float64) decker.Composite { return decker.FlyIn(c, t, 0.5, decker.DirLeft, 0.1) },
+	func(t float64) decker.Composite { return decker.FadeOut(t, 0.4) },
+).Then(decker.Grow(c.Since(2), 0.4, 1.1)) // a pulse at step 2
+fx.Draw(p, r, func(p *decker.Pixels) {
+	decker.Panel(c, p, r.X, r.Y, r.W, r.H, "hello", c.Theme.Panel, c.Theme.Accent, c.Theme.Text, 1)
+})
+```
+
+`bounds` is where the element lives: only it and a margin of a tenth of the
+screen's height around it (for a glow) is put on a layer, and `Trim` is a
+fraction of it. An identity composite draws straight onto the canvas, and
+a fade or wipe alone costs one copy of the region. A move or scale draws the
+element twice (on black and on white, which tells the layer's coverage) and
+resamples it, so `draw` must be pure, and an element moved off whole pixels is
+a little soft. Additive light (`p.Glow`) in a moved element blends as a screen
+rather than adding. Moving a large element every frame is the kind of full
+region redraw the terminal-setup advice warns about: let it settle.
+
 ### Toolbox
 
 Everything here is in package `decker`.
@@ -290,7 +323,9 @@ Everything here is in package `decker`.
 | Pixel art | `p.Art(PixelArt{Rows, Colors}, x, y, scale, alpha, flip)`; return a different frame for a different `t` to animate |
 | An overlay on every slide | `Theme.Overlay: func(c Ctx, p *Pixels)`: a logo, a handle or a page tag in a corner that slides leave clear |
 | Images | `NewImages(fsys, dir)` over the talk's embedded files, then `images.Draw(p, "shot.png", x, y, w, h, alpha)` |
-| Motion | `Ease`, `EaseOutBack`, `EaseInOutCubic`, `Spring` (Harmonica), `Pulse`, `Lerp`, `Progress` |
+| Element animations | `AppearAt(c, enter, exit, in, out)` builds a `Composite` from "in at step n, out at step m"; entrances `FadeIn`, `FlyIn`, `ZoomIn`, `Pop`, `WipeIn`, exits `FadeOut`, `FlyOut`, `ZoomOut`, `WipeOut`, emphasis `Grow`, `Shake`, `Dim`; join with `Then` or `Combine`, draw with `fx.Draw(p, bounds, draw)`; see [Element animations](#element-animations) |
+| Layers | `Composite{Alpha, DX, DY, Scale, PivotX, PivotY, Trim}.Draw(p, bounds, draw)` draws a group on a pooled layer and fades, moves, scales and clips it as one; `Identity()` is the no-cost default, `Clipped(bounds, clip)` clips to a rect |
+| Motion | `Ease`, `EaseOutBack`, `EaseInOutCubic`, `EaseInQuad`/`EaseOutQuad`/`EaseInOutQuad`, `EaseInCubic`, `EaseOutExpo`/`EaseInOutExpo`, `EaseOutElastic`, `EaseOutBounce`, `CubicBezier(x1, y1, x2, y2)` (CSS-style), `Spring` (Harmonica), `Pulse`, `Lerp`, `Progress` |
 | Color | `Hex("#FFB000")`, `Mix`, `RGB.Scale` |
 | Off-screen drawing | `NewScene(w, h, theme)`, then `Render` it to a string (to `sc.Put` on the slide's own scene) or `Release` it when you've copied what you need |
 | Small native terminal text (rarely) | `sc.Text`, `sc.Put`, `sc.Sprite` draw on top of the pixels; videos only have the pixels |
@@ -328,7 +363,8 @@ invariants, the golden tests, and a recipe for each kind of addition.
 | `figlet.go`, `block.go`, `blockfit.go`, `blockglyph.go`, `fonts/figlet/` | block letters: FIGlet font loading, drawing, fitting to a box, block-character glyphs |
 | `effects.go`, `blockfx.go` | letter animations: `GlyphEffect` for `Text`, `BlockEffect` for `Block` |
 | `pixels.go`, `pixelart.go`, `image.go` | the pixel canvas and shapes, pixel art, images |
-| `anim.go` | easing, springs, noise |
+| `anim.go` | easing (`Ease*`, `CubicBezier`), springs, noise |
+| `layer.go`, `animate.go` | `Composite`: draw a group on a layer and fade, move, scale and clip it; the element animations (`FadeIn`, `FlyIn`, `Pop`, `WipeOut`, `Shake`, `AppearAt`...) built on it |
 | `scene.go`, `grid.go`, `pool.go` | combine the pixel canvas and character layer into terminal cells; reused frame buffers |
 | `render.go` | a slide's frame: the scene `View` draws on, then placed elements and the overlay, panics caught |
 | `transition.go`, `morph.go` | slide transitions: each mixes two scenes, for the terminal and video alike; the morph moves placed elements |
