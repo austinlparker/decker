@@ -78,15 +78,33 @@ func niceScale(lo, hi float64, maxTicks int) axisScale {
 			lo, hi = 0, 1
 		} else {
 			span := math.Abs(lo) / 2
-			lo, hi = lo-span, lo+span
+			lo, hi = max(lo-span, -math.MaxFloat64), min(lo+span, math.MaxFloat64)
+			if !(hi > lo) {
+				lo, hi = math.Nextafter(lo, math.Inf(-1)), math.Nextafter(hi, math.Inf(1))
+			}
 		}
 	}
 	step := niceNum(niceNum(hi-lo, false)/float64(max(maxTicks-1, 1)), true)
-	return axisScale{
+	a := axisScale{
 		lo:   math.Floor(lo/step+1e-9) * step,
 		hi:   math.Ceil(hi/step-1e-9) * step,
 		step: step,
 	}
+	if !finite(a.lo) || !finite(a.hi) || !finite(step) || !(step > 0) || !(a.hi > a.lo) {
+		return extremeScale(lo, hi, maxTicks)
+	}
+	return a
+}
+
+// extremeScale keeps finite data visible when decimal rounding overflows or
+// collapses a subnormal range. Retaining the endpoints beats losing the axis.
+func extremeScale(lo, hi float64, maxTicks int) axisScale {
+	span := hi - lo
+	if !finite(span) {
+		span = hi/2 - lo/2
+	}
+	step := max(span/float64(max(maxTicks-1, 1)), math.SmallestNonzeroFloat64)
+	return axisScale{lo, hi, step}
 }
 
 // fixedScale is niceScale for a caller-chosen range: the ends stay put and
@@ -95,7 +113,11 @@ func fixedScale(lo, hi float64, maxTicks int) axisScale {
 	if !(hi > lo) {
 		return niceScale(lo, hi, maxTicks)
 	}
-	return axisScale{lo, hi, niceNum(niceNum(hi-lo, false)/float64(max(maxTicks-1, 1)), true)}
+	step := niceNum(niceNum(hi-lo, false)/float64(max(maxTicks-1, 1)), true)
+	if !finite(step) || !(step > 0) {
+		return extremeScale(lo, hi, maxTicks)
+	}
+	return axisScale{lo, hi, step}
 }
 
 // ticks returns the gridline values, multiples of the step inside the range.
@@ -105,7 +127,14 @@ func (a axisScale) ticks() []float64 {
 	}
 	var out []float64
 	for k := math.Ceil(a.lo/a.step - 1e-9); k <= math.Floor(a.hi/a.step+1e-9) && len(out) < 64; k++ {
-		out = append(out, k*a.step+0) // +0 turns -0 into 0
+		v := k*a.step + 0 // +0 turns -0 into 0
+		if !finite(v) || k+1 == k {
+			return []float64{a.lo, a.hi} // the step is below the range's precision
+		}
+		if len(out) > 0 && v <= out[len(out)-1] {
+			break
+		}
+		out = append(out, v)
 	}
 	return out
 }
@@ -156,6 +185,17 @@ func fitValueAxis(f *Font, size int, format func(float64) string, lo, hi float64
 func (a axisScale) at(v float64) float64 {
 	if !(a.hi > a.lo) {
 		return 0
+	}
+	if v <= a.lo {
+		return 0
+	}
+	if v >= a.hi {
+		return 1
+	}
+	if math.IsInf(a.hi-a.lo, 0) {
+		// Finite endpoints can span more than MaxFloat64. Halving before
+		// subtracting keeps both the span and the relative position finite.
+		return Clamp01((v/2 - a.lo/2) / (a.hi/2 - a.lo/2))
 	}
 	return Clamp01((v - a.lo) / (a.hi - a.lo))
 }
@@ -252,10 +292,16 @@ type catLayout struct {
 	w, h   float64 // the widest line and the tallest label
 }
 
-// labelsKey joins labels into a memo key. The count goes first so that no
-// labels and one empty label stay different.
+// labelsKey encodes lengths so embedded separators cannot alias another
+// label list, including no labels versus one empty label.
 func labelsKey(labels []string) string {
-	return strconv.Itoa(len(labels)) + "\x00" + strings.Join(labels, "\x00")
+	var b strings.Builder
+	for _, label := range labels {
+		b.WriteString(strconv.Itoa(len(label)))
+		b.WriteByte(':')
+		b.WriteString(label)
+	}
+	return b.String()
 }
 
 type catKey struct {

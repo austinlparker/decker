@@ -85,6 +85,9 @@ func (s *Scene) toGrid() *grid {
 	for _, i := range s.used {
 		x, y := i%w, i/w
 		cell := s.cells[i]
+		if cell.Width == 0 {
+			continue // the lead writes both columns of a wide glyph
+		}
 		var fallback [3]uint8
 		if cell.Style.Bg == nil {
 			fallback = Mix(s.Px.Pix[(2*y)*w+x], s.Px.Pix[(2*y+1)*w+x], 0.5).q()
@@ -105,7 +108,6 @@ func (g *grid) setUV(x, y int, cell *uv.Cell, fg, bg [3]uint8) {
 	c.bg = colorQ(cell.Style.Bg, bg)
 	if cell.Width > 1 && x+1 < g.W {
 		c.wide = true
-		*g.at(x+1, y) = gcell{fg: c.fg, bg: c.bg}
 	} else if cell.Width > 1 {
 		c.ch = " " // a wide character that doesn't fit
 	}
@@ -116,6 +118,14 @@ func (g *grid) setUV(x, y int, cell *uv.Cell, fg, bg [3]uint8) {
 		}
 	} else if old.wide && !c.wide && x+1 < g.W {
 		g.at(x+1, y).ch = " "
+	}
+	if c.wide {
+		// The second column may itself be the lead of another wide glyph.
+		// Erase its continuation before replacing that lead.
+		if next := g.at(x+1, y); next.wide && x+2 < g.W {
+			g.at(x+2, y).ch = " "
+		}
+		*g.at(x+1, y) = gcell{fg: c.fg, bg: c.bg}
 	}
 	*g.at(x, y) = c
 }

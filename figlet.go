@@ -166,8 +166,8 @@ func parseFig(name, src string) (*FigletFont, error) {
 			}
 			line := strings.TrimRight(sc.Text(), " \r")
 			if line != "" {
-				end := line[len(line)-1:]
-				line = strings.TrimRight(line, end) // strip the end mark(s)
+				end, _ := utf8.DecodeLastRuneInString(line)
+				line = strings.TrimRight(line, string(end)) // strip the end mark(s)
 			}
 			row := []rune(line)
 			for j, ch := range row {

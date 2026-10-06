@@ -3,6 +3,7 @@ package decker
 import (
 	"image/color"
 	"strings"
+	"unicode/utf8"
 
 	"charm.land/lipgloss/v2"
 	uv "github.com/charmbracelet/ultraviolet"
@@ -92,6 +93,30 @@ func (s *Scene) setCell(x, y int, c *uv.Cell) {
 		s.cells = make([]*uv.Cell, s.W*s.H)
 	}
 	i := y*s.W + x
+	// Resolve overlaps while drawing, so conversion order cannot resurrect
+	// a glyph whose lead was written earlier than its other column.
+	if x > 0 {
+		if left := s.cells[i-1]; left != nil && left.Width > 1 {
+			s.storeCell(i-1, &uv.Cell{Content: " ", Width: 1, Style: left.Style})
+		}
+	}
+	if old := s.cells[i]; old != nil && old.Width > 1 && x+1 < s.W {
+		s.storeCell(i+1, &uv.Cell{Content: " ", Width: 1, Style: old.Style})
+	}
+	if c.Width > 1 {
+		if x+1 == s.W {
+			c = &uv.Cell{Content: " ", Width: 1, Style: c.Style}
+		} else {
+			if next := s.cells[i+1]; next != nil && next.Width > 1 && x+2 < s.W {
+				s.storeCell(i+2, &uv.Cell{Content: " ", Width: 1, Style: next.Style})
+			}
+			s.storeCell(i+1, &uv.Cell{Style: c.Style})
+		}
+	}
+	s.storeCell(i, c)
+}
+
+func (s *Scene) storeCell(i int, c *uv.Cell) {
 	if s.cells[i] == nil {
 		s.used = append(s.used, i)
 	}
@@ -108,16 +133,26 @@ func moveChars(from, to *Scene, where func(x, y int, old bool) (int, int, bool))
 	}
 	to.moved = to.moved[:0]
 	for _, i := range to.used {
-		to.moved = append(to.moved, movedCell{i, to.cells[i]})
+		if c := to.cells[i]; c.Width > 0 {
+			to.moved = append(to.moved, movedCell{i, c})
+		}
 	}
 	to.clearChars()
 	place := func(i int, c *uv.Cell, old bool) {
 		if x, y, ok := where(i%to.W, i/to.W, old); ok && x >= 0 && y >= 0 && x < to.W && y < to.H {
-			to.setCell(x, y, c)
+			if to.cells == nil {
+				to.cells = make([]*uv.Cell, to.W*to.H)
+			}
+			// These glyphs already resolved drawing overlaps in their source
+			// scene. Movement shares them without allocating replacements;
+			// toGrid resolves overlaps where the two frames meet.
+			to.storeCell(y*to.W+x, c)
 		}
 	}
 	for _, i := range from.used {
-		place(i, from.cells[i], true)
+		if c := from.cells[i]; c.Width > 0 {
+			place(i, c, true)
+		}
 	}
 	for _, m := range to.moved {
 		place(m.i, m.cell, false)
@@ -154,15 +189,18 @@ func (s *Scene) Text(x, y int, text string, fg color.Color, attrs ...uint8) {
 	}
 }
 
-// runes draws the non-space runes of line from (x, y), styled by style(i).
+// runes draws graphemes from line, styled by their first rune's index so
+// Sprite.Paint continues to address runes even when several form one glyph.
 func (s *Scene) runes(x, y int, line string, style func(i int) uv.Style) {
-	col := 0
-	for i, r := range []rune(line) {
-		ch := string(r)
-		if r != ' ' {
+	col, i := 0, 0
+	for len(line) > 0 {
+		ch, width := ansi.FirstGraphemeCluster(line, ansi.GraphemeWidth)
+		if ch != " " && width > 0 {
 			s.Cell(x+col, y, ch, style(i))
 		}
-		col += max(ansi.StringWidth(ch), 1)
+		col += width
+		i += utf8.RuneCountInString(ch)
+		line = line[len(ch):]
 	}
 }
 
