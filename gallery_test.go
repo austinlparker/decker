@@ -45,7 +45,7 @@ var (
 // not (it goes through Render).
 func TestGalleryDraw(t *testing.T) {
 	d := gallery()
-	wantSteps := map[string]int{"Cycle": 5, "Cycle ring": 4, "Bullets": 5, "Builds": 4}
+	wantSteps := map[string]int{"Cycle": 5, "Cycle ring": 4, "Bullets": 5, "Builds": 4, "Table rows": 6, "Table columns": 4}
 	for i, s := range d.Slides {
 		if want, ok := wantSteps[s.Title]; ok && d.Steps(i) != want {
 			t.Errorf("slide %q has %d steps, want %d", s.Title, d.Steps(i), want)
@@ -161,6 +161,9 @@ func gallery() Deck {
 		slideShapes(),
 		slideConnectors(),
 		slideDiagrams(),
+		slideTable(),
+		slideTableRows(),
+		slideTableCols(),
 	}}
 }
 
@@ -1588,5 +1591,74 @@ func slideDiagrams() Slide {
 			// Pin the returned sizes.
 			Label(c, p, fmt.Sprintf("process %.0fx%.0f timeline %.0fx%.0f vertical %.0fx%.0f", pw, ph, tw, thh, vw, vh),
 				c.X(0.04), c.Y(0.93), th.Faint, Left)
+		}}
+}
+
+func slideTable() Slide {
+	return Slide{Title: "Table", Transition: TransitionPush,
+		View: func(c Ctx, sc *Scene) {
+			p := sc.Px
+			top := heading(c, p, "Table")
+			// Weighted, aligned columns with a wrapped cell, a static highlight
+			// and a ragged row.
+			Table{
+				Header:  []string{"Engine", "Frames/s", "Notes"},
+				Rows:    [][]string{{"cells", "60", "half blocks, true color"}, {"video", "30", "reads the pixels directly, so there is no character layer and long notes wrap"}, {"png"}, {"live", "120", "synchronized output"}},
+				Weights: []float64{1, 1, 3},
+				Align:   []Align{Left, Right, Left},
+				Zebra:   true, Rules: true, Highlight: 2,
+			}.Draw(c, p, NewRect(c.X(0.03), top+c.Y(0.03), c.X(0.62), c.Y(0.5)))
+			// A table with more rows than its box holds, to exercise clipping.
+			Table{
+				Header:  []string{"n", "a cell far longer than the narrow column it sits in"},
+				Rows:    tableRows(40),
+				Weights: []float64{1, 4},
+				Rules:   true,
+			}.Draw(c, p, NewRect(c.X(0.69), top+c.Y(0.03), c.X(0.28), c.Y(0.5)))
+			// No header, centered columns, and an empty table.
+			Table{Rows: [][]string{{"a", "b", "c"}, {"d", "e", "f"}}, Align: []Align{Center, Center, Center}, Zebra: true}.
+				Draw(c, p, c.Rect(0.03, 0.72, 0.3, 0.24))
+			Table{}.Draw(c, p, c.Rect(0.4, 0.72, 0.2, 0.2))
+		}}
+}
+
+// tableRows is n numbered rows with a long second cell.
+func tableRows(n int) [][]string {
+	rows := make([][]string, n)
+	for i := range rows {
+		rows[i] = []string{fmt.Sprint(i + 1), fmt.Sprintf("row %d has text that wraps in its cell", i+1)}
+	}
+	return rows
+}
+
+func slideTableRows() Slide {
+	return Slide{Title: "Table rows", Steps: 6, Transition: TransitionDissolve,
+		View: func(c Ctx, sc *Scene) {
+			p := sc.Px
+			top := heading(c, p, "Table rows")
+			// Rows appear one per step from step 1, and the highlight walks
+			// down them.
+			Table{
+				Header:    []string{"Step", "What happens"},
+				Rows:      [][]string{{"1", "the header and first row"}, {"2", "a second row"}, {"3", "a third row"}, {"4", "a fourth row"}, {"5", "the last row"}},
+				Weights:   []float64{1, 4},
+				Zebra:     true,
+				FirstStep: 1, Reveal: TableRevealRows, Walk: true,
+			}.Draw(c, p, NewRect(c.X(0.05), top+c.Y(0.03), c.X(0.9), c.Y(0.7)))
+		}}
+}
+
+func slideTableCols() Slide {
+	return Slide{Title: "Table columns", Steps: 4, Transition: TransitionWipe,
+		View: func(c Ctx, sc *Scene) {
+			p := sc.Px
+			top := heading(c, p, "Table columns")
+			// Columns appear one per step.
+			Table{
+				Header: []string{"Language", "Typing", "Born"},
+				Rows:   [][]string{{"Go", "static", "2009"}, {"Lisp", "dynamic", "1958"}, {"Zig", "static", "2016"}},
+				Align:  []Align{Left, Center, Right},
+				Rules:  true, Highlight: 3, Reveal: TableRevealCols,
+			}.Draw(c, p, NewRect(c.X(0.1), top+c.Y(0.05), c.X(0.8), c.Y(0.5)))
 		}}
 }

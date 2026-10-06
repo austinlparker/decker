@@ -43,6 +43,8 @@
 //   - [Block], [FigFont]: FIGlet block letters scaled to fill a box ([FitBlock]).
 //   - [GlyphEffect], [BlockEffect]: per-letter and per-cell animations,
 //     combined with [Chain] and [BlockChain].
+//   - [Table], [TableReveal]: a grid of text fitted to a [Rect] at one size,
+//     built up by row or column over steps.
 //   - [Composite]: a group drawn on a layer and faded, moved, scaled and
 //     clipped as one; [FadeIn], [FlyIn], [Pop], [WipeOut], [Shake] and the
 //     rest are its animations, built into a frame by [AppearAt].
@@ -56,10 +58,11 @@
 // Shapes beyond the basics ([Pixels.Polygon], [Pixels.Ellipse],
 // [Pixels.Polyline], [Pixels.Bezier], [Pixels.DashedLine]) are in shapes.go.
 // Stock components ([Panel], [Arrow], [CycleDiagram], [BulletList],
-// [PageNumber], [ProgressBar], [Timeline], [Process], and [Code] with its
-// [SyntaxColors] and [LineRange] focus) and easing helpers ([Ease],
-// [CubicBezier], [Spring]) are in draw.go, diagram.go, code.go and anim.go.
-// Charts ([BarChart], [LineChart], [DonutChart], [Sparkline]) and the counting
-// [Stat] are in chart.go; their series colors are [Theme.Series]. The package
-// README is the full guide, with the command line, keys and presenter view.
+// [PageNumber], [ProgressBar], [Timeline], [Process], [Table], and [Code] with
+// its [SyntaxColors] and [LineRange] focus) and easing helpers ([Ease],
+// [CubicBezier], [Spring]) are in draw.go, diagram.go, table.go, code.go and
+// anim.go. Charts ([BarChart], [LineChart], [DonutChart], [Sparkline]) and the
+// counting [Stat] are in chart.go; their series colors are [Theme.Series]. The
+// package README is the full guide, with the command line, keys and presenter
+// view.
 package decker
