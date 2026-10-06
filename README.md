@@ -91,7 +91,8 @@ as sharp as its `-size` allows. It needs `ffmpeg`, and the video has no sound.
 - Run it directly in the terminal (Ghostty, kitty, WezTerm, iTerm2). A
   multiplexer like zellij works, but adds latency to animation.
 - The deck paints its own background, so your terminal theme doesn't matter.
-- Clickers that send page-up/page-down or arrow keys work out of the box.
+- Clickers that send page-up/page-down or arrow keys work out of the box, and
+  a "blank" button (`b` or `.`) blanks the screen to black.
 - It animates at 60 fps (`-fps 30` if the terminal can't keep up).
 - The deck writes to the terminal itself rather than through Bubble Tea's
   renderer (`termout.go`): each frame sends only the cells that
@@ -124,7 +125,8 @@ The deck's own keys keep working if the presenter view goes away.
 
 The presenter view shows:
 
-- the slide number, title and build step;
+- the slide number, title and build step, and a `BLANK` tag while the deck is
+  blanked (`b`, `w`);
 - small previews of what's on screen now and what comes next;
 - the current slide's notes;
 - a 30-minute timer, which starts when you leave slide 1 (or press `t`);
@@ -150,7 +152,18 @@ These work in the deck and in the presenter view:
 | `g` `home` / `G` `end` | first / last slide |
 | `12g` or `12⏎` | jump to slide 12 |
 | `r` | replay the current slide's animations |
+| `b` `.` | blank the screen to black; again to resume |
+| `w` `,` | blank the screen to white; again to resume |
 | `q` `ctrl+c` | quit (that window only) |
+
+A blank screen is pure black or white over the whole screen, footer included,
+like PowerPoint's B and W (many clickers' "blank" button sends `b` or `.`).
+Pressing the same key again brings the slide back, and so does any
+navigation key, which then also does its move. The other blank key switches
+color. The slide's clock keeps running underneath, so animations finish while
+it is up. Pressed in the presenter view, the keys blank the deck, and the
+presenter view shows `BLANK` in its header while keeping the notes and
+previews. Blanking closes the notes and help.
 
 Only in the presenter view: `t` starts or pauses the timer, `T` resets it.
 

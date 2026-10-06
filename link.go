@@ -19,6 +19,9 @@ type linkState struct {
 	Notes   string        `json:"notes"` // for the current slide
 	W       int           `json:"w"`     // the deck's size in cells, for previews
 	H       int           `json:"h"`
+	// Blank is "black" or "white" while the deck's screen is blanked, else
+	// empty (and left out, so an unblanked state is the same JSON as before).
+	Blank string `json:"blank,omitempty"`
 }
 
 // linkOutline is one slide in the deck's running order. It comes from the

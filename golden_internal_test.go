@@ -606,6 +606,35 @@ func goldenModel(t *testing.T, g *goldenEntries) {
 	bodyH, _ := um.layout()
 	g.addString("model/cur", um.cur().Title, fmt.Sprint(bodyH, um.showChrome()))
 
+	// Blanked screens: black and white, with and without a dev footer, and
+	// the keys that bring the slide back.
+	for _, dev := range []string{"plain", "dev"} {
+		for _, size := range [][2]int{{80, 24}, {200, 56}} {
+			m := testModel(d, 2, 1, size[0], size[1], Settled, devs[dev]())
+			m = press(press(m, "n"), "?")
+			for _, k := range []string{"b", "w"} {
+				m = press(m, k)
+				g.addString(key(m, dev, "blank-"+m.blank.String()), view(m))
+			}
+		}
+	}
+	m = testModel(d, 1, 0, 120, 36, Settled, nil)
+	trail.Reset()
+	for _, k := range strings.Fields("b b w w . , , b x ctrl+l right w 5 enter w ] b [ w g b G b r w n b ? b esc") {
+		m = press(m, k)
+		fmt.Fprintf(&trail, "%s -> s%d.%d count=%q blank=%q notes=%v help=%v\n", k, m.idx, m.step, m.count, m.blank, m.showNotes, m.showHelp)
+	}
+	g.addString("model/blankKeys", trail.String())
+	m = press(m, "w")
+	st, _ = json.Marshal(m.linkState())
+	g.add("model/linkState/blank", st)
+	for _, cmd := range []linkCmd{{Key: "b"}, {Key: "right"}, {Key: "."}, {Key: "w"}, {Key: ","}} {
+		next, _ := m.Update(cmd)
+		m = next.(model)
+		b, _ := json.Marshal(cmd)
+		g.addString("model/blankLink/"+string(b), fmt.Sprintf("s%d.%d %q", m.idx, m.step, m.blank), view(m))
+	}
+
 	// A zero-size model draws nothing.
 	g.addString("model/empty", view(testModel(d, 0, 0, 0, 0, 0, nil)))
 	// The view is always empty: the writer owns the screen.
@@ -869,6 +898,12 @@ func goldenPresenter(t *testing.T, g *goldenEntries) {
 		g.addString(key("small-deck"), p.View().Content)
 		p.st.W, p.st.H = 0, 0 // unreported: no previews
 		g.addString(key("no-deck-size"), p.View().Content)
+		// A blanked deck: the header says so, the notes and previews stay.
+		for _, color := range []string{"black", "white"} {
+			p = presenterFor(d, w, h, true, 1, 1, previews)
+			p.st.Blank = color
+			g.addString(key("blank-"+color), p.View().Content)
+		}
 		// Long notes are cut to fit.
 		p = presenterFor(d, w, h, true, 0, 0, previews)
 		p.st.Notes = strings.Repeat("a long line of speaker notes, which wraps over several lines\n", 20)

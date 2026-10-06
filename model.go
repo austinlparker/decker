@@ -11,6 +11,46 @@ import (
 
 type tickMsg time.Time
 
+// blankMode is what covers the screen: nothing, black or white, like
+// PowerPoint's B and W.
+type blankMode uint8
+
+const (
+	blankNone blankMode = iota
+	blankBlack
+	blankWhite
+)
+
+// String names the mode as the link reports it; "" for blankNone.
+func (b blankMode) String() string {
+	switch b {
+	case blankBlack:
+		return "black"
+	case blankWhite:
+		return "white"
+	}
+	return ""
+}
+
+// color is the pure color the mode paints.
+func (b blankMode) color() RGB {
+	if b == blankWhite {
+		return RGB{255, 255, 255}
+	}
+	return RGB{}
+}
+
+// toggleBlank blanks the screen with mode, or restores the slide if that mode
+// is already up. Overlays close, so they don't pop back at the audience.
+func (m *model) toggleBlank(mode blankMode) {
+	if m.blank == mode {
+		m.blank = blankNone
+		return
+	}
+	m.blank = mode
+	m.showHelp, m.showNotes = false, false
+}
+
 // model is the Bubble Tea model of a running deck. With live set, frames go to
 // the terminal writer; tests call frame directly.
 type model struct {
@@ -35,10 +75,16 @@ type model struct {
 	showNotes, showHelp bool
 	count               string // numeric prefix for jumps, e.g. "12g"
 
+	// blank covers the whole screen with one color. The slide's clock (Ctx.T)
+	// keeps running underneath, so animations finish while it is up and the
+	// slide is settled when it comes back; frame doesn't draw the slide at
+	// all while blanked.
+	blank blankMode
+
 	dev *devState // nil unless -dev
 
 	link      *linkServer // nil unless the presenter link is on
-	published [4]int      // slide, step, w, h last sent over the link
+	published [5]int      // slide, step, w, h, blank last sent over the link
 }
 
 func newModel(d *Deck, idx, step, fps int, dev *devState) model {
@@ -78,7 +124,7 @@ func (m model) Init() tea.Cmd {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m, cmd := m.handle(msg)
 	if m.link != nil {
-		if key := [4]int{m.idx, m.step, m.w, m.h}; key != m.published {
+		if key := [5]int{m.idx, m.step, m.w, m.h, int(m.blank)}; key != m.published {
 			m.published = key
 			m.link.publish(m.linkState())
 		}
@@ -87,7 +133,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) linkState() linkState {
-	st := linkState{Slide: m.idx, Step: m.step, Notes: m.cur().Notes, W: m.w, H: m.h}
+	st := linkState{Slide: m.idx, Step: m.step, Notes: m.cur().Notes, W: m.w, H: m.h, Blank: m.blank.String()}
 	for i, s := range m.slides {
 		st.Outline = append(st.Outline, linkOutline{Title: s.Title, Steps: s.steps(), Section: sectionAt(m.slides, i)})
 	}
@@ -147,7 +193,19 @@ func (m model) handleKey(k string) (model, tea.Cmd) {
 		}
 		return m, nil
 	}
-	switch keyActs[k].act {
+	act := keyActs[k].act
+	// Anything that moves, or asks to see something, brings the slide back
+	// first and then does its job. ctrl+l and unbound keys leave the blank up,
+	// so a stray key on a clicker doesn't flash the slide at the audience.
+	switch act {
+	case "next", "nextSlide", "prev", "prevSlide", "first", "last", "replay", "notes", "help", "closeHelp":
+		m.blank = blankNone
+	}
+	switch act {
+	case "blank":
+		m.toggleBlank(blankBlack)
+	case "blankWhite":
+		m.toggleBlank(blankWhite)
 	case "quit":
 		return m, tea.Quit
 	case "closeHelp":
@@ -195,6 +253,7 @@ func (m model) handleKey(k string) (model, tea.Cmd) {
 
 // jump goes to the 1-based slide n, clamped to the deck.
 func (m model) jump(n int) model {
+	m.blank = blankNone
 	n = min(max(n, 1), len(m.slides))
 	m.goTo(n-1, 0, n-1 >= m.idx)
 	return m
@@ -250,6 +309,11 @@ func (m model) body(h int) *Scene {
 }
 
 func (m model) frame() *grid {
+	if m.blank != blankNone {
+		// All of the screen, footer included, and none of the slide's drawing:
+		// the writer diffs a static frame down to nothing.
+		return blankGrid(m.w, m.h, m.blank.color())
+	}
 	bodyH, panels := m.layout()
 	sc := m.body(bodyH)
 	sc.finish()
