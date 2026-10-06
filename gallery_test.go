@@ -158,6 +158,9 @@ func gallery() Deck {
 		slideCharts(),
 		slideChartOptions(),
 		slideDonutStats(),
+		slideShapes(),
+		slideConnectors(),
+		slideDiagrams(),
 	}}
 }
 
@@ -1432,5 +1435,158 @@ func slideDonutStats() Slide {
 			Stat{Value: 1284, Label: "deploys", Step: 1}.Draw(c, p, cells[0])
 			Stat{Value: 99.95, Decimals: 2, Suffix: "%", Label: "uptime this quarter", Step: 1, Duration: 2}.Draw(c, p, cells[1])
 			Stat{Value: 4.2, Decimals: 1, Prefix: "$", Suffix: "M", Label: "saved", Step: 1, Duration: 0.6}.Draw(c, p, cells[2])
+		}}
+}
+
+func slideShapes() Slide {
+	return Slide{Title: "Shapes", Transition: TransitionDefault,
+		View: func(c Ctx, sc *Scene) {
+			p, th := sc.Px, c.Theme
+			top := heading(c, p, "Shapes")
+			_, area := c.Frame().Inset(c.X(0.03), 0).CutTop(top + c.Y(0.02))
+			_, area = area.CutBottom(c.Y(0.1))
+			var g []Rect
+			for _, row := range area.Rows(c.Unit(0.1), 1, 1) {
+				g = append(g, row.Cols(c.Unit(0.05), 1, 1, 1, 1)...)
+			}
+			u := c.Unit(0.01)
+
+			// Polygon: a triangle, a concave arrow and a pentagram (even-odd
+			// leaves its middle open), the arrow translucent over the triangle.
+			r := g[0]
+			cx, cy := r.Center()
+			p.Polygon([]float64{cx, r.Y, r.Right(), r.Bottom(), r.X, r.Bottom()}, th.Accent, 1)
+			arrow := []float64{r.X, cy - 4*u, cx, cy - 4*u, cx, cy - 9*u, r.Right(), cy, cx, cy + 9*u, cx, cy + 4*u, r.X, cy + 4*u}
+			p.Polygon(arrow, th.Accent2, 0.6)
+			star := make([]float64, 0, 10)
+			for i := 0; i < 5; i++ {
+				a := float64(i) * 4 * math.Pi / 5
+				star = append(star, r.Right()-8*u+7*u*math.Sin(a), r.Y+8*u-7*u*math.Cos(a))
+			}
+			p.Polygon(star, th.Good, 1)
+			tag(c, p, "Polygon", r.X, r.Bottom()+u, th.Muted)
+
+			// Ellipse: filled, outlined, a circle, and a faded one.
+			r = g[1]
+			cx, cy = r.Center()
+			p.Ellipse(cx, cy, r.W*0.45, r.H*0.3, 0, th.Accent2, 1)
+			p.Ellipse(cx, cy, r.W*0.35, r.H*0.2, max(u*0.6, 1.5), th.Background, 1)
+			p.Ellipse(cx, cy, r.H*0.12, r.H*0.12, 0, th.Warn, 0.8)
+			p.Ellipse(r.X+r.H*0.2, r.Bottom()-r.H*0.2, r.H*0.2, r.H*0.2, 3, th.Good, 1)
+			p.Ellipse(r.Right()-r.W*0.15, r.Bottom()-r.H*0.2, r.W*0.12, r.H*0.12, 0, th.Accent, 0.4)
+			tag(c, p, "Ellipse", r.X, r.Bottom()+u, th.Muted)
+
+			// Polyline: one translucent path whose joints must not show.
+			r = g[2]
+			cx, cy = r.Center()
+			zig := []float64{r.X, r.Bottom(), r.X + r.W*0.25, r.Y, r.X + r.W*0.5, r.Bottom(), r.X + r.W*0.75, r.Y, r.Right(), r.Bottom()}
+			p.Polyline(zig, 5*u, th.Accent, 0.5)
+			p.Polyline([]float64{r.X, cy, r.Right(), cy}, 1.5, th.Text, 1)
+			p.Polyline([]float64{r.X + 4, r.Y + 4}, 6, th.Good, 1) // a single point is a dot
+			tag(c, p, "Polyline", r.X, r.Bottom()+u, th.Muted)
+
+			// Bezier: drawn on over a second, over a faint full curve.
+			r = g[3]
+			p.Bezier(r.X, r.Bottom(), r.X, r.Y, r.Right(), r.Y, r.Right(), r.Bottom(), 2, th.Faint, 1, 1)
+			p.Bezier(r.X, r.Bottom(), r.X, r.Y, r.Right(), r.Y, r.Right(), r.Bottom(), 4, th.Accent, 1, Ease(c.T, 1))
+			p.Bezier(r.X, r.Y, r.Right(), r.Bottom(), r.X, r.Bottom(), r.Right(), r.Y, 3, th.Accent2, 0.6, 0.5)
+			tag(c, p, "Bezier", r.X, r.Bottom()+u, th.Muted)
+
+			// DashedLine: horizontal, diagonal, tight dashes and a wide gap.
+			r = g[4]
+			p.DashedLine(r.X, r.Y+r.H*0.1, r.Right(), r.Y+r.H*0.1, 2, 6*u, 4*u, th.Text, 1)
+			p.DashedLine(r.X, r.Bottom(), r.Right(), r.Y+r.H*0.3, 3, 3*u, 3*u, th.Accent, 0.8)
+			p.DashedLine(r.X, r.Y+r.H*0.2, r.Right(), r.Bottom(), 1.5, 8*u, 12*u, th.Accent2, 1)
+			p.DashedLine(r.X, r.Y+r.H*0.5, r.Right(), r.Y+r.H*0.5, 2, 0, 5, th.Faint, 1) // no dash: solid
+			tag(c, p, "DashedLine", r.X, r.Bottom()+u, th.Muted)
+
+			// Gradients: linear on a rounded rect, radial on a square-cornered one.
+			r = g[5]
+			halves := r.Cols(c.Unit(0.02), 1, 1)
+			a, b := halves[0], halves[1]
+			p.LinearGradient(a.X, a.Y, a.W, a.H, c.Unit(0.04), a.X, a.Y, a.Right(), a.Bottom(), th.Accent, th.Accent2, 1)
+			bx, by := b.Center()
+			p.RadialGradient(b.X, b.Y, b.W, b.H, 0, bx, by, b.W*0.6, th.Text, th.Panel, 1)
+			p.LinearGradient(b.X, b.Y, b.W/3, b.H/3, 4, b.X, b.Y, b.X, b.Y, th.Good, th.Warn, 0.5) // empty axis
+			tag(c, p, "Gradients", r.X, r.Bottom()+u, th.Muted)
+
+			// Degenerate input draws nothing: two points, no radius, no width.
+			r = g[6]
+			p.Polygon([]float64{r.X, r.Y, r.X + 3*u, r.Y}, th.Warn, 1)
+			p.Ellipse(r.X, r.Y, 0, r.H*0.5, 0, th.Warn, 1)
+			p.Polyline([]float64{r.X, r.Y, r.Right(), r.Bottom()}, 0, th.Warn, 1)
+			p.Bezier(r.X, r.Y, r.Right(), r.Y, r.X, r.Bottom(), r.Right(), r.Bottom(), 3, th.Warn, 1, 0)
+			p.Polygon([]float64{r.X + 2*u, r.Y + 2*u, r.Right() - 2*u, r.Y + 2*u, r.Right() - 2*u, r.Bottom() - 2*u, r.X + 2*u, r.Bottom() - 2*u}, th.Good, 0.35)
+			tag(c, p, "degenerate", r.X, r.Bottom()+u, th.Muted)
+
+			// Shapes running off the canvas are clipped, not wrapped.
+			p.Ellipse(c.PW(), c.PH(), 14*u, 9*u, 0, th.Accent2, 0.8)
+			p.Polyline([]float64{c.PW() - 40*u, c.PH() + 5*u, c.PW() + 5*u, c.PH() - 20*u}, 3, th.Good, 1)
+			p.Bezier(c.PW()-30*u, c.PH(), c.PW()-30*u, c.PH()-20*u, c.PW()-5*u, c.PH()-20*u, c.PW()+10*u, c.PH()-10*u, 3, th.Accent, 1, 1)
+			tag(c, p, "clipped", c.PW()-26*u, c.PH()-26*u, th.Muted)
+		}}
+}
+
+func slideConnectors() Slide {
+	return Slide{Title: "Connectors", Steps: 6, Transition: TransitionPush,
+		View: func(c Ctx, sc *Scene) {
+			p, th := sc.Px, c.Theme
+			top := heading(c, p, "Connectors")
+			_, area := c.Frame().Inset(c.X(0.04), 0).CutTop(top + c.Y(0.02))
+			_, area = area.CutBottom(c.Y(0.03))
+			cells := area.Grid(3, 3, 0)
+			// box places a labeled box in the middle of cell (col, row), shifted
+			// by (dx, dy) cells.
+			box := func(col, row int, dx, dy float64, label string, edge RGB) Rect {
+				cell := cells[row*3+col]
+				r := cell.Anchor(cell.W*0.42, cell.H*0.42, 0.5+dx, 0.5+dy)
+				Panel(c, p, r.X, r.Y, r.W, r.H, label, th.Panel, edge, th.Text, 1)
+				return r
+			}
+			a, b := box(0, 0, 0, 0, "A", th.Accent), box(1, 0, 0, 0, "B", th.Accent)
+			cc, d := box(2, 0, 0, 0.45, "C", th.Accent2), box(0, 1, 0.3, 0, "D", th.Accent2)
+			e, f := box(1, 1, 0, 0.4, "E", th.Good), box(2, 2, 0, 0, "F", th.Good)
+			g := box(0, 2, 0, 0, "G", th.Warn)
+			prog := func(step int) float64 { return Ease(c.Since(step), 0.7) }
+
+			// A straight line with a tail dot, an arrowhead and a label.
+			Connector{From: a, To: b, Head: HeadArrow, Tail: HeadDot, Label: "calls", Color: th.Accent, Prog: prog(1)}.Draw(c, p)
+			// Elbows with two bends, across and down, and one with a single bend.
+			Connector{From: b, To: cc, Route: RouteElbow, Head: HeadArrow, Color: th.Text, Prog: prog(2)}.Draw(c, p)
+			Connector{From: a, To: d, Route: RouteElbow, Head: HeadArrow, Color: th.Muted, Prog: prog(2)}.Draw(c, p)
+			Connector{From: cc, To: e, Route: RouteElbow, FromSide: SideBottom, ToSide: SideTop, Head: HeadArrow, Color: th.Good, Dashed: true, Prog: 0.5 * prog(4)}.Draw(c, p)
+			// Curves, one with a head at each end and a label.
+			Connector{From: d, To: e, Route: RouteCurved, Head: HeadArrow, Color: th.Accent2, Width: 3, Prog: prog(3)}.Draw(c, p)
+			Connector{From: d, To: g, Route: RouteCurved, Head: HeadArrow, Tail: HeadArrow, Color: th.Accent2, Label: "both", Prog: prog(3)}.Draw(c, p)
+			Connector{From: e, To: f, Route: RouteElbow, Head: HeadDot, Color: th.Warn, Dashed: true, Prog: prog(4)}.Draw(c, p)
+			// Forced sides give a C-shaped elbow (and the dashed C to E, half drawn, a Z).
+			Connector{From: f, To: g, Route: RouteElbow, FromSide: SideBottom, ToSide: SideBottom, Head: HeadArrow, Color: th.Good, Prog: prog(5)}.Draw(c, p)
+			Connector{From: g, To: b, Route: RouteCurved, Prog: 0}.Draw(c, p) // not yet drawn: nothing
+		}}
+}
+
+func slideDiagrams() Slide {
+	return Slide{Title: "Timeline and process", Steps: 6, Transition: TransitionWipe,
+		View: func(c Ctx, sc *Scene) {
+			p, th := sc.Px, c.Theme
+			top := heading(c, p, "Timeline and process")
+			_, body := c.Frame().Inset(c.X(0.04), 0).CutTop(top + c.Y(0.03))
+			steps, rest := body.CutTop(c.Y(0.2))
+			pw, ph := Process{Steps: []string{"Plan", "Build the thing", "Test it", "Ship"}, FirstStep: 1}.Draw(c, p, steps)
+			rest = rest.Inset(0, c.Unit(0.05))
+			left, right := rest.CutLeft(rest.W * 0.6)
+			tw, thh := Timeline{FirstStep: 1, Items: []TimelineItem{
+				{"Kickoff", "Agree on scope"},
+				{"Prototype", "Something people can try"},
+				{"Launch", ""},
+			}}.Draw(c, p, left.Inset(0, c.Unit(0.02)))
+			vw, vh := Timeline{Vertical: true, FirstStep: 2, Items: []TimelineItem{
+				{"Design", "Sketch first"},
+				{"Build", "Then the code"},
+				{"Ship", ""},
+			}}.Draw(c, p, right.Inset(c.Unit(0.04), 0))
+			// Pin the returned sizes.
+			Label(c, p, fmt.Sprintf("process %.0fx%.0f timeline %.0fx%.0f vertical %.0fx%.0f", pw, ph, tw, thh, vw, vh),
+				c.X(0.04), c.Y(0.93), th.Faint, Left)
 		}}
 }

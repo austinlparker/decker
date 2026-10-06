@@ -336,14 +336,15 @@ Everything here is in package `decker`.
 | Sizing text to a box | `font.Fit(...)`, `FitAll(...)` for several lines at one size |
 | Small labels | `c.SmallText(font)`: the smallest readable size; `Label`, `Chip`, `LineLabel` (text sitting on an arrow) |
 | Block letters | `f, lines, scale := FitBlock(s, maxW, maxH, maxLines, gap, fonts...)` picks a font and scale for a pixel box; `Block{Font, Scale, Color, To, Shadow, Drop, Align, Glow, FX}.Draw(p, s, x, y)`; `BlockEffect`s for `Block.FX`: `BlockDecrypt`, `BlockRain`, `BlockBeam`, `BlockSlide`, `BlockType`, `BlockGlitch`, `BlockFade`, combined with `BlockChain` |
-| Diagrams | `Panel`, `Arrow`, `CycleDiagram` (numbered ring with a legend), `BulletList`, `SpeechBubble` |
+| Diagrams | `Panel`, `Arrow`, `CycleDiagram` (numbered ring with a legend), `BulletList`, `SpeechBubble`; `Timeline{Items, FirstStep, Vertical}.Draw(c, p, rect)` (milestones on a line, one per step) and `Process{Steps, FirstStep}.Draw(c, p, rect)` (a row of chevrons, one per step) |
+| Joining boxes | `Connector{From, To Rect, Route, Head, Tail, Width, Color, Dashed, Label, Prog}.Draw(c, p)`: a line, an elbow (`RouteElbow`) or a curve (`RouteCurved`) between two rects, leaving and arriving at the sides that face each other (`FromSide`/`ToSide` to force them), with `HeadArrow`/`HeadDot` ends flush on the edge; `Prog` draws it on, so `Ease(c.Since(step), 0.6)` animates it |
 | Code | `Code{Source, Lang, LineNumbers, Title, Focus, FirstStep, Diff, Size}.Draw(c, p, rect)`: syntax-highlighted (chroma) in `Theme.Mono` on a plate, sized to fit the rect; `Focus` is one `LineRange{From, To}` per step from `FirstStep`, dimming the other lines behind a highlight bar that glides between ranges; `Diff` reads a unified diff. Colors from `Theme.Syntax`, or derived from the theme |
 | Charts | `BarChart{Labels, Values or Series, Max, Horizontal, ShowValues, Step}`, `LineChart{Labels, Series, Names, Min, Max, Points, Step}`, `DonutChart{Labels, Values, Thickness, Center, Step}`, each with `.Draw(c, p, rect)`: they grow in on their step, take colors from `Theme.Series` (`t.SeriesColor(i)`; default Accent, Accent2, Good, Warn, Muted) and survive empty, zero, negative and NaN data. `Sparkline(c, p, rect, values, col, prog)` is a tiny inline line |
 | A counting number | `Stat{Value, Prefix, Suffix, Decimals, Label, Step, Duration}.Draw(c, p, rect)`: counts up from 0 on its step, at a steady width |
 | Unfinished material | `PlaceholderBox` (dashed frame) and `IllustrativeTag` (made-up data) mark what to replace before the talk |
 | Letter animations | `GlyphEffect`s for `Text.FX` and `Rich.FX`: `RiseIn`, `DropIn`, `Decode` (scramble), `TypeOn`, `FadeUp`, `Wave`, `Jitter`, combined with `Chain` |
 | A moving highlight | `Shine: ShineBand(t, dur, strength)` |
-| Shapes | `p.Disc`, `p.Arc` (rings, gauges), `p.Line`, `p.Rect`, `p.RoundRect` (fill or outline), `p.Glow`, `p.VGradient`; `p.Box` and `Coverage` for shapes of your own |
+| Shapes | `p.Disc`, `p.Arc` (rings, gauges), `p.Line`, `p.Rect`, `p.RoundRect` (fill or outline), `p.Glow`, `p.VGradient`; `p.Ellipse` (fill or outline), `p.Polygon` (concave shapes, even-odd), `p.Polyline` (one blend, so joints don't show at partial alpha), `p.Bezier` (cubic, drawn on to a fraction of its length), `p.DashedLine`, `p.LinearGradient` and `p.RadialGradient` (fill a rect or rounded rect); `p.Box` and `Coverage` for shapes of your own |
 | Pixel art | `p.Art(PixelArt{Rows, Colors}, x, y, scale, alpha, flip)`; return a different frame for a different `t` to animate |
 | An overlay on every slide | `Theme.Overlay: func(c Ctx, p *Pixels)`: a logo, a handle or a page tag in a corner that slides leave clear |
 | Page number, progress, section | `PageNumber` ("12 / 40"), `ProgressBar` (share of slides shown), `c.Section`: for `Theme.Overlay`, from `c.Index` and `c.Count` |
@@ -411,11 +412,12 @@ invariants, the golden tests, and a recipe for each kind of addition.
 | `draw.go` | stock components: `Panel`, `Arrow`, `Label`, `PageNumber`, `ProgressBar`, `Chip`, `CycleDiagram`, `BulletList`… |
 | `code.go` | the `Code` component: chroma lexing (cached per source and language), the token-to-color palette (`SyntaxColors`), focus ranges per step, diffs |
 | `chart.go` | `BarChart`, `LineChart`, `DonutChart`, `Sparkline`, `Stat`, and `Theme.SeriesColor` |
+| `connector.go`, `diagram.go` | `Connector` (lines, elbows and curves between rects) and the `Timeline` and `Process` diagrams |
 | `font.go`, `fit.go`, `text.go`, `coverage.go`, `memo.go`, `fonts/` | smooth type: font loading and glyphs, fitting and wrapping, drawing with glow and gradients, coverage masks, cached fits |
 | `rich.go`, `richmarkup.go` | `Rich` text: spans with their own font, color and decoration laid out and drawn on the `Text` machinery, fitted to a box; `ParseSpans` markup |
 | `figlet.go`, `block.go`, `blockfit.go`, `blockglyph.go`, `fonts/figlet/` | block letters: FIGlet font loading, drawing, fitting to a box, block-character glyphs |
 | `effects.go`, `blockfx.go` | letter animations: `GlyphEffect` for `Text`, `BlockEffect` for `Block` |
-| `pixels.go`, `pixelart.go`, `image.go` | the pixel canvas and shapes, pixel art, images |
+| `pixels.go`, `shapes.go`, `pixelart.go`, `image.go` | the pixel canvas and its basic shapes; polygons, ellipses, polylines, curves, dashes and gradients; pixel art; images |
 | `anim.go` | easing (`Ease*`, `CubicBezier`), springs, noise |
 | `layer.go`, `animate.go` | `Composite`: draw a group on a layer and fade, move, scale and clip it; the element animations (`FadeIn`, `FlyIn`, `Pop`, `WipeOut`, `Shake`, `AppearAt`...) built on it |
 | `scene.go`, `grid.go`, `pool.go` | combine the pixel canvas and character layer into terminal cells; reused frame buffers |

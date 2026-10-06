@@ -316,13 +316,7 @@ func SpeechBubble(p *Pixels, x, y, w, h, tailX, tailY float64, fill, edge RGB, a
 func PlaceholderBox(c Ctx, p *Pixels, x, y, w, h float64, what string) {
 	dash := c.Unit(0.03)
 	col := Mix(c.Theme.Background, c.Theme.Warn, 0.8)
-	edge := func(x0, y0, x1, y1 float64) {
-		l := math.Hypot(x1-x0, y1-y0)
-		for d := 0.0; d < l; d += 2 * dash {
-			e := min(d+dash, l)
-			p.Line(x0+(x1-x0)*d/l, y0+(y1-y0)*d/l, x0+(x1-x0)*e/l, y0+(y1-y0)*e/l, 1.5, col, 1)
-		}
-	}
+	edge := func(x0, y0, x1, y1 float64) { p.DashedLine(x0, y0, x1, y1, 1.5, dash, dash, col, 1) }
 	edge(x, y, x+w, y)
 	edge(x+w, y, x+w, y+h)
 	edge(x+w, y+h, x, y+h)

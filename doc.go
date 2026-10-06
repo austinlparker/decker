@@ -50,12 +50,16 @@
 //     wipe, split, fade, fade-through, dissolve, iris, zoom, pixelate, glitch,
 //     morph, none), for how long ([Transition.Over]) and from which side
 //     ([Transition.From]).
+//   - [Connector]: a line, elbow or curve joining two [Rect]s, with arrowheads
+//     that sit on the edges and a [Connector.Prog] that draws it on.
 //
+// Shapes beyond the basics ([Pixels.Polygon], [Pixels.Ellipse],
+// [Pixels.Polyline], [Pixels.Bezier], [Pixels.DashedLine]) are in shapes.go.
 // Stock components ([Panel], [Arrow], [CycleDiagram], [BulletList],
-// [PageNumber], [ProgressBar], and [Code] with its [SyntaxColors] and
-// [LineRange] focus) and easing helpers ([Ease], [CubicBezier], [Spring]) are
-// in draw.go, code.go and anim.go. Charts ([BarChart], [LineChart],
-// [DonutChart], [Sparkline]) and the counting [Stat] are in chart.go; their
-// series colors are [Theme.Series]. The package README is the full guide,
-// with the command line, keys and presenter view.
+// [PageNumber], [ProgressBar], [Timeline], [Process], and [Code] with its
+// [SyntaxColors] and [LineRange] focus) and easing helpers ([Ease],
+// [CubicBezier], [Spring]) are in draw.go, diagram.go, code.go and anim.go.
+// Charts ([BarChart], [LineChart], [DonutChart], [Sparkline]) and the counting
+// [Stat] are in chart.go; their series colors are [Theme.Series]. The package
+// README is the full guide, with the command line, keys and presenter view.
 package decker
