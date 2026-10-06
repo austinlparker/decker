@@ -1,0 +1,23 @@
+# Weekly dependency updates, one grouped PR per ecosystem. Patch and minor
+# updates merge themselves once CI passes (.github/workflows/dependabot.yml);
+# major ones wait for a person. A merged update is released by the Release
+# workflow's daily run.
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    labels: [dependencies]
+    groups:
+      go:
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    labels: [dependencies]
+    groups:
+      actions:
+        patterns: ["*"]

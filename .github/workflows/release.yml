@@ -1,24 +1,37 @@
 name: Release
 
-# Release by pushing a semver tag (git tag -a v0.3.0 -m v0.3.0 && git push
-# origin v0.3.0), or run this workflow by hand with a version: it tags the
-# head of main and releases it in one go, since a tag pushed by the workflow's
-# own token would not start another run.
+# Releases happen on their own. Every push to main that changes the library
+# (not just tests, goldens, docs or CI) is tested, tagged and published; the
+# version comes from the API diff against the last tag (see
+# .github/scripts/next-version.sh). The daily run catches pushes that started
+# no workflow, such as merges made with the workflow token (Dependabot
+# auto-merges). Put [skip release] in a merge's message to hold it back until
+# the next one. Running the workflow by hand releases now, optionally as a
+# given version.
 on:
   push:
-    tags: ["v*.*.*"]
+    branches: [main]
+  schedule:
+    - cron: "17 6 * * *"
   workflow_dispatch:
     inputs:
       version:
-        description: "Version to tag and release, e.g. v0.3.0"
-        required: true
+        description: "Version to release, e.g. v1.0.0 (empty: work it out from the API diff)"
+        required: false
 
 permissions:
   contents: write
 
+# One release at a time, and never cancel one halfway; a queued run starts
+# from the tags the previous one pushed.
 concurrency:
   group: release
   cancel-in-progress: false
+
+env:
+  # golang.org/x/exp has no releases; pin the commit the bump rules were
+  # checked against.
+  APIDIFF: golang.org/x/exp/cmd/apidiff@v0.0.0-20261005173118-76772065c9b0
 
 jobs:
   release:
@@ -26,58 +39,64 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          ref: main
           fetch-depth: 0
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
 
-      - name: Tag
-        if: github.event_name == 'workflow_dispatch'
+      - name: Decide the version
+        id: next
         env:
-          VERSION: ${{ inputs.version }}
+          FORCED: ${{ inputs.version }}
+          NOTES: ${{ runner.temp }}/api-changes.md
         run: |
-          if ! [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
-            echo "version must look like v1.2.3 or v1.2.3-rc.1, got $VERSION"; exit 1
+          if [ "$GITHUB_EVENT_NAME" = push ] && git log -1 --format=%B | grep -qF '[skip release]'; then
+            echo "skipped: [skip release] in the head commit"
+            echo "version=" >>"$GITHUB_OUTPUT"
+            exit 0
           fi
-          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
-            echo "run this from main, not $GITHUB_REF"; exit 1
+          : >"$NOTES"
+          go install "$APIDIFF"
+          .github/scripts/next-version.sh | tee -a "$GITHUB_OUTPUT"
+          if [ -n "$FORCED" ]; then
+            if ! [[ "$FORCED" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+              echo "version must look like v1.2.3 or v1.2.3-rc.1, got $FORCED"; exit 1
+            fi
+            echo "version=$FORCED" >>"$GITHUB_OUTPUT"
           fi
+
+      - name: Check the tag is new
+        if: steps.next.outputs.version != ''
+        env:
+          VERSION: ${{ steps.next.outputs.version }}
+        run: |
           if git rev-parse -q --verify "refs/tags/$VERSION" >/dev/null; then
             echo "$VERSION already exists"; exit 1
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "$VERSION" -m "$VERSION"
 
-      # Never publish a version whose tests fail: the goldens are the
-      # contract talks in other repos rely on.
+      # Never publish a version whose tests fail: the goldens are the contract
+      # talks in other repos rely on.
       - name: Test
+        if: steps.next.outputs.version != ''
         run: |
           go vet ./...
           go test ./...
 
-      - name: Push tag
-        if: github.event_name == 'workflow_dispatch'
-        run: git push origin "${{ inputs.version }}"
+      - name: Tag
+        if: steps.next.outputs.version != ''
+        env:
+          VERSION: ${{ steps.next.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$VERSION" -m "$VERSION"
+          git push origin "$VERSION"
 
       - uses: goreleaser/goreleaser-action@v7
+        if: steps.next.outputs.version != ''
         with:
           version: "~> v2"
-          args: release --clean
+          args: release --clean --release-header=${{ runner.temp }}/api-changes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # Ask the module proxy for the new version so `go get` sees it at once.
-      - name: Warm the module proxy
-        env:
-          VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
-        # From an empty directory: inside this repo the module is the main
-        # module, and go list can't ask for a version of that.
-        run: |
-          cd "$(mktemp -d)"
-          for i in 1 2 3 4 5; do
-            GOPROXY=https://proxy.golang.org GOFLAGS=-mod=mod \
-              go list -m "github.com/austinlparker/decker@$VERSION" && exit 0
-            sleep 15
-          done
-          echo "the proxy hasn't picked up $VERSION yet; it will on first use"
