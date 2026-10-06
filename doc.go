@@ -41,8 +41,13 @@
 //     combined with [Chain] and [BlockChain].
 //   - [Transition]: how a slide enters (push, dissolve, wipe, morph, none),
 //     and for how long ([Transition.Over]).
+//   - [Connector]: a line, elbow or curve joining two [Rect]s, with arrowheads
+//     that sit on the edges and a [Connector.Prog] that draws it on.
 //
-// Stock components ([Panel], [Arrow], [CycleDiagram], [BulletList]) and
-// easing helpers ([Ease], [Spring]) are in draw.go and anim.go. The package
-// README is the full guide, with the command line, keys and presenter view.
+// Shapes beyond the basics ([Pixels.Polygon], [Pixels.Ellipse],
+// [Pixels.Polyline], [Pixels.Bezier], [Pixels.DashedLine]) are in shapes.go.
+// Stock components ([Panel], [Arrow], [CycleDiagram], [BulletList],
+// [Timeline], [Process]) and easing helpers ([Ease], [Spring]) are in draw.go,
+// diagram.go and anim.go. The package README is the full guide, with the
+// command line, keys and presenter view.
 package decker
