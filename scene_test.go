@@ -28,13 +28,19 @@ func TestSceneLayering(t *testing.T) {
 // TestTransitionsMoveChars checks the character layer goes with its frame:
 // each output cell shows the old or the new frame's character, or none (in a
 // wipe's band), never both, and the new frame's alone at the end. A morph
-// switches all of them half-way.
+// switches all of them half-way, as do the fades and the zoom; the
+// fade-through and pixelate drop them in between, and a glitch flips one slice
+// at a time.
 func TestTransitionsMoveChars(t *testing.T) {
 	const w, h = 20, 5
 	text := func(ch string) *Scene {
 		sc := NewScene(w, h, testTheme)
 		sc.Put(0, 0, strings.TrimSuffix(strings.Repeat(strings.Repeat(ch, w)+"\n", h), "\n"))
 		return sc
+	}
+	switchesAtHalf := map[Transition]bool{
+		TransitionWipe: true, TransitionMorph: true, TransitionFade: true, TransitionFadeThrough: true,
+		TransitionZoom: true, TransitionPixelate: true, TransitionGlitch: true,
 	}
 	for kind := range transitions {
 		k := Transition{kind: kind}
@@ -53,7 +59,7 @@ func TestTransitionsMoveChars(t *testing.T) {
 				if p == 1 && out[0] != strings.Repeat("b", w) {
 					t.Errorf("transition %v at p=1 should be fully new, got %q", k, out[0])
 				}
-				if p == 0.5 && k != TransitionWipe && k != TransitionMorph && !strings.Contains(out[0], "a") {
+				if p == 0.5 && !switchesAtHalf[k] && !strings.Contains(out[0], "a") {
 					t.Errorf("transition %v at p=0.5 lost the old frame's characters: %q", k, out[0])
 				}
 			}

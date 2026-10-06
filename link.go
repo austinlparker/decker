@@ -19,6 +19,9 @@ type linkState struct {
 	Notes   string        `json:"notes"` // for the current slide
 	W       int           `json:"w"`     // the deck's size in cells, for previews
 	H       int           `json:"h"`
+	// Blank is "black" or "white" while the deck's screen is blanked, else
+	// empty (and left out, so an unblanked state is the same JSON as before).
+	Blank string `json:"blank,omitempty"`
 }
 
 // linkOutline is one slide in the deck's running order. It comes from the
@@ -27,6 +30,10 @@ type linkState struct {
 type linkOutline struct {
 	Title string `json:"title"`
 	Steps int    `json:"steps"`
+
+	// Section is the slide's resolved section, so the presenter view needn't
+	// resolve it against a build that may be out of date.
+	Section string `json:"section,omitempty"`
 }
 
 // linkCmd is a presenter request: press Key (a navigation key in keyActs) or

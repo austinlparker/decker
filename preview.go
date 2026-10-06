@@ -23,13 +23,13 @@ func (p presenter) key(i, step int) (k previewKey, ok bool) {
 	return previewKey{i, step, pw, ph, dw, dh}, ph >= 5 && pw >= 20
 }
 
-// renderPreview draws s at a size it's designed for (240 cells wide, in the
-// deck's shape), then shrinks it into pw×ph cells; drawing at preview size
-// would lay the slide out for a tiny screen instead.
-func renderPreview(s Slide, k previewKey, t *Theme) string {
+// renderPreview draws slide k.slide of slides at a size it's designed for (240
+// cells wide, in the deck's shape), then shrinks it into pw×ph cells; drawing
+// at preview size would lay the slide out for a tiny screen instead.
+func renderPreview(slides []Slide, k previewKey, t *Theme) string {
 	const rw = 240
 	rh := max(rw*k.dh/k.dw, 20)
-	g := renderSlideGrid(s, Ctx{W: rw, H: rh, T: Settled, Step: k.step, StepT: Settled, Theme: t})
+	g := renderSlideGrid(slides[k.slide], Ctx{W: rw, H: rh, T: Settled, Step: k.step, StepT: Settled, Theme: t}.at(slides, k.slide))
 	defer g.release()
 	sc := NewScene(k.pw, k.ph, t)
 	px := g.pixels()
