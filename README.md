@@ -289,7 +289,7 @@ Everything here is in package `decker`.
 | Shapes | `p.Disc`, `p.Arc` (rings, gauges), `p.Line`, `p.Rect`, `p.RoundRect` (fill or outline), `p.Glow`, `p.VGradient`; `p.Box` and `Coverage` for shapes of your own |
 | Pixel art | `p.Art(PixelArt{Rows, Colors}, x, y, scale, alpha, flip)`; return a different frame for a different `t` to animate |
 | An overlay on every slide | `Theme.Overlay: func(c Ctx, p *Pixels)`: a logo, a handle or a page tag in a corner that slides leave clear |
-| Images | `NewImages(fsys, dir)` over the talk's embedded files, then `images.Draw(p, "shot.png", x, y, w, h, alpha)` |
+| Images | `NewImages(fsys, dir)` over the talk's embedded files, then `images.Draw(p, "shot.png", x, y, w, h, alpha)` (fit inside the box) or `images.DrawCover(...)` (fill the box, crop the overflow); PNG transparency is kept |
 | Motion | `Ease`, `EaseOutBack`, `EaseInOutCubic`, `Spring` (Harmonica), `Pulse`, `Lerp`, `Progress` |
 | Color | `Hex("#FFB000")`, `Mix`, `RGB.Scale` |
 | Off-screen drawing | `NewScene(w, h, theme)`, then `Render` it to a string (to `sc.Put` on the slide's own scene) or `Release` it when you've copied what you need |
