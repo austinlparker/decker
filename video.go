@@ -95,7 +95,7 @@ func writeVideoFrames(d *Deck, o videoOptions, w io.Writer) error {
 		for step := 0; step < s.steps(); step++ {
 			dur := videoTiming(s, step, o.hold)
 			for t := 0.0; t < dur-dt/2; t += dt {
-				c := Ctx{W: cw, H: ch, T: slideT + t, Step: step, StepT: t, Theme: d.Theme}
+				c := Ctx{W: cw, H: ch, T: slideT + t, Step: step, StepT: t, Theme: d.Theme}.at(d.Slides, i)
 				sc := drawSlide(s, c)
 				if step == 0 && from != nil && t < tdur {
 					mixTransition(kind, from, sc, t/tdur, true, d.Theme)

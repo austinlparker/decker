@@ -27,7 +27,8 @@
 //
 //   - [Deck], [Slide]: the talk, and one slide with its steps, notes and
 //     [Transition].
-//   - [Ctx]: what changes between frames (T, Step, StepT), plus layout helpers.
+//   - [Ctx]: what changes between frames (T, Step, StepT), the slide's position
+//     (Index, Count, Section), plus layout helpers.
 //   - [Rect]: a box on the canvas; layout cuts and splits rects
 //     ([Rect.CutTop], [Rect.Cols], [Rect.Grid]).
 //   - [Theme]: colors, typefaces and an optional overlay the engine uses.
@@ -42,7 +43,8 @@
 //   - [Transition]: how a slide enters (push, dissolve, wipe, morph, none),
 //     and for how long ([Transition.Over]).
 //
-// Stock components ([Panel], [Arrow], [CycleDiagram], [BulletList]) and
-// easing helpers ([Ease], [Spring]) are in draw.go and anim.go. The package
-// README is the full guide, with the command line, keys and presenter view.
+// Stock components ([Panel], [Arrow], [CycleDiagram], [BulletList],
+// [PageNumber], [ProgressBar]) and easing helpers ([Ease], [Spring]) are in
+// draw.go and anim.go. The package README is the full guide, with the command
+// line, keys and presenter view.
 package decker
