@@ -34,12 +34,6 @@ Custom block fonts may omit glyphs: `FitBlock` skips faces missing a needed
 character and removes unsupported quote marks with `DropQuotes`. The
 FIGlet loader currently loads ASCII input glyphs only.
 
-![The five stock Spleen variants render Hello, decker! with lowercase and punctuation.](assets/stock-block-fonts.png)
-
-Font copyright and license texts for this preview are retained in the
-[Spleen notice](../fonts/figlet/Spleen-LICENSE.txt) and
-[JetBrains Mono notice](../fonts/JetBrainsMono-OFL.txt).
-
 One idea per slide: a headline and at most a couple of short lines or a
 visual. Put the detail in the speaker notes (`Notes`, shown in the presenter
 view). Keep titles under about 24 characters so they stay full size.
@@ -80,8 +74,7 @@ slide := decker.Slide{
 ```
 
 This snippet uses `strings.Join` from the Go standard library. A drop shadow
-is a drawing option rather than a separate font. Compare the designs in
-the [font research preview](figlet-alternatives.md). Wider, more detailed
+is a drawing option rather than a separate font. Wider, more detailed
 faces need more space; `FitBlock` accepts your preferred fonts in order
 and scales or wraps them to the given box.
 

@@ -12,8 +12,6 @@ Start with the [project README](../README.md) and its complete first talk.
 | [Architecture](architecture.md) | Engine source-file map |
 | [Releasing](releasing.md) | Version selection and release automation |
 | [Font licenses](../fonts/README.md) | Bundled font inventory, OFL and BSD notices |
-| [Block font alternatives](figlet-alternatives.md) | Explicitly licensed candidates, actual renderings and compatibility findings |
-| [Documentation review](documentation-review.md) | Comparison with 20 popular Go packages and remaining gaps |
 
 The runnable [hello example](../examples/hello/main.go) is mirrored in the
 README. Its preview is generated from the repository root with:

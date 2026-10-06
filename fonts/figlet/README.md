@@ -127,6 +127,4 @@ their `FigletFont.Name`, glyph measurements, case, punctuation and appearance
 change. `FitBlock` recomputes wrapping and scaling for the new faces.
 `DropQuotes` now retains ASCII quote marks supported by Spleen.
 
-See the [font comparison](../../docs/figlet-alternatives.md) for the
-research behind the choice, and the [font inventory](../README.md) for
-TrueType font licenses.
+See the [font inventory](../README.md) for TrueType font licenses.

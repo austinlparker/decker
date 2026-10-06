@@ -48,9 +48,6 @@ and [full Spleen notice](figlet/Spleen-LICENSE.txt). Every generated `.flf`
 also includes that notice in its comment header. Retain the notice in
 source and accompanying materials when distributing binaries.
 
-The [replacement research and visual comparison](../docs/figlet-alternatives.md)
-records the Spleen selection and other candidates evaluated.
-
 ## Optional FIGlet fonts: SIL OFL 1.1
 
 The bundled catalog also contains five half-block conversions: **Decker
@@ -70,17 +67,3 @@ See the [inventory and reproducible converter](figlet/README.md#optional-display
 Consumers may supply their own FIGlet or smooth fonts through the
 [font loading APIs](../docs/guide.md#choosing-and-loading-fonts). They retain
 their own license terms and need not be added to Decker's stock catalog.
-
-## Review method
-
-Checked on 2026-10-06: embedded license metadata for the three TrueType
-files and both checked-in OFL notices agree with upstream declarations.
-The original five FIGlet files and their source collection had no explicit
-license grants; those files were replaced with conversions of pinned
-Spleen BDF sources, which identify BSD-2-Clause directly. Spleen source
-hashes, generated font reproducibility and all printable ASCII glyphs
-are checked. The optional outline sources' own OFL files and embedded
-license metadata were inspected; their SHA-256 hashes and conversion
-tool versions are recorded, and the bundled FIGlet files regenerate
-byte-for-byte. The three bundled TrueType files and their existing OFL
-notices are unchanged.
