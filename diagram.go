@@ -62,8 +62,10 @@ func (t Timeline) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 		delay := 0.0 // the dot waits for the line to reach it
 		if i > 0 {
 			px, py := dot(i - 1)
-			e := Ease(since, 0.35)
-			p.Line(px, py, Lerp(px, x, e), Lerp(py, y, e), lineW, col, 1)
+			// A zero-length line still draws its round cap, over the last dot.
+			if e := Ease(since, 0.35); e > 0 {
+				p.Line(px, py, Lerp(px, x, e), Lerp(py, y, e), lineW, col, 1)
+			}
 			delay = 0.3
 		}
 		p.Disc(x, y, dotR*EaseOutBack(Progress(since, delay, 0.35)), col, 1)
@@ -178,7 +180,8 @@ func (pr Process) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 		mid := x + left + (cw-tip-left)/2
 		wrapped := strings.Join(th.Body.Wrap(s, size, textW), "\n")
 		lines := float64(strings.Count(wrapped, "\n") + 1)
-		tx := Text{Font: th.Body, Size: size, Align: Center, Color: Mix(fill, text, e)}
+		// The text fades with the shape: at e == 0 nothing of the step shows.
+		tx := Text{Font: th.Body, Size: size, Align: Center, Color: text, FX: func(int) GlyphFX { return GlyphFX{Alpha: e} }}
 		if lines > 1 {
 			tx.Draw(p, wrapped, mid, y+h/2-lines*float64(size)*DefaultLeading/2)
 		} else {

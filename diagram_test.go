@@ -112,3 +112,54 @@ func TestProcessActiveIsFilled(t *testing.T) {
 	}
 	Process{Steps: []string{"A single step with a long name"}}.Draw(diagramCtx(1), p, Rect{10, 5, 140, 40})
 }
+
+// changed counts pixels that differ from the background.
+func changed(p *Pixels) (n int) {
+	for _, c := range p.Pix {
+		if c != testTheme.Background {
+			n++
+		}
+	}
+	return n
+}
+
+func TestProcessDrawsNothingBeforeItsEntrance(t *testing.T) {
+	c := Ctx{W: 240, H: 67, Step: 0, StepT: 0, T: 0, Theme: testTheme}
+	for _, steps := range [][]string{{"Plan"}, {"Plan", "Build"}} {
+		p := NewPixels(240, 134, testTheme.Background)
+		Process{Steps: steps}.Draw(c, p, Rect{10, 5, 200, 60})
+		if n := changed(p); n != 0 {
+			t.Errorf("%d steps: %d pixels drawn at StepT 0, want none", len(steps), n)
+		}
+	}
+}
+
+func TestTimelineDrawsNothingNewBeforeItsEntrance(t *testing.T) {
+	r := Rect{10, 5, 220, 100}
+	// A single item: nothing at all at the start of its step.
+	c := Ctx{W: 240, H: 67, Step: 0, StepT: 0, Theme: testTheme}
+	for _, vertical := range []bool{false, true} {
+		p := NewPixels(240, 134, testTheme.Background)
+		Timeline{Items: []TimelineItem{{"A", "x"}}, Vertical: vertical}.Draw(c, p, r)
+		if n := changed(p); n != 0 {
+			t.Errorf("vertical=%v: %d pixels drawn for an item at Since 0, want none", vertical, n)
+		}
+	}
+	// A second item adds nothing yet: the first dot stays as it was, and
+	// nothing appears past it.
+	tl := Timeline{Items: []TimelineItem{{"A", ""}, {"B", ""}}}
+	c.Step = 1
+	p := NewPixels(240, 134, testTheme.Background)
+	tl.Draw(c, p, r)
+	dotX, dotY := int(r.X+r.W/4), int(r.Y+max(c.Unit(0.016), 3))
+	if got := p.At(dotX, dotY); got != testTheme.Muted {
+		t.Errorf("first dot center = %v, want Muted with nothing drawn over it", got)
+	}
+	for y := 0; y < p.H; y++ {
+		for x := dotX + 20; x < p.W; x++ {
+			if p.At(x, y) != testTheme.Background {
+				t.Fatalf("pixel (%d, %d) drawn for the newest item at Since 0", x, y)
+			}
+		}
+	}
+}
