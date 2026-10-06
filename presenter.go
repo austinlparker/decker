@@ -208,9 +208,15 @@ func (p presenter) curOutline() linkOutline {
 func (p presenter) mainView() string {
 	cur, inner := p.curOutline(), p.inner()
 	left := p.sty.accent.Render(fmt.Sprintf("%d/%d", p.st.Slide+1, len(p.st.Outline))) + "  " + p.sty.text.Bold(true).Render(cur.Title)
+	if cur.Section != "" {
+		left += p.sty.muted.Render("  · " + cur.Section)
+	}
 	var right []string
 	if !p.linked {
 		right = append(right, p.sty.warn.Render("○ reconnecting to the deck…"))
+	}
+	if p.st.Blank != "" {
+		right = append(right, p.sty.warn.Bold(true).Render("BLANK")+p.sty.muted.Render(" ("+p.st.Blank+")"))
 	}
 	if p.count != "" {
 		right = append(right, p.sty.accent2.Render("go to "+p.count+"…"))
@@ -287,7 +293,7 @@ func (p presenter) preview(k previewKey) string {
 	if s, ok := p.previews[k]; ok {
 		return s
 	}
-	s := renderPreview(p.slides[k.slide], k, p.theme)
+	s := renderPreview(p.slides, k, p.theme)
 	p.previews[k] = s
 	return s
 }

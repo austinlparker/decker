@@ -18,6 +18,22 @@ func toRGB(c color.Color) RGB {
 	return RGB{float32(r >> 8), float32(g >> 8), float32(b >> 8)}
 }
 
+// toRGBA splits c into straight (not premultiplied) color and alpha in 0..1.
+// color.Color reports premultiplied channels, so a translucent pixel has to be
+// divided back out or it would draw darker than it is. Opaque pixels take the
+// toRGB path unchanged.
+func toRGBA(c color.Color) (RGB, float32) {
+	r, g, b, a := c.RGBA()
+	if a == 0xffff {
+		return RGB{float32(r >> 8), float32(g >> 8), float32(b >> 8)}, 1
+	}
+	if a == 0 {
+		return RGB{}, 0
+	}
+	k := 255 / float32(a)
+	return RGB{float32(r) * k, float32(g) * k, float32(b) * k}, float32(a) / 0xffff
+}
+
 // Mix blends two colors: p=0 is a, p=1 is b.
 func Mix(a, b RGB, p float64) RGB {
 	q := float32(Clamp01(p))

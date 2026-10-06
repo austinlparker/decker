@@ -40,6 +40,127 @@ func EaseOutBack(p float64) float64 {
 	return 1 + c3*math.Pow(p-1, 3) + c1*math.Pow(p-1, 2)
 }
 
+// EaseInQuad accelerates from rest; p is clamped to 0..1.
+func EaseInQuad(p float64) float64 { p = Clamp01(p); return p * p }
+
+// EaseOutQuad decelerates, more gently than EaseOutCubic; p is clamped to 0..1.
+func EaseOutQuad(p float64) float64 { p = Clamp01(p); return 1 - (1-p)*(1-p) }
+
+// EaseInOutQuad accelerates then decelerates, more gently than
+// EaseInOutCubic; p is clamped to 0..1.
+func EaseInOutQuad(p float64) float64 {
+	p = Clamp01(p)
+	if p < 0.5 {
+		return 2 * p * p
+	}
+	return 1 - math.Pow(-2*p+2, 2)/2
+}
+
+// EaseInCubic accelerates from rest, the mirror of EaseOutCubic: for exits.
+func EaseInCubic(p float64) float64 { p = Clamp01(p); return p * p * p }
+
+// EaseOutExpo decelerates sharply: most of the travel happens at the start.
+func EaseOutExpo(p float64) float64 {
+	p = Clamp01(p)
+	if p >= 1 {
+		return 1
+	}
+	return 1 - math.Pow(2, -10*p)
+}
+
+// EaseInOutExpo is slow at both ends with a fast middle.
+func EaseInOutExpo(p float64) float64 {
+	p = Clamp01(p)
+	switch {
+	case p <= 0:
+		return 0
+	case p >= 1:
+		return 1
+	case p < 0.5:
+		return math.Pow(2, 20*p-10) / 2
+	}
+	return (2 - math.Pow(2, -20*p+10)) / 2
+}
+
+// EaseOutElastic overshoots and rings like a spring before it settles on 1.
+func EaseOutElastic(p float64) float64 {
+	p = Clamp01(p)
+	if p <= 0 || p >= 1 {
+		return p
+	}
+	const c4 = 2 * math.Pi / 3
+	return math.Pow(2, -10*p)*math.Sin((p*10-0.75)*c4) + 1
+}
+
+// EaseOutBounce lands on 1 and bounces back up a few times, like a dropped
+// ball.
+func EaseOutBounce(p float64) float64 {
+	p = Clamp01(p)
+	const n, d = 7.5625, 2.75
+	switch {
+	case p < 1/d:
+		return n * p * p
+	case p < 2/d:
+		p -= 1.5 / d
+		return n*p*p + 0.75
+	case p < 2.5/d:
+		p -= 2.25 / d
+		return n*p*p + 0.9375
+	}
+	p -= 2.625 / d
+	return n*p*p + 0.984375
+}
+
+// CubicBezier returns the easing of CSS's cubic-bezier(x1, y1, x2, y2): a
+// curve from (0,0) to (1,1) through two control points, with x1 and x2 in
+// 0..1. y may leave 0..1 to overshoot. CubicBezier(0.25, 0.1, 0.25, 1) is
+// CSS's "ease". Build it once and keep the func: the returned function does no
+// allocation.
+func CubicBezier(x1, y1, x2, y2 float64) func(float64) float64 {
+	x1, x2 = Clamp01(x1), Clamp01(x2)
+	cx, cy := 3*x1, 3*y1
+	bx, by := 3*(x2-x1)-cx, 3*(y2-y1)-cy
+	ax, ay := 1-cx-bx, 1-cy-by
+	x := func(t float64) float64 { return ((ax*t+bx)*t + cx) * t }
+	dx := func(t float64) float64 { return (3*ax*t+2*bx)*t + cx }
+	return func(p float64) float64 {
+		p = Clamp01(p)
+		if p <= 0 || p >= 1 {
+			return p
+		}
+		// Newton from the straight-line guess converges in a few steps on
+		// the usual curves; bisection takes over where the slope is too flat
+		// to trust it.
+		t := p
+		for range 8 {
+			e := x(t) - p
+			if math.Abs(e) < 1e-7 {
+				return ((ay*t+by)*t + cy) * t
+			}
+			d := dx(t)
+			if math.Abs(d) < 1e-6 {
+				break
+			}
+			t = Clamp01(t - e/d)
+		}
+		lo, hi := 0.0, 1.0
+		t = p
+		for range 40 {
+			e := x(t) - p
+			if math.Abs(e) < 1e-7 {
+				break
+			}
+			if e > 0 {
+				hi = t
+			} else {
+				lo = t
+			}
+			t = (lo + hi) / 2
+		}
+		return ((ay*t+by)*t + cy) * t
+	}
+}
+
 // Lerp is a+(b-a)*p; unlike Mix, p is not clamped.
 func Lerp(a, b, p float64) float64 { return a + (b-a)*p }
 

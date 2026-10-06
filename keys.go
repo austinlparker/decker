@@ -24,6 +24,8 @@ var bindings = []binding{
 	{"G end", "last", true, "", ""},
 	{"", "", false, "12g  12⏎", "jump to slide 12"},
 	{"r", "replay", true, "r", "replay this slide"},
+	{"b .", "blank", true, "b .", "black screen (again to resume)"},
+	{"w ,", "blankWhite", true, "w ,", "white screen (again to resume)"},
 	{"n", "notes", false, "n", "speaker notes"},
 	{"?", "help", false, "?", "this help"},
 	{"esc", "closeHelp", false, "", ""},
