@@ -30,6 +30,10 @@ type linkState struct {
 type linkOutline struct {
 	Title string `json:"title"`
 	Steps int    `json:"steps"`
+
+	// Section is the slide's resolved section, so the presenter view needn't
+	// resolve it against a build that may be out of date.
+	Section string `json:"section,omitempty"`
 }
 
 // linkCmd is a presenter request: press Key (a navigation key in keyActs) or

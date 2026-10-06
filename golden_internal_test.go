@@ -565,7 +565,7 @@ func goldenModel(t *testing.T, g *goldenEntries) {
 		b, _ := json.Marshal(cmd)
 		g.addString("model/link/"+string(b), fmt.Sprintf("s%d.%d", m.idx, m.step), view(m))
 	}
-	b, _ := json.Marshal(linkOutline{"t", 2})
+	b, _ := json.Marshal(linkOutline{Title: "t", Steps: 2})
 	g.add("link/outline", b)
 	var keys []string
 	for k, v := range keyActs {
@@ -839,7 +839,7 @@ func presenterFor(d *Deck, w, h int, linked bool, slide, step int, previews map[
 	slides := d.Slides
 	outline := make([]linkOutline, len(slides))
 	for i, s := range slides {
-		outline[i] = linkOutline{s.Title, s.steps()}
+		outline[i] = linkOutline{Title: s.Title, Steps: s.steps()}
 	}
 	p := newPresenter(d, "/tmp/x.sock", 30*time.Minute)
 	p.previews, p.now, p.w, p.h, p.linked = previews, goldenBase, w, h, linked
@@ -936,7 +936,7 @@ func goldenPresenter(t *testing.T, g *goldenEntries) {
 	g.addString("presenter/empty", presenterFor(d, 0, 0, true, 0, 0, previews).View().Content)
 
 	// The pieces.
-	outline := []linkOutline{{"a", 1}, {"b", 4}, {"c", 1}}
+	outline := []linkOutline{{Title: "a", Steps: 1}, {Title: "b", Steps: 4}, {Title: "c", Steps: 1}}
 	for _, c := range []struct {
 		slide, step int
 		el          time.Duration
@@ -952,8 +952,8 @@ func goldenPresenter(t *testing.T, g *goldenEntries) {
 	for _, i := range []int{0, 2, 5} {
 		for _, step := range []int{0, 1} {
 			g.addString(fmt.Sprintf("presenter/renderPreview/%d.%d", i, step),
-				renderPreview(d.Slides[i], previewKey{i, step, 50, 12, 682, 171}, testTheme),
-				renderPreview(d.Slides[i], previewKey{i, step, 30, 9, 120, 40}, testTheme))
+				renderPreview(d.Slides, previewKey{i, step, 50, 12, 682, 171}, testTheme),
+				renderPreview(d.Slides, previewKey{i, step, 30, 9, 120, 40}, testTheme))
 		}
 	}
 	g.addString("presenter/nextTarget", func() string {

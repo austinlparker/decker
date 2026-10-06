@@ -134,8 +134,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) linkState() linkState {
 	st := linkState{Slide: m.idx, Step: m.step, Notes: m.cur().Notes, W: m.w, H: m.h, Blank: m.blank.String()}
-	for _, s := range m.slides {
-		st.Outline = append(st.Outline, linkOutline{Title: s.Title, Steps: s.steps()})
+	for i, s := range m.slides {
+		st.Outline = append(st.Outline, linkOutline{Title: s.Title, Steps: s.steps(), Section: sectionAt(m.slides, i)})
 	}
 	return st
 }
@@ -292,7 +292,7 @@ func (m model) ctx(h int) Ctx {
 		Step:  m.step,
 		StepT: m.now.Sub(m.stepStart).Seconds(),
 		Theme: m.theme,
-	}
+	}.at(m.slides, m.idx)
 }
 
 // body draws the slide area at exactly m.w × h, mixed with the previous slide

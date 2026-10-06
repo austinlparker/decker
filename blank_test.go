@@ -180,7 +180,7 @@ func TestPresenterShowsBlank(t *testing.T) {
 	slides := testDeck().Slides
 	outline := make([]linkOutline, len(slides))
 	for i, s := range slides {
-		outline[i] = linkOutline{s.Title, s.steps()}
+		outline[i] = linkOutline{Title: s.Title, Steps: s.steps()}
 	}
 	p := newPresenter(&Deck{Slides: slides, Theme: testTheme}, "/tmp/x.sock", 30*time.Minute)
 	p.w, p.h, p.linked = 100, 30, true

@@ -58,7 +58,7 @@ Every deck has the same command line, from `decker.Main`:
 go run .                     # present, from slide 1
 go run . -dev                # rebuild and reload on every save, staying on the current slide
 go run . -presenter          # the presenter view, in a second window
-go run . -list               # slide titles and step counts
+go run . -list               # slide titles, step counts and sections
 go run . -snapshot -slide 6 -step 4 -t 2.5 -w 240 -h 67 -png frame.png
 go run . -sheet sheet.png -w 682 -h 171 -shrink 8
 go run . -video talk.mp4 -fps 30
@@ -217,6 +217,7 @@ func mySlide() decker.Slide {
 		Title:      "Something",                     // window title and slide list
 		Steps:      2,                               // "next" presses before moving on (build steps)
 		Notes:      "say the thing",                 // shown in the presenter view
+		Section:    "Part one",                      // chapter; later slides inherit it until one sets another
 		Transition: decker.TransitionWipe.Over(0.6), // Push (default), Dissolve, Wipe, Morph, None; Over sets seconds
 		View: func(c decker.Ctx, sc *decker.Scene) {
 			p := sc.Px // the pixel canvas; c.PW() × c.PH() pixels
@@ -251,6 +252,10 @@ slide. The `Ctx` it receives holds everything that changes between frames:
   `c.Y(0.9)` is near the bottom, `c.Size(0.1)` is type one tenth of the
   screen tall, and `c.Unit(0.02)` is a small length for strokes and gaps.
   Keep text at least `c.Size(decker.MinText)` (`c.SmallText(font)`).
+- `c.Index`, `c.Count`, `c.Section`: the slide's 0-based position, the number
+  of slides, and its section (`Slide.Section`, inherited from the nearest
+  slide before it that sets one). They exist for `Theme.Overlay`: a page
+  number, a progress bar or a chapter name on every slide.
 - `c.Theme`: the talk's colors and typefaces.
 
 A frame depends only on `Ctx`, so any moment can be replayed, snapshotted, or
@@ -302,7 +307,8 @@ Everything here is in package `decker`.
 | Shapes | `p.Disc`, `p.Arc` (rings, gauges), `p.Line`, `p.Rect`, `p.RoundRect` (fill or outline), `p.Glow`, `p.VGradient`; `p.Box` and `Coverage` for shapes of your own |
 | Pixel art | `p.Art(PixelArt{Rows, Colors}, x, y, scale, alpha, flip)`; return a different frame for a different `t` to animate |
 | An overlay on every slide | `Theme.Overlay: func(c Ctx, p *Pixels)`: a logo, a handle or a page tag in a corner that slides leave clear |
-| Images | `NewImages(fsys, dir)` over the talk's embedded files, then `images.Draw(p, "shot.png", x, y, w, h, alpha)` |
+| Page number, progress, section | `PageNumber` ("12 / 40"), `ProgressBar` (share of slides shown), `c.Section`: for `Theme.Overlay`, from `c.Index` and `c.Count` |
+| Images | `NewImages(fsys, dir)` over the talk's embedded files, then `images.Draw(p, "shot.png", x, y, w, h, alpha)` (fit inside the box) or `images.DrawCover(...)` (fill the box, crop the overflow); PNG transparency is kept |
 | Motion | `Ease`, `EaseOutBack`, `EaseInOutCubic`, `Spring` (Harmonica), `Pulse`, `Lerp`, `Progress` |
 | Color | `Hex("#FFB000")`, `Mix`, `RGB.Scale` |
 | Off-screen drawing | `NewScene(w, h, theme)`, then `Render` it to a string (to `sc.Put` on the slide's own scene) or `Release` it when you've copied what you need |
@@ -336,7 +342,7 @@ invariants, the golden tests, and a recipe for each kind of addition.
 | `layout.go` | `Rect`: boxes cut from the canvas for layout |
 | `cli.go` | `Main`: the command line (live, dev, presenter, list, snapshot, sheet, video) |
 | `theme.go`, `color.go` | `Theme`; `RGB`, `Hex`, `Mix` |
-| `draw.go` | stock components: `Panel`, `Arrow`, `Label`, `Chip`, `CycleDiagram`, `BulletList`… |
+| `draw.go` | stock components: `Panel`, `Arrow`, `Label`, `PageNumber`, `ProgressBar`, `Chip`, `CycleDiagram`, `BulletList`… |
 | `font.go`, `fit.go`, `text.go`, `coverage.go`, `memo.go`, `fonts/` | smooth type: font loading and glyphs, fitting and wrapping, drawing with glow and gradients, coverage masks, cached fits |
 | `figlet.go`, `block.go`, `blockfit.go`, `blockglyph.go`, `fonts/figlet/` | block letters: FIGlet font loading, drawing, fitting to a box, block-character glyphs |
 | `effects.go`, `blockfx.go` | letter animations: `GlyphEffect` for `Text`, `BlockEffect` for `Block` |
