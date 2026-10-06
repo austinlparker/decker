@@ -305,24 +305,29 @@ func layoutCatsAt(f *Font, labels []string, maxW, maxH float64, base, stride int
 	}
 }
 
-// legendRow draws a one-line key of swatches and names across the top of r
-// and returns its height. A name missing from names is "Series N".
-func legendRow(c Ctx, p *Pixels, r Rect, names []string, count int, a float64) float64 {
+// legendRow draws a one-line key of swatches and names across the top of r,
+// as many as fit. A name missing from names is "Series N".
+func legendRow(c Ctx, p *Pixels, r Rect, names []string, count int, a float64) {
 	th := c.Theme
 	size := c.SmallText(th.Body)
 	sw := float64(size) * 0.7
 	gap := float64(size) * 0.9
 	x := r.X
+	if r.H < float64(size)*DefaultLeading {
+		return
+	}
 	for i := 0; i < count; i++ {
 		name := "Series " + strconv.Itoa(i+1)
 		if i < len(names) {
 			name = names[i]
 		}
+		if x+sw*1.4+th.Body.Measure(name, size) > r.Right() {
+			return
+		}
 		p.RoundRect(x, r.Y+(float64(size)*DefaultLeading-sw)/2, sw, sw, sw*0.25, 0, th.SeriesColor(i), a)
 		w, _ := chartText(c, p, name, size, th.Muted, Left, x+sw*1.4, r.Y, a)
 		x += sw*1.4 + w + gap
 	}
-	return float64(size) * DefaultLeading
 }
 
 // BarChart is a bar chart that grows from its baseline: bars rise (or extend,
@@ -383,7 +388,7 @@ func (b BarChart) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 	top := fs * 0.6
 	if k > 1 {
 		top = lineH + gap
-		legendRow(c, p, Rect{r.X, r.Y, r.W, lineH}, b.Names, k, frame)
+		legendRow(c, p, Rect{r.X, r.Y, r.W, min(lineH, r.H)}, b.Names, k, frame)
 	}
 	// Room for a value label past the end of the longest bar, and past the end
 	// of the longest negative bar.
@@ -394,6 +399,8 @@ func (b BarChart) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 
 	var plot Rect
 	var cats catLayout
+	var catRight float64 // where horizontal category labels end
+	loRoom := 0.0        // below the plot, for the labels of negative bars
 	if b.Horizontal {
 		cats = layoutCats(th.Body, b.Labels, r.W*0.35, r.H/float64(max(n, 1))*0.95, size, false)
 		right := fs * 1.5 // half a tick label, and a little
@@ -411,6 +418,20 @@ func (b BarChart) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 		if cats.w > 0 {
 			left = cats.w + gap
 		}
+		catRight = r.X + cats.w
+		// A negative bar's label sits left of the bar, so it gets a gutter
+		// between the category labels and the plot.
+		if b.ShowValues {
+			gutter := 0.0
+			for _, s := range series {
+				for _, v := range s {
+					if finite(v) && v < 0 {
+						gutter = max(gutter, th.Body.Measure(format(v), size)+gap/2)
+					}
+				}
+			}
+			left += gutter
+		}
 		plot = Rect{r.X + left, r.Y + top, max(r.W-left-right, 0), max(r.H-top-lineH-gap, 0)}
 	} else {
 		left := tickW + gap
@@ -420,7 +441,7 @@ func (b BarChart) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 		if cats.h > 0 {
 			catH = cats.h + gap
 		}
-		hiRoom, loRoom := valRoom, 0.0
+		hiRoom := valRoom
 		if lo < 0 {
 			loRoom = valRoom
 		}
@@ -475,9 +496,9 @@ func (b BarChart) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 		mid := (float64(i) + 0.5) * slot
 		if b.Horizontal {
 			lh := float64(len(cats.lines[i])) * float64(cats.size) * DefaultLeading
-			chartText(c, p, txt, cats.size, th.Muted, Right, plot.X-gap, plot.Y+mid-lh/2, frame)
+			chartText(c, p, txt, cats.size, th.Muted, Right, catRight, plot.Y+mid-lh/2, frame)
 		} else {
-			chartText(c, p, txt, cats.size, th.Muted, Center, plot.X+mid, plot.Bottom()+gap, frame)
+			chartText(c, p, txt, cats.size, th.Muted, Center, plot.X+mid, plot.Bottom()+loRoom+gap, frame)
 		}
 	}
 
@@ -599,7 +620,7 @@ func (l LineChart) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 	top := fs * 0.6
 	if len(l.Series) > 1 {
 		top = lineH + gap
-		legendRow(c, p, Rect{r.X, r.Y, r.W, lineH}, l.Names, len(l.Series), frame)
+		legendRow(c, p, Rect{r.X, r.Y, r.W, min(lineH, r.H)}, l.Names, len(l.Series), frame)
 	}
 	left := tickW + gap
 	slot := max(r.W-left, 0) / float64(max(n, 1))
@@ -747,12 +768,12 @@ func layoutDonut(f *Font, labels []string, w, h, gap float64, maxSize, minSize i
 			for f2 := 1.0; f2 >= 0.7-1e-9; f2 -= 0.05 {
 				out.diam = full * f2
 				out.lay = layoutLegend(f, labels, max(w-out.diam-gap, 0), h, maxSize, minSize, shares)
-				if out.lay.w <= w-out.diam-gap {
+				if out.lay.w <= w-out.diam-gap && out.lay.h <= h {
 					return out
 				}
 			}
 		}
-		return out
+		return donutLayout{diam: min(h, w)} // no room for a legend: ring alone
 	})
 	return r.diam, r.lay
 }
@@ -784,7 +805,8 @@ func (d DonutChart) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 	gap := c.Unit(0.06)
 	diam, lay := layoutDonut(th.Body, labels, r.W, r.H, gap, th.Body.Drawn(c.Size(0.075)), c.SmallText(th.Body))
 	legendW := lay.w
-	if n == 0 {
+	hasLegend := lay.size > 0
+	if !hasLegend {
 		gap = 0
 	}
 	groupX := r.X + (r.W-diam-gap-legendW)/2
@@ -835,7 +857,7 @@ func (d DonutChart) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 			Draw(p, txt, cx, cy-lines*float64(size)*DefaultLeading/2)
 	}
 
-	if n > 0 {
+	if hasLegend {
 		size := lay.size
 		fs := float64(size)
 		sw := fs * 0.7
@@ -872,8 +894,9 @@ func Sparkline(c Ctx, p *Pixels, r Rect, values []float64, col RGB, prog float64
 	if !ok {
 		return
 	}
-	width := max(c.Unit(0.01), 1.5)
-	dot := width * 1.5
+	// The stroke and dot scale with the canvas, but never past what r can hold.
+	width := min(max(c.Unit(0.01), 1.5), min(r.W, r.H)/3)
+	dot := min(width*1.5, min(r.W, r.H)/2)
 	box := r.Inset(dot, dot)
 	x := func(i int) float64 {
 		if len(values) == 1 {
@@ -895,7 +918,10 @@ func Sparkline(c Ctx, p *Pixels, r Rect, values []float64, col RGB, prog float64
 		}
 		hx, hy, have = x(i), y(i), true
 		if i+1 < len(values) && finite(values[i+1]) {
-			f := Clamp01((reveal - x(i)) / (x(i+1) - x(i)))
+			f := 1.0
+			if dx := x(i+1) - x(i); dx > 0 {
+				f = Clamp01((reveal - x(i)) / dx)
+			}
 			hx, hy = Lerp(x(i), x(i+1), f), Lerp(y(i), y(i+1), f)
 			p.Line(x(i), y(i), hx, hy, width, col, 1)
 		}
