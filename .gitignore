@@ -3,3 +3,6 @@
 
 # Finder metadata
 .DS_Store
+
+# goreleaser output
+dist/

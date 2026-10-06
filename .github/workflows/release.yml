@@ -1,0 +1,83 @@
+name: Release
+
+# Release by pushing a semver tag (git tag -a v0.3.0 -m v0.3.0 && git push
+# origin v0.3.0), or run this workflow by hand with a version: it tags the
+# head of main and releases it in one go, since a tag pushed by the workflow's
+# own token would not start another run.
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to tag and release, e.g. v0.3.0"
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Tag
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          if ! [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "version must look like v1.2.3 or v1.2.3-rc.1, got $VERSION"; exit 1
+          fi
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "run this from main, not $GITHUB_REF"; exit 1
+          fi
+          if git rev-parse -q --verify "refs/tags/$VERSION" >/dev/null; then
+            echo "$VERSION already exists"; exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$VERSION" -m "$VERSION"
+
+      # Never publish a version whose tests fail: the goldens are the
+      # contract talks in other repos rely on.
+      - name: Test
+        run: |
+          go vet ./...
+          go test ./...
+
+      - name: Push tag
+        if: github.event_name == 'workflow_dispatch'
+        run: git push origin "${{ inputs.version }}"
+
+      - uses: goreleaser/goreleaser-action@v7
+        with:
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Ask the module proxy for the new version so `go get` sees it at once.
+      - name: Warm the module proxy
+        env:
+          VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
+        # From an empty directory: inside this repo the module is the main
+        # module, and go list can't ask for a version of that.
+        run: |
+          cd "$(mktemp -d)"
+          for i in 1 2 3 4 5; do
+            GOPROXY=https://proxy.golang.org GOFLAGS=-mod=mod \
+              go list -m "github.com/austinlparker/decker@$VERSION" && exit 0
+            sleep 15
+          done
+          echo "the proxy hasn't picked up $VERSION yet; it will on first use"

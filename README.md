@@ -399,6 +399,27 @@ purpose, record it with `UPDATE_GOLDEN=1 go test -run Golden`. That makes
 the engine safe to change: an engine change that moves one pixel of any
 talk fails that talk's test.
 
+## Releasing
+
+Talks depend on decker by version, so a release is a semver tag; there are no
+binaries. Every push and pull request runs CI (`.github/workflows/ci.yml`):
+gofmt, `go mod tidy`, vet and the full test suite, goldens included.
+
+To release, either push an annotated tag:
+
+```sh
+git tag -a v0.3.0 -m v0.3.0 && git push origin v0.3.0
+```
+
+or run the Release workflow from the Actions tab on `main` with the version,
+and it makes the tag itself. Either way the workflow runs the tests again,
+then [GoReleaser](https://goreleaser.com) (`.goreleaser.yaml`) publishes a
+GitHub Release whose notes list the pull requests merged since the last tag,
+grouped by label (`.github/release.yml`: `breaking`, `bug` or `fix`, the
+rest; `skip-changelog` leaves one out). Finally it asks the Go module proxy
+for the version, so `go get github.com/austinlparker/decker@v0.3.0` works at
+once.
+
 ## Where things live
 
 Changing the engine itself? Read [AGENTS.md](AGENTS.md) first: the

@@ -1,0 +1,18 @@
+# Groups for GitHub's generated release notes (goreleaser uses them through
+# changelog.use: github-native). A PR goes in the first group whose label it
+# has; unlabeled PRs land in "Changes".
+changelog:
+  exclude:
+    labels:
+      - skip-changelog
+  categories:
+    - title: Breaking changes
+      labels:
+        - breaking
+    - title: Fixes
+      labels:
+        - bug
+        - fix
+    - title: Changes
+      labels:
+        - "*"
