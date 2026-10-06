@@ -58,7 +58,7 @@ Every deck has the same command line, from `decker.Main`:
 go run .                     # present, from slide 1
 go run . -dev                # rebuild and reload on every save, staying on the current slide
 go run . -presenter          # the presenter view, in a second window
-go run . -list               # slide titles and step counts
+go run . -list               # slide titles, step counts and sections
 go run . -snapshot -slide 6 -step 4 -t 2.5 -w 240 -h 67 -png frame.png
 go run . -sheet sheet.png -w 682 -h 171 -shrink 8
 go run . -video talk.mp4 -fps 30
@@ -91,7 +91,8 @@ as sharp as its `-size` allows. It needs `ffmpeg`, and the video has no sound.
 - Run it directly in the terminal (Ghostty, kitty, WezTerm, iTerm2). A
   multiplexer like zellij works, but adds latency to animation.
 - The deck paints its own background, so your terminal theme doesn't matter.
-- Clickers that send page-up/page-down or arrow keys work out of the box.
+- Clickers that send page-up/page-down or arrow keys work out of the box, and
+  a "blank" button (`b` or `.`) blanks the screen to black.
 - It animates at 60 fps (`-fps 30` if the terminal can't keep up).
 - The deck writes to the terminal itself rather than through Bubble Tea's
   renderer (`termout.go`): each frame sends only the cells that
@@ -124,7 +125,8 @@ The deck's own keys keep working if the presenter view goes away.
 
 The presenter view shows:
 
-- the slide number, title and build step;
+- the slide number, title and build step, and a `BLANK` tag while the deck is
+  blanked (`b`, `w`);
 - small previews of what's on screen now and what comes next;
 - the current slide's notes;
 - a 30-minute timer, which starts when you leave slide 1 (or press `t`);
@@ -150,7 +152,18 @@ These work in the deck and in the presenter view:
 | `g` `home` / `G` `end` | first / last slide |
 | `12g` or `12⏎` | jump to slide 12 |
 | `r` | replay the current slide's animations |
+| `b` `.` | blank the screen to black; again to resume |
+| `w` `,` | blank the screen to white; again to resume |
 | `q` `ctrl+c` | quit (that window only) |
+
+A blank screen is pure black or white over the whole screen, footer included,
+like PowerPoint's B and W (many clickers' "blank" button sends `b` or `.`).
+Pressing the same key again brings the slide back, and so does any
+navigation key, which then also does its move. The other blank key switches
+color. The slide's clock keeps running underneath, so animations finish while
+it is up. Pressed in the presenter view, the keys blank the deck, and the
+presenter view shows `BLANK` in its header while keeping the notes and
+previews. Blanking closes the notes and help.
 
 Only in the presenter view: `t` starts or pauses the timer, `T` resets it.
 
@@ -190,9 +203,10 @@ func talk() decker.Deck {
 background painted behind every slide, the colors of the footer, help,
 notes, presenter view and wipe transition, the typefaces the stock
 components draw in, and an optional `Overlay` drawn over every slide (a
-logo or a handle in the corner, like a TV station's bug). Slides reach it as
-`c.Theme`. Everything else about the look (title treatment, backdrops,
-characters) is the talk's own code in `style.go`.
+logo or a handle in the corner, like a TV station's bug). An optional `Syntax`
+(`*SyntaxColors`) sets the colors `Code` highlights with; left nil, they are
+derived from the palette. Slides reach it as `c.Theme`. Everything else about
+the look (title treatment, backdrops, characters) is the talk's own code in `style.go`.
 
 ### Slides
 
@@ -204,7 +218,8 @@ func mySlide() decker.Slide {
 		Title:      "Something",                     // window title and slide list
 		Steps:      2,                               // "next" presses before moving on (build steps)
 		Notes:      "say the thing",                 // shown in the presenter view
-		Transition: decker.TransitionWipe.Over(0.6), // Push (default), Dissolve, Wipe, Morph, None; Over sets seconds
+		Section:    "Part one",                      // chapter; later slides inherit it until one sets another
+		Transition: decker.TransitionWipe.Over(0.6), // Push (default), Dissolve, Wipe, Morph, Fade, FadeThrough, Cover, Uncover, Split, Iris, Zoom, Pixelate, Glitch, None; Over sets seconds, From a side
 		View: func(c decker.Ctx, sc *decker.Scene) {
 			p := sc.Px // the pixel canvas; c.PW() × c.PH() pixels
 
@@ -238,6 +253,10 @@ slide. The `Ctx` it receives holds everything that changes between frames:
   `c.Y(0.9)` is near the bottom, `c.Size(0.1)` is type one tenth of the
   screen tall, and `c.Unit(0.02)` is a small length for strokes and gaps.
   Keep text at least `c.Size(decker.MinText)` (`c.SmallText(font)`).
+- `c.Index`, `c.Count`, `c.Section`: the slide's 0-based position, the number
+  of slides, and its section (`Slide.Section`, inherited from the nearest
+  slide before it that sets one). They exist for `Theme.Overlay`: a page
+  number, a progress bar or a chapter name on every slide.
 - `c.Theme`: the talk's colors and typefaces.
 
 A frame depends only on `Ctx`, so any moment can be replayed, snapshotted, or
@@ -270,6 +289,39 @@ transition is how a slide *enters*, so going back plays the transition of
 the slide you return to: give both slides `TransitionMorph` to morph both
 ways.
 
+### Element animations
+
+`Text` animates letter by letter; everything else (a panel, an image, a
+diagram) animates as a whole through a `Composite`: its drawing goes onto a
+layer, and the layer is put back faded, moved, scaled about a pivot and
+clipped. Animations are pure functions of `t`, the seconds since they start,
+and return a `Composite`; they come in three kinds. Entrances start hidden and
+end untouched, exits start untouched and end hidden, and emphasis (`Grow`,
+`Shake`, `Dim`) leaves the element as it was. `AppearAt` turns the build
+steps an element comes and goes at into this frame's `Composite`, including
+"hidden until its step".
+
+```go
+r := c.Rect(0.1, 0.3, 0.3, 0.3)
+fx := decker.AppearAt(c, 1, 3, // in at step 1, out at step 3
+	func(t float64) decker.Composite { return decker.FlyIn(c, t, 0.5, decker.DirLeft, 0.1) },
+	func(t float64) decker.Composite { return decker.FadeOut(t, 0.4) },
+).Then(decker.Grow(c.Since(2), 0.4, 1.1)) // a pulse at step 2
+fx.Draw(p, r, func(p *decker.Pixels) {
+	decker.Panel(c, p, r.X, r.Y, r.W, r.H, "hello", c.Theme.Panel, c.Theme.Accent, c.Theme.Text, 1)
+})
+```
+
+`bounds` is where the element lives: only it and a margin of a tenth of the
+screen's height around it (for a glow) is put on a layer, and `Trim` is a
+fraction of it. An identity composite draws straight onto the canvas, and
+a fade or wipe alone costs one copy of the region. A move or scale draws the
+element twice (on black and on white, which tells the layer's coverage) and
+resamples it, so `draw` must be pure, and an element moved off whole pixels is
+a little soft. Additive light (`p.Glow`) in a moved element blends as a screen
+rather than adding. Moving a large element every frame is the kind of full
+region redraw the terminal-setup advice warns about: let it settle.
+
 ### Toolbox
 
 Everything here is in package `decker`.
@@ -277,24 +329,58 @@ Everything here is in package `decker`.
 | Want | Use |
 | --- | --- |
 | Layout | `Rect` (or `NewRect(x, y, w, h)` in pixels): start from `c.Frame()` or `c.Rect(fx, fy, fw, fh)`, then `Inset`, `CutTop`/`CutBottom`/`CutLeft`/`CutRight`, `Rows`/`Cols` (by weight), `Grid`, `Sub` (fractions of the rect) and `Anchor` (a box of a given size inside it); `LerpRect` animates between two |
+| Transitions | `Slide.Transition`: `TransitionPush` (default), `Cover`, `Uncover`, `Wipe`, `Split`, `Fade`, `FadeThrough`, `Dissolve`, `Iris`, `Zoom`, `Pixelate`, `Glitch`, `Morph`, `None`. `.Over(secs)` sets the time; `.From(DirLeft / DirRight / DirUp / DirDown)` sets the side of Push, Cover, Uncover and Wipe (and the axis of Split); going back plays from the opposite side. Vertical moves go in whole cell rows |
 | Magic move | `sc.Place(key, rect, draw)` on both slides, `Transition: TransitionMorph` on the second; see [Magic move](#magic-move) |
 | Big type | `Text{Font, Size, Color, To (gradient), Glow, Shine, FX, MaxW}.Draw(p, s, x, y)` with `Align`; returns width and height. `DrawMid` centers a line's ink on a y |
+| Mixed styles in a line | `Rich{Font, Size, Color, Glow, FX, MaxW}.Draw(p, spans, x, y)` with `[]Span{Text, Font, Color, Underline, Strike, Mark}`: bold a word, color a keyword, highlight, inline code, one baseline, wrapping across spans; ``ParseSpans("*bold* _muted_ `code` {accent:word}", theme)`` builds spans from light markup (see [Rich text](#rich-text)); `rich.Fit(spans, w, h, maxSize)` sizes them to a box |
 | Sizing text to a box | `font.Fit(...)`, `FitAll(...)` for several lines at one size |
 | Small labels | `c.SmallText(font)`: the smallest readable size; `Label`, `Chip`, `LineLabel` (text sitting on an arrow) |
 | Block letters | `f, lines, scale := FitBlock(s, maxW, maxH, maxLines, gap, fonts...)` picks a font and scale for a pixel box; `Block{Font, Scale, Color, To, Shadow, Drop, Align, Glow, FX}.Draw(p, s, x, y)`; `BlockEffect`s for `Block.FX`: `BlockDecrypt`, `BlockRain`, `BlockBeam`, `BlockSlide`, `BlockType`, `BlockGlitch`, `BlockFade`, combined with `BlockChain` |
-| Diagrams | `Panel`, `Arrow`, `CycleDiagram` (numbered ring with a legend), `BulletList`, `SpeechBubble` |
+| Diagrams | `Panel`, `Arrow`, `CycleDiagram` (numbered ring with a legend), `BulletList`, `SpeechBubble`; `Timeline{Items, FirstStep, Vertical}.Draw(c, p, rect)` (milestones on a line, one per step) and `Process{Steps, FirstStep}.Draw(c, p, rect)` (a row of chevrons, one per step) |
+| Joining boxes | `Connector{From, To Rect, Route, Head, Tail, Width, Color, Dashed, Label, Prog}.Draw(c, p)`: a line, an elbow (`RouteElbow`) or a curve (`RouteCurved`) between two rects, leaving and arriving at the sides that face each other (`FromSide`/`ToSide` to force them), with `HeadArrow`/`HeadDot` ends flush on the edge; `Prog` draws it on, so `Ease(c.Since(step), 0.6)` animates it |
+| Code | `Code{Source, Lang, LineNumbers, Title, Focus, FirstStep, Diff, Size}.Draw(c, p, rect)`: syntax-highlighted (chroma) in `Theme.Mono` on a plate, sized to fit the rect; `Focus` is one `LineRange{From, To}` per step from `FirstStep`, dimming the other lines behind a highlight bar that glides between ranges; `Diff` reads a unified diff. Colors from `Theme.Syntax`, or derived from the theme |
+| Charts | `BarChart{Labels, Values or Series, Max, Horizontal, ShowValues, Step}`, `LineChart{Labels, Series, Names, Min, Max, Points, Step}`, `DonutChart{Labels, Values, Thickness, Center, Step}`, each with `.Draw(c, p, rect)`: they grow in on their step, take colors from `Theme.Series` (`t.SeriesColor(i)`; default Accent, Accent2, Good, Warn, Muted) and survive empty, zero, negative and NaN data. `Sparkline(c, p, rect, values, col, prog)` is a tiny inline line |
+| A counting number | `Stat{Value, Prefix, Suffix, Decimals, Label, Step, Duration}.Draw(c, p, rect)`: counts up from 0 on its step, at a steady width |
 | Tables | `Table{Header, Rows, Weights, Align, Zebra, Rules, FirstStep, Reveal, Highlight, Walk}.Draw(c, p, rect)`: one text size for every cell, ragged rows, reveal by row or column over steps (`TableRevealRows`, `TableRevealCols`), and a highlight that can `Walk` down the rows |
 | Unfinished material | `PlaceholderBox` (dashed frame) and `IllustrativeTag` (made-up data) mark what to replace before the talk |
-| Letter animations | `GlyphEffect`s for `Text.FX`: `RiseIn`, `DropIn`, `Decode` (scramble), `TypeOn`, `FadeUp`, `Wave`, `Jitter`, combined with `Chain` |
+| Letter animations | `GlyphEffect`s for `Text.FX` and `Rich.FX`: `RiseIn`, `DropIn`, `Decode` (scramble), `TypeOn`, `FadeUp`, `Wave`, `Jitter`, combined with `Chain` |
 | A moving highlight | `Shine: ShineBand(t, dur, strength)` |
-| Shapes | `p.Disc`, `p.Arc` (rings, gauges), `p.Line`, `p.Rect`, `p.RoundRect` (fill or outline), `p.Glow`, `p.VGradient`; `p.Box` and `Coverage` for shapes of your own |
+| Shapes | `p.Disc`, `p.Arc` (rings, gauges), `p.Line`, `p.Rect`, `p.RoundRect` (fill or outline), `p.Glow`, `p.VGradient`; `p.Ellipse` (fill or outline), `p.Polygon` (concave shapes, even-odd), `p.Polyline` (one blend, so joints don't show at partial alpha), `p.Bezier` (cubic, drawn on to a fraction of its length), `p.DashedLine`, `p.LinearGradient` and `p.RadialGradient` (fill a rect or rounded rect); `p.Box` and `Coverage` for shapes of your own |
 | Pixel art | `p.Art(PixelArt{Rows, Colors}, x, y, scale, alpha, flip)`; return a different frame for a different `t` to animate |
 | An overlay on every slide | `Theme.Overlay: func(c Ctx, p *Pixels)`: a logo, a handle or a page tag in a corner that slides leave clear |
-| Images | `NewImages(fsys, dir)` over the talk's embedded files, then `images.Draw(p, "shot.png", x, y, w, h, alpha)` |
-| Motion | `Ease`, `EaseOutBack`, `EaseInOutCubic`, `Spring` (Harmonica), `Pulse`, `Lerp`, `Progress` |
+| Page number, progress, section | `PageNumber` ("12 / 40"), `ProgressBar` (share of slides shown), `c.Section`: for `Theme.Overlay`, from `c.Index` and `c.Count` |
+| Images | `NewImages(fsys, dir)` over the talk's embedded files, then `images.Draw(p, "shot.png", x, y, w, h, alpha)` (fit inside the box) or `images.DrawCover(...)` (fill the box, crop the overflow); PNG transparency is kept |
+| Element animations | `AppearAt(c, enter, exit, in, out)` builds a `Composite` from "in at step n, out at step m"; entrances `FadeIn`, `FlyIn`, `ZoomIn`, `Pop`, `WipeIn`, exits `FadeOut`, `FlyOut`, `ZoomOut`, `WipeOut`, emphasis `Grow`, `Shake`, `Dim`; join with `Then` or `Combine`, draw with `fx.Draw(p, bounds, draw)`; see [Element animations](#element-animations) |
+| Layers | `Composite{Alpha, DX, DY, Scale, PivotX, PivotY, Trim}.Draw(p, bounds, draw)` draws a group on a pooled layer and fades, moves, scales and clips it as one; `Identity()` is the no-cost default, `Clipped(bounds, clip)` clips to a rect |
+| Motion | `Ease`, `EaseOutBack`, `EaseInOutCubic`, `EaseInQuad`/`EaseOutQuad`/`EaseInOutQuad`, `EaseInCubic`, `EaseOutExpo`/`EaseInOutExpo`, `EaseOutElastic`, `EaseOutBounce`, `CubicBezier(x1, y1, x2, y2)` (CSS-style), `Spring` (Harmonica), `Pulse`, `Lerp`, `Progress` |
 | Color | `Hex("#FFB000")`, `Mix`, `RGB.Scale` |
 | Off-screen drawing | `NewScene(w, h, theme)`, then `Render` it to a string (to `sc.Put` on the slide's own scene) or `Release` it when you've copied what you need |
 | Small native terminal text (rarely) | `sc.Text`, `sc.Put`, `sc.Sprite` draw on top of the pixels; videos only have the pixels |
+
+### Rich text
+
+`Text` draws one font and color. `Rich` takes `[]Span` and lets each span differ, on a shared baseline; it wraps at spaces across span boundaries and counts `FX` glyph indexes as `Text` does. `Rich.Fit` finds the largest size at which spans fill a box, remembered between frames like `Font.Fit`.
+
+```go
+spans := decker.ParseSpans("Call *Draw* with `[]Span`, {accent:not} a string.", c.Theme)
+r := decker.Rich{Font: c.Theme.Body, Color: c.Theme.Text}
+r.Size, r.MaxW = r.Fit(spans, w, h, c.Size(0.2)), w
+r.Draw(p, spans, x, y)
+```
+
+`ParseSpans` markup, with the theme supplying fonts and colors:
+
+| Write | Get |
+| --- | --- |
+| `*bold*` | the Display face (a theme has no bold cut) |
+| `_muted_` | `Theme.Muted` |
+| `` `code` `` | `Theme.Mono` on a plate; markup inside is literal |
+| `{accent:word}` | a color: `text`, `muted`, `faint`, `accent`, `accent2`, `warn`, `good`, `#rrggbb` or `#rgb` |
+| `{u:word}`, `{s:word}` | underline, strikethrough |
+| `{mark:word}` | highlighter pen: accent plate, background-colored ink |
+| `\*` | a literal marker; `\\`, `\_`, ``\` ``, `\{` and `\}` likewise |
+
+Markers toggle wherever they sit, so `*bo*ld` bolds half a word; write `snake\_case`. Build `Span`s by hand for anything else (`Underline`, `Strike`, `Mark`, any `Font` or `Color`).
 
 ### Tests
 
@@ -324,16 +410,21 @@ invariants, the golden tests, and a recipe for each kind of addition.
 | `layout.go` | `Rect`: boxes cut from the canvas for layout |
 | `cli.go` | `Main`: the command line (live, dev, presenter, list, snapshot, sheet, video) |
 | `theme.go`, `color.go` | `Theme`; `RGB`, `Hex`, `Mix` |
-| `draw.go` | stock components: `Panel`, `Arrow`, `Label`, `Chip`, `CycleDiagram`, `BulletList`… |
+| `draw.go` | stock components: `Panel`, `Arrow`, `Label`, `PageNumber`, `ProgressBar`, `Chip`, `CycleDiagram`, `BulletList`… |
+| `code.go` | the `Code` component: chroma lexing (cached per source and language), the token-to-color palette (`SyntaxColors`), focus ranges per step, diffs |
+| `chart.go` | `BarChart`, `LineChart`, `DonutChart`, `Sparkline`, `Stat`, and `Theme.SeriesColor` |
+| `connector.go`, `diagram.go` | `Connector` (lines, elbows and curves between rects) and the `Timeline` and `Process` diagrams |
 | `table.go` | `Table`: a grid of text fitted to a rect at one size, with row and column reveals and a walking highlight |
 | `font.go`, `fit.go`, `text.go`, `coverage.go`, `memo.go`, `fonts/` | smooth type: font loading and glyphs, fitting and wrapping, drawing with glow and gradients, coverage masks, cached fits |
+| `rich.go`, `richmarkup.go` | `Rich` text: spans with their own font, color and decoration laid out and drawn on the `Text` machinery, fitted to a box; `ParseSpans` markup |
 | `figlet.go`, `block.go`, `blockfit.go`, `blockglyph.go`, `fonts/figlet/` | block letters: FIGlet font loading, drawing, fitting to a box, block-character glyphs |
 | `effects.go`, `blockfx.go` | letter animations: `GlyphEffect` for `Text`, `BlockEffect` for `Block` |
-| `pixels.go`, `pixelart.go`, `image.go` | the pixel canvas and shapes, pixel art, images |
-| `anim.go` | easing, springs, noise |
+| `pixels.go`, `shapes.go`, `pixelart.go`, `image.go` | the pixel canvas and its basic shapes; polygons, ellipses, polylines, curves, dashes and gradients; pixel art; images |
+| `anim.go` | easing (`Ease*`, `CubicBezier`), springs, noise |
+| `layer.go`, `animate.go` | `Composite`: draw a group on a layer and fade, move, scale and clip it; the element animations (`FadeIn`, `FlyIn`, `Pop`, `WipeOut`, `Shake`, `AppearAt`...) built on it |
 | `scene.go`, `grid.go`, `pool.go` | combine the pixel canvas and character layer into terminal cells; reused frame buffers |
 | `render.go` | a slide's frame: the scene `View` draws on, then placed elements and the overlay, panics caught |
-| `transition.go`, `morph.go` | slide transitions: each mixes two scenes, for the terminal and video alike; the morph moves placed elements |
+| `transition.go`, `transfx.go`, `morph.go`, `direction.go` | slide transitions: each mixes two scenes, for the terminal and video alike. `transition.go` has the kinds and directions and the ones that move or sweep frames (push, cover, uncover, split, wipe, dissolve); `transfx.go` the ones that rework pixels (fades, iris, zoom, pixelate, glitch); the morph moves placed elements |
 | `model.go`, `keys.go`, `termout.go`, `dev.go` | the app: navigation, the key table, writing frames, dev reload |
 | `presenter.go`, `link.go`, `preview.go` | the presenter view, the socket link to the deck, slide previews |
 | `png.go` | PNG snapshots and contact sheets, painted from cell grids |

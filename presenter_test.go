@@ -86,7 +86,7 @@ func TestLinkSocketFiles(t *testing.T) {
 }
 
 func TestPace(t *testing.T) {
-	outline := []linkOutline{{"a", 1}, {"b", 4}, {"c", 1}} // 6 steps
+	outline := []linkOutline{{Title: "a", Steps: 1}, {Title: "b", Steps: 4}, {Title: "c", Steps: 1}} // 6 steps
 	const talk = 30 * time.Minute
 	cases := []struct {
 		slide, step int
@@ -112,7 +112,7 @@ func TestPresenterViewFits(t *testing.T) {
 	slides := testDeck().Slides
 	outline := make([]linkOutline, len(slides))
 	for i, s := range slides {
-		outline[i] = linkOutline{s.Title, s.steps()}
+		outline[i] = linkOutline{Title: s.Title, Steps: s.steps()}
 	}
 	out := os.Getenv("PRESENTER_PNG")
 	for _, size := range [][2]int{{60, 15}, {80, 24}, {120, 36}, {200, 50}} {

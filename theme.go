@@ -16,9 +16,17 @@ type Theme struct {
 	Good       RGB // positive status, such as the presenter's "on pace"
 	Panel      RGB // inset plates and the help box, a shade off Background
 
+	// Series are the colors of chart series, in order, for BarChart, LineChart
+	// and DonutChart; see Theme.SeriesColor. Empty uses Accent, Accent2, Good,
+	// Warn and Muted.
+	Series []RGB
+
 	Display *Font // headlines and numbers
 	Body    *Font // supporting lines, labels, chips
 	Mono    *Font // code
+
+	// Syntax colors [Code] with; nil derives a palette from the colors above.
+	Syntax *SyntaxColors
 
 	// Overlay, if set, draws after every slide into the full canvas p (a TV
 	// station's bug), with the slide's Ctx. Slides should leave its corner
