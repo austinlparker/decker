@@ -1,0 +1,21 @@
+# decker is a library: there is nothing to build. A release is the tag,
+# a GitHub Release with notes, and the module proxy fetching the version.
+version: 2
+
+project_name: decker
+
+builds:
+  - skip: true
+
+changelog:
+  # GitHub's generated notes list the merged PRs since the last tag, which
+  # reads better than this repo's commit messages; .github/release.yml groups
+  # them.
+  use: github-native
+
+release:
+  github:
+    owner: austinlparker
+    name: decker
+  # Tags with a pre-release suffix (v0.3.0-rc.1) are marked as pre-releases.
+  prerelease: auto

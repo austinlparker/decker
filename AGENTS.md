@@ -38,6 +38,10 @@ things live") for the file map.
 - **The exported API is used by talks in other repos.** Don't rename, remove or
   change the behavior of an exported identifier without being asked. Additions
   are fine. Unexported code is free to change if the goldens hold.
+- **Merging releases.** A merge to main that changes library code is tagged
+  and released by CI, the version bumped from the API diff (`apidiff`): a
+  break bumps the major (minor at v0), an addition the minor. Say in the PR
+  when it changes the exported API.
 
 ## Commands
 

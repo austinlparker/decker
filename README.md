@@ -399,6 +399,35 @@ purpose, record it with `UPDATE_GOLDEN=1 go test -run Golden`. That makes
 the engine safe to change: an engine change that moves one pixel of any
 talk fails that talk's test.
 
+## Releasing
+
+Talks depend on decker by version, so a release is a semver tag and a GitHub
+Release; there are no binaries. It all happens on its own:
+
+- **CI** (`.github/workflows/ci.yml`) runs on every push and pull request:
+  gofmt, `go mod tidy`, vet and the full test suite, goldens included.
+- **Release** (`.github/workflows/release.yml`) runs on every push to `main`
+  and once a day. If the library changed since the last tag (not just tests,
+  goldens, docs or CI), it works out the next version from the exported API
+  with `apidiff` (`.github/scripts/next-version.sh`): a breaking change bumps
+  the major version (the minor one while decker is v0), an addition the minor,
+  anything else the patch. Then it runs the tests again, tags, and
+  [GoReleaser](https://goreleaser.com) (`.goreleaser.yaml`) publishes the
+  release: the API diff, then the pull requests merged since the last tag,
+  grouped by label (`.github/release.yml`: `breaking`, `bug` or `fix`, the
+  rest; `skip-changelog` leaves one out).
+- **Dependencies** (`.github/dependabot.yml`) are updated weekly, one grouped
+  pull request for Go modules and one for Actions. Patch and minor updates
+  merge themselves when CI passes (`.github/workflows/dependabot.yml`); the
+  next daily run releases them.
+
+To hold a merge back, put `[skip release]` in its message; the next release
+picks it up. To release now, or as a version of your choosing (a `v1.0.0`, a
+`-rc.1`), run the Release workflow by hand from the Actions tab.
+
+Each release ends by asking the Go module proxy for the new version, so
+`go get github.com/austinlparker/decker@latest` and pkg.go.dev see it at once.
+
 ## Where things live
 
 Changing the engine itself? Read [AGENTS.md](AGENTS.md) first: the
