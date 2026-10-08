@@ -45,8 +45,11 @@ rather than the engine? Read `docs/authoring.md` and start from
   edit, and make it once rather than in steps. Don't keep the old form
   compiling: no alias, no `Deprecated:` wrapper, no function that forwards
   its arguments to the new one, no `FooV2` beside `Foo`. `TestNoCompatShims`
-  (`shim_test.go`) fails on all of these; its grandfathered list only
-  shrinks. Unexported code is free to change if the goldens hold.
+  (`shim_test.go`) type-checks the API and fails on aliases, `Deprecated:`
+  declarations, vars and consts that rename another, and forwarders; a
+  `FooV2` with its own body gets past it and is still a shim. Its
+  grandfathered list only shrinks. Unexported code is free to change if the
+  goldens hold.
 - **Merging releases.** A merge to main that changes library code is tagged
   and released by CI, the version bumped from the API diff (`apidiff`): a
   break bumps the major (minor at v0), an addition the minor. Say in the PR

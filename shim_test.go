@@ -1,13 +1,17 @@
 package decker
 
 import (
+	"fmt"
 	"go/ast"
+	"go/importer"
 	"go/parser"
 	"go/token"
+	"go/types"
+	"io"
 	"maps"
 	"os"
+	"os/exec"
 	"path/filepath"
-	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -24,23 +28,30 @@ var grandfatheredShims = []string{
 	"decker.StockFigFontNames",
 }
 
-// shimPackages are the directories whose exported API talks import.
-var shimPackages = map[string]string{".": "decker", "decktest": "decktest"}
-
-// variantSuffix marks a name that sits beside an older one instead of
-// replacing it: DrawV2, FitEx, ParseLegacy.
-var variantSuffix = regexp.MustCompile(`^(.+?)(V[0-9]+|Ex|Compat|Legacy|Old|New|WithOptions)$`)
+// shimPackages are the packages whose exported API talks import, by import
+// path, with their directories.
+var shimPackages = []struct{ path, dir string }{
+	{"github.com/austinlparker/decker", "."},
+	{"github.com/austinlparker/decker/decktest", "decktest"},
+}
 
 // TestNoCompatShims fails on exported API whose only job is to keep an old
-// spelling compiling: an alias, a deprecated declaration, a function or
-// method that forwards its arguments to another exported one, or a variant
-// like FooV2 beside Foo. Before 1.0 decker changes its API in place instead:
-// move the callers (gallery, examples, docs) to the new form, delete the old
-// one, and say in the PR that it breaks.
+// spelling compiling: a type alias, a declaration documented as Deprecated,
+// a var or const that is another name for a function or constant, or a
+// function or method that only passes its own arguments on to another
+// exported one. Before 1.0 decker changes its API in place instead: move the
+// callers (gallery, examples, docs) to the new form, delete the old one, and
+// say in the PR that it breaks.
 func TestNoCompatShims(t *testing.T) {
+	fset := token.NewFileSet()
+	dirs := make([]string, len(shimPackages))
+	for i, p := range shimPackages {
+		dirs[i] = "./" + p.dir
+	}
+	imp := exportImporter(t, fset, dirs...)
 	found := map[string]string{}
-	for dir, pkg := range shimPackages {
-		maps.Copy(found, findShims(t, dir, pkg))
+	for _, p := range shimPackages {
+		maps.Copy(found, findShims(t, fset, imp, p.path, p.dir))
 	}
 	allowed := map[string]bool{}
 	for _, name := range grandfatheredShims {
@@ -59,11 +70,37 @@ func TestNoCompatShims(t *testing.T) {
 	}
 }
 
-// findShims parses the non-test files of the package in dir and returns its
-// shim-like exported identifiers, qualified by pkg, with where and why.
-func findShims(t *testing.T, dir, pkg string) map[string]string {
+// exportImporter imports the dependencies of pkgs from the export data the
+// go command already built for them, as go list -export reports it. Type
+// checking them from source instead takes seconds.
+func exportImporter(t *testing.T, fset *token.FileSet, pkgs ...string) types.Importer {
 	t.Helper()
-	fset := token.NewFileSet()
+	args := append([]string{"list", "-export", "-deps", "-f", "{{.ImportPath}}\t{{.Export}}"}, pkgs...)
+	out, err := exec.Command("go", args...).Output()
+	if err != nil {
+		t.Fatalf("go list -export: %v", err)
+	}
+	exports := map[string]string{}
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		if path, file, ok := strings.Cut(line, "\t"); ok && file != "" {
+			exports[path] = file
+		}
+	}
+	return importer.ForCompiler(fset, "gc", func(path string) (io.ReadCloser, error) {
+		file, ok := exports[path]
+		if !ok {
+			return nil, fmt.Errorf("no export data for %s", path)
+		}
+		return os.Open(file)
+	})
+}
+
+// findShims type-checks the non-test files of the package in dir and returns
+// its shim-like exported identifiers, qualified by the package's name, with
+// where and why.
+func findShims(t *testing.T, fset *token.FileSet, imp types.Importer, path, dir string) map[string]string {
+	t.Helper()
+	name := path[strings.LastIndex(path, "/")+1:]
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		t.Fatal(err)
@@ -77,148 +114,145 @@ func findShims(t *testing.T, dir, pkg string) map[string]string {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if f.Name.Name == pkg {
+		if f.Name.Name == name {
 			files = append(files, f)
 		}
 	}
-	if len(files) == 0 {
-		t.Fatalf("no package %s in %s", pkg, dir)
+	info := &types.Info{
+		Defs:       map[*ast.Ident]types.Object{},
+		Uses:       map[*ast.Ident]types.Object{},
+		Selections: map[*ast.SelectorExpr]*types.Selection{},
 	}
-
-	// What every exported name is, so a forward or alias can be told from a
-	// call into the implementation.
-	funcs, consts, names := map[string]bool{}, map[string]bool{}, map[string]token.Pos{}
-	for _, f := range files {
-		for _, d := range f.Decls {
-			switch d := d.(type) {
-			case *ast.FuncDecl:
-				if d.Name.IsExported() {
-					names[declName(d)] = d.Pos()
-					if d.Recv == nil {
-						funcs[d.Name.Name] = true
-					}
-				}
-			case *ast.GenDecl:
-				for _, s := range d.Specs {
-					switch s := s.(type) {
-					case *ast.TypeSpec:
-						names[s.Name.Name] = s.Pos()
-					case *ast.ValueSpec:
-						for _, n := range s.Names {
-							names[n.Name] = n.Pos()
-							if d.Tok == token.CONST {
-								consts[n.Name] = true
-							}
-						}
-					}
-				}
-			}
-		}
+	pkg, err := (&types.Config{Importer: imp}).Check(path, fset, files, info)
+	if err != nil {
+		t.Fatalf("type-checking %s: %v", path, err)
 	}
 
 	out := map[string]string{}
-	add := func(pos token.Pos, name, why string) {
-		key := pkg + "." + name
-		if _, seen := out[key]; !seen && ast.IsExported(lastPart(name)) && exportedRecv(name) {
-			out[key] = fset.Position(pos).String() + ": " + why
+	add := func(pos token.Pos, obj types.Object, why string) {
+		if n, ok := apiName(obj); ok {
+			out[name+"."+n] = fset.Position(pos).String() + ": " + why
 		}
 	}
 	for _, f := range files {
 		for _, d := range f.Decls {
 			switch d := d.(type) {
 			case *ast.FuncDecl:
-				name := declName(d)
+				fn := info.Defs[d.Name].(*types.Func)
 				if deprecated(d.Doc) {
-					add(d.Pos(), name, "its doc says Deprecated")
-				} else if to, ok := forwardsTo(d, funcs); ok {
-					add(d.Pos(), name, "it only passes its arguments on to "+to)
+					add(d.Pos(), fn, "its doc says Deprecated")
+				} else if to := forwardsTo(d, fn, info); to != nil {
+					add(d.Pos(), fn, "it only passes its arguments on to "+to.Name())
 				}
 			case *ast.GenDecl:
 				for _, s := range d.Specs {
+					doc := specDoc(d, s)
 					switch s := s.(type) {
 					case *ast.TypeSpec:
-						doc := s.Doc
-						if doc == nil && len(d.Specs) == 1 {
-							doc = d.Doc
-						}
+						tn := info.Defs[s.Name].(*types.TypeName)
 						switch {
 						case deprecated(doc):
-							add(s.Pos(), s.Name.Name, "its doc says Deprecated")
-						case s.Assign.IsValid():
-							add(s.Pos(), s.Name.Name, "it is a type alias")
+							add(s.Pos(), tn, "its doc says Deprecated")
+						case tn.IsAlias():
+							add(s.Pos(), tn, "it is another name for "+types.TypeString(types.Unalias(tn.Type()), types.RelativeTo(pkg)))
 						}
-						if st, ok := s.Type.(*ast.StructType); ok {
+						if st, ok := s.Type.(*ast.StructType); ok && tn.Exported() {
 							for _, fld := range st.Fields.List {
 								for _, n := range fld.Names {
-									if deprecated(fld.Doc) || deprecated(fld.Comment) {
-										add(n.Pos(), s.Name.Name+"."+n.Name, "its doc says Deprecated")
+									if n.IsExported() && (deprecated(fld.Doc) || deprecated(fld.Comment)) {
+										out[name+"."+tn.Name()+"."+n.Name] = fset.Position(n.Pos()).String() + ": its doc says Deprecated"
 									}
 								}
 							}
 						}
 					case *ast.ValueSpec:
-						doc := s.Doc
-						if doc == nil && len(d.Specs) == 1 {
-							doc = d.Doc
-						}
 						for i, n := range s.Names {
+							obj := info.Defs[n]
 							switch {
 							case deprecated(doc) || deprecated(s.Comment):
-								add(n.Pos(), n.Name, "its doc says Deprecated")
+								add(n.Pos(), obj, "its doc says Deprecated")
 							case i < len(s.Values):
 								// A var copying another var's value is a
-								// default, not a second name; a var holding a
-								// function or a const naming a const is.
-								if id, ok := s.Values[i].(*ast.Ident); ok && id.IsExported() &&
-									(funcs[id.Name] || d.Tok == token.CONST && consts[id.Name]) {
-									add(n.Pos(), n.Name, "it is another name for "+id.Name)
+								// default, not a second name; one holding a
+								// function, or a const naming a const, is.
+								switch to := used(s.Values[i], info).(type) {
+								case *types.Func:
+									if _, isVar := obj.(*types.Var); isVar && sameAPI(to, pkg) {
+										add(n.Pos(), obj, "it is another name for "+to.Name())
+									}
+								case *types.Const:
+									if _, isConst := obj.(*types.Const); isConst && sameAPI(to, pkg) {
+										add(n.Pos(), obj, "it is another name for "+to.Name())
+									}
 								}
 							}
 						}
 					}
 				}
-			}
-		}
-	}
-	for name := range names {
-		if m := variantSuffix.FindStringSubmatch(lastPart(name)); m != nil {
-			base := strings.TrimSuffix(name, m[2])
-			if _, ok := names[base]; ok {
-				add(names[name], name, "it is a variant of "+base+" (use one name and change it in place)")
 			}
 		}
 	}
 	return out
 }
 
-// declName is a function's name, or Type.Method for a method.
-func declName(d *ast.FuncDecl) string {
-	if d.Recv == nil || len(d.Recv.List) == 0 {
-		return d.Name.Name
+// apiName is obj's name as a talk sees it, Type.Name for a method, and
+// whether it is part of the API: exported, and on an exported type.
+func apiName(obj types.Object) (string, bool) {
+	if !obj.Exported() {
+		return "", false
 	}
-	typ := d.Recv.List[0].Type
-	if st, ok := typ.(*ast.StarExpr); ok {
-		typ = st.X
+	if fn, ok := obj.(*types.Func); ok {
+		if recv := fn.Type().(*types.Signature).Recv(); recv != nil {
+			return typeOf(recv.Type(), fn.Name())
+		}
 	}
-	switch tt := typ.(type) {
-	case *ast.IndexExpr:
-		typ = tt.X
-	case *ast.IndexListExpr:
-		typ = tt.X
-	}
-	if id, ok := typ.(*ast.Ident); ok {
-		return id.Name + "." + d.Name.Name
-	}
-	return d.Name.Name
+	return obj.Name(), true
 }
 
-func lastPart(name string) string { return name[strings.LastIndex(name, ".")+1:] }
+// typeOf names member on the named type t (or *t), and reports whether that
+// type is exported.
+func typeOf(t types.Type, member string) (string, bool) {
+	if p, ok := t.(*types.Pointer); ok {
+		t = p.Elem()
+	}
+	n, ok := t.(*types.Named)
+	if !ok || !n.Obj().Exported() {
+		return "", false
+	}
+	return n.Obj().Name() + "." + member, true
+}
 
-// exportedRecv reports whether a method's type is part of the API; a method
-// on an unexported type is not.
-func exportedRecv(name string) bool {
-	typ, _, ok := strings.Cut(name, ".")
-	return !ok || ast.IsExported(typ)
+// specDoc is a spec's doc comment, or its declaration's when the declaration
+// has just the one spec.
+func specDoc(d *ast.GenDecl, s ast.Spec) *ast.CommentGroup {
+	var doc *ast.CommentGroup
+	switch s := s.(type) {
+	case *ast.TypeSpec:
+		doc = s.Doc
+	case *ast.ValueSpec:
+		doc = s.Doc
+	}
+	if doc == nil && len(d.Specs) == 1 {
+		doc = d.Doc
+	}
+	return doc
+}
+
+// used is the object an identifier or selector expression refers to.
+func used(e ast.Expr, info *types.Info) types.Object {
+	switch e := ast.Unparen(e).(type) {
+	case *ast.Ident:
+		return info.Uses[e]
+	case *ast.SelectorExpr:
+		return info.Uses[e.Sel]
+	}
+	return nil
+}
+
+// sameAPI reports whether obj is exported API of pkg.
+func sameAPI(obj types.Object, pkg *types.Package) bool {
+	_, ok := apiName(obj)
+	return ok && obj.Pkg() == pkg
 }
 
 func deprecated(doc *ast.CommentGroup) bool {
@@ -233,62 +267,55 @@ func deprecated(doc *ast.CommentGroup) bool {
 	return false
 }
 
-// forwardsTo reports whether d's whole body calls another exported function
-// of the package, or another exported method on its own receiver, with
-// exactly its own parameters in order: two names for one thing.
-func forwardsTo(d *ast.FuncDecl, funcs map[string]bool) (string, bool) {
+// forwardsTo returns the exported function or method of the same package
+// that fn's whole body calls with exactly fn's own parameters, in order (and
+// for a method, on fn's own receiver): two names for one thing. It returns
+// nil for anything else.
+func forwardsTo(d *ast.FuncDecl, fn *types.Func, info *types.Info) *types.Func {
 	if d.Body == nil || len(d.Body.List) != 1 {
-		return "", false
+		return nil
 	}
 	var call *ast.CallExpr
 	switch s := d.Body.List[0].(type) {
 	case *ast.ReturnStmt:
 		if len(s.Results) == 1 {
-			call, _ = s.Results[0].(*ast.CallExpr)
+			call, _ = ast.Unparen(s.Results[0]).(*ast.CallExpr)
 		}
 	case *ast.ExprStmt:
-		call, _ = s.X.(*ast.CallExpr)
+		call, _ = ast.Unparen(s.X).(*ast.CallExpr)
 	}
 	if call == nil {
-		return "", false
+		return nil
 	}
-	var target string
-	switch fn := call.Fun.(type) {
+	sig := fn.Type().(*types.Signature)
+	var target *types.Func
+	switch f := ast.Unparen(call.Fun).(type) {
 	case *ast.Ident:
-		if d.Recv != nil || !funcs[fn.Name] {
-			return "", false
-		}
-		target = fn.Name
+		target, _ = info.Uses[f].(*types.Func)
 	case *ast.SelectorExpr:
-		recv, ok := fn.X.(*ast.Ident)
-		if d.Recv == nil || len(d.Recv.List) == 0 || len(d.Recv.List[0].Names) == 0 ||
-			!ok || recv.Name != d.Recv.List[0].Names[0].Name || !fn.Sel.IsExported() {
-			return "", false
+		sel := info.Selections[f]
+		if sel == nil { // a package-qualified function
+			target, _ = info.Uses[f.Sel].(*types.Func)
+			break
 		}
-		target = fn.Sel.Name
-	default:
-		return "", false
-	}
-	if target == d.Name.Name {
-		return "", false
-	}
-	var params []string
-	variadic := false
-	for _, f := range d.Type.Params.List {
-		_, variadic = f.Type.(*ast.Ellipsis)
-		for _, n := range f.Names {
-			params = append(params, n.Name)
+		if sel.Kind() != types.MethodVal || sig.Recv() == nil || used(f.X, info) != sig.Recv() {
+			return nil
 		}
+		target, _ = sel.Obj().(*types.Func)
 	}
-	if len(call.Args) != len(params) || call.Ellipsis.IsValid() != (variadic && len(params) > 0) {
-		return "", false
+	if target == nil || target == fn || !sameAPI(target, fn.Pkg()) {
+		return nil
+	}
+	params := sig.Params()
+	if len(call.Args) != params.Len() || call.Ellipsis.IsValid() != sig.Variadic() {
+		return nil
 	}
 	for i, a := range call.Args {
-		if id, ok := a.(*ast.Ident); !ok || id.Name != params[i] {
-			return "", false
+		if used(a, info) != params.At(i) {
+			return nil
 		}
 	}
-	return target, true
+	return target
 }
 
 // TestShimDetector checks findShims on code it must flag and code it must
@@ -299,6 +326,7 @@ func TestShimDetector(t *testing.T) {
 
 type Font struct{}
 type FontOld = Font // alias
+type font struct{}
 
 // Old is gone.
 //
@@ -307,11 +335,16 @@ func Old() {}
 
 func Load(name string) *Font { return nil }
 func LoadFont(name string) *Font { return Load(name) }
+func OpenFont(name string) *Font { return (Load)(name) }
 func load(name string) *Font { return Load(name) }
 func Open(name string) *Font { return load(name) }
 func Join(parts ...string) string { return Concat(parts...) }
 func Concat(parts ...string) string { return "" }
+func Swap(a, b string) string { return Pair(b, a) }
+func Pair(a, b string) string { return a + b }
+func Call(f func(string) *Font, name string) *Font { return f(name) }
 var Parse = Load
+var parse = Load
 const Max = 3
 const Limit = Max
 var Default = Fallback
@@ -320,8 +353,9 @@ var Fallback = 2
 func (f Font) Width(s string) int { return f.Measure(s) }
 func (f Font) Measure(s string) int { return len(s) }
 func (f Font) Height(s string) int { return f.Measure(s + "x") }
-func (f Font) DrawV2() {}
-func (f Font) Draw() {}
+func (f Font) Other(g Font, s string) int { return g.Measure(s) }
+func (f font) Width(s string) int { return f.Measure(s) }
+func (f font) Measure(s string) int { return len(s) }
 
 type Opts struct {
 	// Size is ignored.
@@ -329,15 +363,17 @@ type Opts struct {
 	// Deprecated: set Scale.
 	Size int
 	Scale int
+	// Deprecated: internal.
+	old int
 }
 `
-	if err := os.WriteFile(dir+"/fake.go", []byte(src), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "fake.go"), []byte(src), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	got := slices.Sorted(maps.Keys(findShims(t, dir, "fake")))
+	got := slices.Sorted(maps.Keys(findShims(t, token.NewFileSet(), nil, "example.com/fake", dir)))
 	want := []string{
-		"fake.Font.DrawV2", "fake.Font.Width", "fake.FontOld", "fake.Join", "fake.Limit",
-		"fake.LoadFont", "fake.Old", "fake.Opts.Size", "fake.Parse",
+		"fake.Font.Width", "fake.FontOld", "fake.Join", "fake.Limit",
+		"fake.LoadFont", "fake.Old", "fake.OpenFont", "fake.Opts.Size", "fake.Parse",
 	}
 	if !slices.Equal(got, want) {
 		t.Errorf("findShims flagged\n  %v\nwant\n  %v", got, want)
