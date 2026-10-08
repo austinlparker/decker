@@ -32,6 +32,15 @@ func (d *Deck) Section(i int) string { return sectionAt(d.Slides, i) }
 // Steps returns how many build steps slide i (0-based) has.
 func (d *Deck) Steps(i int) int { return d.Slides[i].steps() }
 
+// builds counts the deck's build steps, every slide's together.
+func (d *Deck) builds() int {
+	n := 0
+	for _, s := range d.Slides {
+		n += s.steps()
+	}
+	return n
+}
+
 // Draw renders slide i into cells without encoding them: the live deck's
 // per-frame work, for benchmarks. Like Render it sets c's position from i.
 func (d *Deck) Draw(i int, c Ctx) {
