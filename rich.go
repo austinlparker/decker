@@ -2,7 +2,6 @@ package decker
 
 import (
 	"encoding/binary"
-	"math"
 	"reflect"
 	"strings"
 	"unicode"
@@ -269,9 +268,7 @@ func (r Rich) Draw(p *Pixels, spans []Span, x, y float64) (w, h float64) {
 
 	// Each distinct color gets its own mask, painted marks first, then glows,
 	// then ink, so a span's plate never covers its neighbor's letters.
-	pad := float64(size)
-	x0, y0 := int(math.Floor(blockX-pad)), int(math.Floor(y-pad))
-	cw, ch := int(math.Ceil(w+2*pad))+1, int(math.Ceil(h+2*pad))+1
+	x0, y0, cw, ch := inkBox(blockX, y, w, h, size)
 	var marks, inks richLayers
 	baseOff := r.text().baseOff(f, size)
 	fs := float64(size)
@@ -305,15 +302,7 @@ func (r Rich) Draw(p *Pixels, spans []Span, x, y float64) (w, h float64) {
 				marks.get(*sp.Mark, x0, y0, cw, ch).fillRect(gx-left, gy-fs*0.8, gx+g.adv+right, gy+fs*0.2, fx.Alpha)
 			}
 			in := inks.get(col, x0, y0, cw, ch)
-			show := g.r
-			if fx.Rune != 0 && g.r != ' ' {
-				// Center the stand-in glyph in the real glyph's advance.
-				show = fx.Rune
-				gx += (g.adv - g.font.glyph(show, size).adv) / 2
-			}
-			ix := math.Floor(gx)
-			q := int((gx - ix) * subpixel)
-			in.stamp(g.font.glyphAt(show, size, q), ix, gy, fx.Alpha)
+			gx = in.stampGlyph(g.font, size, g.r, g.adv, gx, gy, fx)
 			if sp.Underline || sp.Strike {
 				th := max(1, fs/16)
 				if sp.Underline {
@@ -328,7 +317,7 @@ func (r Rich) Draw(p *Pixels, spans []Span, x, y float64) (w, h float64) {
 	}
 
 	for _, m := range marks {
-		paintFlat(p, m.cov, m.col)
+		m.cov.paintFlat(p, m.col)
 	}
 	if r.Glow > 0 {
 		for _, in := range inks {
@@ -336,7 +325,7 @@ func (r Rich) Draw(p *Pixels, spans []Span, x, y float64) (w, h float64) {
 		}
 	}
 	for _, in := range inks {
-		paintFlat(p, in.cov, in.col)
+		in.cov.paintFlat(p, in.col)
 	}
 	if p.review != nil {
 		covs := make([]coverage, len(inks))
@@ -347,11 +336,8 @@ func (r Rich) Draw(p *Pixels, spans []Span, x, y float64) (w, h float64) {
 		for _, sp := range spans {
 			text.WriteString(sp.Text)
 		}
-		boxes := make([]Rect, len(l.lines))
-		for i := range l.lines {
-			boxes[i] = Rect{x + r.Align.shift(l.widths[i]), y + float64(i)*lineH, l.widths[i], lineH}
-		}
-		checkInk(p, covs, f, size, text.String(), quoteText("Rich", text.String()), Rect{blockX, y, w, h}, boxes)
+		checkInk(p, covs, f, size, text.String(), quoteText("Rich", text.String()), Rect{blockX, y, w, h},
+			lineBoxes(r.Align, l.widths, x, y, lineH))
 	}
 	return w, h
 }
@@ -361,12 +347,7 @@ func (r Rich) Draw(p *Pixels, spans []Span, x, y float64) (w, h float64) {
 func (r Rich) DrawMid(p *Pixels, spans []Span, x, cy float64) (w, h float64) {
 	f, size := r.resolved()
 	l, _ := r.layout(spans)
-	top, bot := l.inkTop, l.inkB
-	if top == bot {
-		top, bot = -f.CapHeight(size), 0
-	}
-	baseline := math.Round(cy - (top+bot)/2)
-	return r.Draw(p, spans, x, baseline-r.text().baseOff(f, size))
+	return r.Draw(p, spans, x, r.text().midTop(f, size, l.inkTop, l.inkB, cy))
 }
 
 // richLayer is a coverage mask painted in one color.
@@ -388,16 +369,6 @@ func (ls *richLayers) get(col RGB, x0, y0, w, h int) coverage {
 	c := newCoverage(x0, y0, w, h)
 	*ls = append(*ls, richLayer{col, c})
 	return c
-}
-
-func paintFlat(p *Pixels, cov coverage, col RGB) {
-	for y := 0; y < cov.h; y++ {
-		for x := 0; x < cov.w; x++ {
-			if a := cov.a[y*cov.w+x]; a > 0.002 {
-				p.Blend(cov.x0+x, cov.y0+y, col, float64(a))
-			}
-		}
-	}
 }
 
 type richFitKey struct {

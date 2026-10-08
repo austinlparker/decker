@@ -603,8 +603,7 @@ func (k Code) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 		}
 	}
 
-	// The 0.08 matches Text's nudge that centers ink in the line box.
-	baseOff := rf.Ascent(rs) + (lineH-float64(rs))/2 - float64(rs)*0.08
+	baseOff := Text{Leading: codeLeading}.baseOff(rf, rs)
 	numCol := Mix(th.Panel, th.Muted, 0.6)
 	for i, l := range g.lines {
 		y := top + float64(i)*lineH
@@ -761,8 +760,8 @@ func drawMono(p *Pixels, f *Font, size int, s string, x, base, adv, xmax float64
 	oy0 := int(math.Round(base))
 	for _, r := range s {
 		if r != ' ' && x+adv <= xmax {
-			ix := math.Floor(x)
-			g := f.glyphAt(r, size, int((x-ix)*subpixel))
+			ix, q := penAt(x)
+			g := f.glyphAt(r, size, q)
 			blitGlyph(p, g, int(ix)+g.ox, oy0+g.oy, y0, y1, col)
 		}
 		x += adv

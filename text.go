@@ -74,11 +74,18 @@ func (t Text) resolved() (*Font, int) {
 func (t Text) DrawMid(p *Pixels, s string, x, cy float64) (w, h float64) {
 	f, size := t.resolved()
 	top, bot := f.Ink(s, size)
+	return t.Draw(p, s, x, t.midTop(f, size, top, bot, cy))
+}
+
+// midTop is the top edge to draw a line at so that its ink, reaching from top
+// to bot about the baseline, is centered on cy, the baseline on a whole pixel.
+// A line with no ink (top == bot) centers the cap height instead.
+func (t Text) midTop(f *Font, size int, top, bot, cy float64) float64 {
 	if top == bot {
 		top, bot = -f.CapHeight(size), 0
 	}
 	baseline := math.Round(cy - (top+bot)/2)
-	return t.Draw(p, s, x, baseline-t.baseOff(f, size))
+	return baseline - t.baseOff(f, size)
 }
 
 // Baseline is the distance from the top of a line to its baseline, as Draw lays
@@ -114,10 +121,7 @@ func (t Text) Draw(p *Pixels, s string, x, y float64) (w, h float64) {
 	h = lineH * float64(len(lines))
 	blockX := x + t.Align.shift(w)
 
-	// The coverage buffer is padded by size on every side for glow and effect
-	// motion.
-	pad := float64(size)
-	cov := newCoverage(int(math.Floor(blockX-pad)), int(math.Floor(y-pad)), int(math.Ceil(w+2*pad))+1, int(math.Ceil(h+2*pad))+1)
+	cov := newCoverage(inkBox(blockX, y, w, h, size))
 	t.stamp(cov, f, size, lines, widths, x, y, lineH)
 
 	if t.Glow > 0 {
@@ -129,11 +133,8 @@ func (t Text) Draw(p *Pixels, s string, x, y float64) (w, h float64) {
 	}
 	t.paint(p, cov, blockX, w)
 	if p.review != nil {
-		boxes := make([]Rect, len(lines))
-		for i := range lines {
-			boxes[i] = Rect{x + t.Align.shift(widths[i]), y + float64(i)*lineH, widths[i], lineH}
-		}
-		checkInk(p, []coverage{cov}, f, size, s, quoteText("Text", s), Rect{blockX, y, w, h}, boxes)
+		checkInk(p, []coverage{cov}, f, size, s, quoteText("Text", s), Rect{blockX, y, w, h},
+			lineBoxes(t.Align, widths, x, y, lineH))
 	}
 	return w, h
 }
@@ -174,16 +175,7 @@ func (t Text) stamp(cov coverage, f *Font, size int, lines []string, widths []fl
 				fx = t.FX(gi)
 			}
 			g := f.glyph(r, size)
-			gx := lx + pen + fx.DX - float64(cov.x0)
-			show := r
-			if fx.Rune != 0 && r != ' ' {
-				// Center the stand-in glyph in the real glyph's advance.
-				show = fx.Rune
-				gx += (g.adv - f.glyph(show, size).adv) / 2
-			}
-			ix := math.Floor(gx)
-			q := int((gx - ix) * subpixel)
-			cov.stamp(f.glyphAt(show, size, q), ix, base+fx.DY-float64(cov.y0), fx.Alpha)
+			cov.stampGlyph(f, size, r, g.adv, lx+pen+fx.DX-float64(cov.x0), base+fx.DY-float64(cov.y0), fx)
 			pen += g.adv
 			prev = r
 			gi++
@@ -204,6 +196,10 @@ func (t Text) colorAt(u float64) RGB {
 }
 
 func (t Text) paint(p *Pixels, cov coverage, blockX, w float64) {
+	if t.To == nil && t.Shine == nil {
+		cov.paintFlat(p, t.Color)
+		return
+	}
 	for y := 0; y < cov.h; y++ {
 		for x := 0; x < cov.w; x++ {
 			a := cov.a[y*cov.w+x]
