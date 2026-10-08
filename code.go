@@ -541,7 +541,7 @@ func (k Code) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 	g := k.geom(c, r)
 	if c.review != nil {
 		k.report(c, r, g)
-		k.reportCanvas(p, r, g)
+		k.reportCanvas(c, r, g)
 		defer c.within(k.name(g.Lines), Rect{r.X, r.Y, g.W, g.H})()
 		c.review.inkRect(c.review.scopeID, Rect{r.X, r.Y, g.W, g.H})
 	}
@@ -686,14 +686,10 @@ func (k Code) report(c Ctx, r Rect, g codeGeom) {
 
 // reportCanvas reports the code's text running past the canvas edges, where
 // drawMono cuts it off: a rect can fit its code and still hang off the slide.
-func (k Code) reportCanvas(p *Pixels, r Rect, g codeGeom) {
+func (k Code) reportCanvas(c Ctx, r Rect, g codeGeom) {
 	left, top := r.X+g.pad, r.Y+g.Head
 	right, bottom := left+float64(g.ShownCols)*g.adv, top+float64(g.Shown)*g.lineH
-	past := [4]int{
-		int(math.Ceil(-left)), int(math.Ceil(-top)),
-		int(math.Ceil(right)) - p.W, int(math.Ceil(bottom)) - p.H,
-	}
-	reportPast(p, past, g.Size, k.name(g.Lines), Rect{r.X, r.Y, g.W, g.H})
+	c.review.reportEdges([4]float64{left, top, right, bottom}, g.Size, k.name(g.Lines), Rect{r.X, r.Y, g.W, g.H})
 }
 
 // color returns the palette color for role, or plain for no role.

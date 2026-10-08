@@ -249,8 +249,9 @@ func (t Table) name() string {
 	return fmt.Sprintf("Table (%d rows)", len(t.Rows))
 }
 
-// report records the rows left out and the cells cut short among those this
-// build reveals: a row or a column still to come is not lost yet.
+// report records the rows left out, header included, and the cells cut
+// short among those this build reveals: a row or a column still to come is
+// not lost yet.
 func (t Table) report(c Ctx, r Rect, l *tableLayout) {
 	off := 0 // layout rows before the first body row
 	if l.header {
@@ -273,9 +274,19 @@ func (t Table) report(c Ctx, r Rect, l *tableLayout) {
 		}
 	}
 	name := t.name()
-	if dropped > 0 {
+	// The header is laid out first, so it is lost only when nothing fits.
+	var lost string
+	switch header := l.header && shown(0, 0) && len(l.rowY) == 0; {
+	case header && dropped > 0:
+		lost = fmt.Sprintf("the header and %d of %d rows don't fit", dropped, revealed)
+	case header:
+		lost = "the header doesn't fit"
+	case dropped > 0:
+		lost = fmt.Sprintf("%d of %d rows don't fit", dropped, revealed)
+	}
+	if lost != "" {
 		c.review.add(SeverityError, "table-rows-dropped", r,
-			fmt.Sprintf("%s: %d of %d rows don't fit in %.0fpx at %dpx text", name, dropped, revealed, r.H, l.size))
+			fmt.Sprintf("%s: %s in %.0fpx at %dpx text", name, lost, r.H, l.size))
 	}
 	if cut > 0 {
 		c.review.add(SeverityWarning, "table-cell-cut", r,

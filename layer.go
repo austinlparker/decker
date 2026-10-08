@@ -94,7 +94,8 @@ func (k Composite) Clipped(bounds, clip Rect) Composite {
 // learn how much of each pixel it covers (the canvas has no alpha), then
 // resamples that: bilinear when moving or growing, averaged over the pixels
 // each one covers when shrinking. So draw must be pure and may run twice, and
-// an element moved off whole pixels is slightly soft.
+// an element moved off whole pixels is slightly soft. A review sees what
+// draw reports where k shows it, and only once.
 //
 // The layers are pooled and only the region around bounds is cleared and
 // composited, so a steady-state frame does not allocate. They are canvas
@@ -135,6 +136,9 @@ func (k Composite) Draw(p *Pixels, bounds Rect, draw func(p *Pixels)) {
 	}
 
 	src := [4]int{sx0, sy0, sx1, sy1}
+	if l := p.review; l != nil {
+		defer l.mapLayer(layerMap{s: s, px: px, py: py, dx: k.DX, dy: k.DY, src: src, win: win})()
+	}
 	if moved {
 		k.resample(p, src, win, g, s, px, py, draw)
 		return
@@ -182,6 +186,7 @@ func coverSpan(v, lo, hi float64) float64 { return Clamp01(min(v+1, hi) - max(v,
 func (k Composite) fade(p *Pixels, src, dst [4]int, win [4]float64, g float64, draw func(p *Pixels)) {
 	top := snapshot(p, src[0], src[1], src[2], src[3])
 	defer layers.put(top)
+	top.review = p.review
 	draw(top)
 	for y := max(dst[1], src[1]); y <= min(dst[3], src[3]); y++ {
 		wy := g * coverSpan(float64(y), win[1], win[3])
@@ -222,7 +227,14 @@ func (k Composite) resample(p *Pixels, src [4]int, win [4]float64, g, s, px, py 
 		}
 	}
 	black.BG, white.BG = p.BG, p.BG
+	black.review = p.review
 	draw(black)
+	// The second drawing is the same element, there only for its coverage.
+	if l := p.review; l != nil {
+		was := l.mute
+		l.mute = true
+		defer func() { l.mute = was }()
+	}
 	draw(white)
 
 	// Most of the region around the bounds is empty: shrink it to what the

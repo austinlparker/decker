@@ -67,14 +67,14 @@ func (s *Scene) pairScratch(n, m int) []int {
 // layers holds scratch canvases for fade, frame-sized like scenes.
 var layers = sizedPool[Pixels]{max: 4}
 
-// layer lends a canvas the size of like; drawing on it reports to like's
-// review, since its coordinates are like's.
+// layer lends a canvas the size of like. Drawing on it reports to no review:
+// a Composite that shows the layer says how what is drawn there lands.
 func layer(like *Pixels) *Pixels {
 	if l := layers.get(func(l *Pixels) bool { return l.W == like.W && l.H == like.H }); l != nil {
-		l.review = like.review
+		l.review = nil
 		return l
 	}
-	return &Pixels{W: like.W, H: like.H, Pix: make([]RGB, len(like.Pix)), review: like.review}
+	return &Pixels{W: like.W, H: like.H, Pix: make([]RGB, len(like.Pix))}
 }
 
 // snapshot lends a layer holding p's pixels in the box x0..x1 × y0..y1,

@@ -354,3 +354,47 @@ func TestReviewFindings(t *testing.T) {
 		}
 	})
 }
+
+// TestReviewFindingsAgain pins the fixes for the second code review.
+func TestReviewFindingsAgain(t *testing.T) {
+	at := func(view func(c Ctx, sc *Scene)) []string {
+		d := &Deck{Name: "a", Theme: testTheme, Slides: []Slide{{View: view}}}
+		return codes(issuesAt(d, [2]int{320, 90}))["1.1"]
+	}
+	label := func(p *Pixels, s string, x float64) {
+		Text{Font: testTheme.Body, Size: 16, Color: testTheme.Text}.Draw(p, s, x, 30)
+	}
+	moved := func(dx float64) func(c Ctx, sc *Scene) {
+		return func(c Ctx, sc *Scene) {
+			Composite{Alpha: 1, DX: dx}.Draw(sc.Px, Rect{20, 30, 120, 20}, func(p *Pixels) { label(p, "other label", 20) })
+		}
+	}
+
+	for _, tc := range []struct {
+		name  string
+		view  func(c Ctx, sc *Scene)
+		codes []string
+	}{
+		{"text a composite moves away from other text", func(c Ctx, sc *Scene) {
+			label(sc.Px, "first label", 20)
+			moved(160)(c, sc)
+		}, nil},
+		{"text a composite moves onto other text", func(c Ctx, sc *Scene) {
+			label(sc.Px, "first label", 180)
+			moved(160)(c, sc)
+		}, []string{"overlap"}},
+		{"text a composite moves off the canvas", moved(300), []string{"text-offcanvas"}},
+		{"Code a composite moves, drawn twice to find its coverage", func(c Ctx, sc *Scene) {
+			Composite{Alpha: 1, DX: 30}.Draw(sc.Px, Rect{20, 30, 200, 80}, func(p *Pixels) {
+				Code{Source: "x := 1"}.Draw(c, p, Rect{20, 30, 200, 80})
+			})
+		}, nil},
+		{"a table whose header doesn't fit", func(c Ctx, sc *Scene) {
+			Table{Header: []string{"Header"}}.Draw(c, sc.Px, Rect{20, 30, 150, 1})
+		}, []string{"table-rows-dropped"}},
+	} {
+		if got := at(tc.view); !slices.Equal(got, tc.codes) {
+			t.Errorf("%s: codes %v, want %v", tc.name, got, tc.codes)
+		}
+	}
+}

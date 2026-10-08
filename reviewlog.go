@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"fmt"
 	"maps"
+	"math"
 	"slices"
 	"strconv"
 	"strings"
@@ -37,6 +38,82 @@ type reviewLog struct {
 	owner    []int32
 	elems    []reviewElem
 	overlaps map[[2]int32]int
+
+	// layer is set while a Composite draws on a layer of its own: what is
+	// reported there is in the layer's coordinates, and layer puts it where
+	// the composite shows it. mute is set while the composite draws the same
+	// element again, to learn its coverage, which reports nothing.
+	layer *layerMap
+	mute  bool
+}
+
+// layerMap is how a Composite moves its layer onto the canvas: scaled by s
+// about (px, py), then moved by (dx, dy). Only the layer's src box (pixel
+// indexes, inclusive) is composited, within the window win on the canvas
+// (left, top, right, bottom). outer is the map of a composite drawing this
+// one onto a layer of its own.
+type layerMap struct {
+	s, px, py, dx, dy float64
+	src               [4]int
+	win               [4]float64
+	outer             *layerMap
+}
+
+// mapLayer has what is reported, until the returned func runs, land as m
+// says, inside any composite already drawing.
+func (l *reviewLog) mapLayer(m layerMap) func() {
+	m.outer = l.layer
+	l.layer = &m
+	return func() { l.layer = m.outer }
+}
+
+// move is where (x, y) on m's layer lands on the canvas, or on the layer
+// of the composite m draws on.
+func (m *layerMap) move(x, y float64) (float64, float64) {
+	return m.px + (x-m.px)*m.s + m.dx, m.py + (y-m.py)*m.s + m.dy
+}
+
+// point is where layer point (x, y) lands on the canvas.
+func (m *layerMap) point(x, y float64) (float64, float64) {
+	for ; m != nil; m = m.outer {
+		x, y = m.move(x, y)
+	}
+	return x, y
+}
+
+// rect is where layer rect r lands on the canvas.
+func (m *layerMap) rect(r Rect) Rect {
+	x0, y0 := m.point(r.X, r.Y)
+	x1, y1 := m.point(r.Right(), r.Bottom())
+	return Rect{x0, y0, x1 - x0, y1 - y0}
+}
+
+// size is a text size drawn on the layer as it shows on the canvas.
+func (m *layerMap) size(size int) int {
+	s := float64(size)
+	for ; m != nil; m = m.outer {
+		s *= m.s
+	}
+	return int(s)
+}
+
+// pixel is the part of the canvas layer pixel (x, y) lands on, or false if
+// the composite leaves it out.
+func (m *layerMap) pixel(x, y int) (Rect, bool) {
+	r := Rect{float64(x), float64(y), 1, 1}
+	for ; m != nil; m = m.outer {
+		if cx, cy := r.X+r.W/2, r.Y+r.H/2; cx < float64(m.src[0]) || cy < float64(m.src[1]) ||
+			cx > float64(m.src[2]+1) || cy > float64(m.src[3]+1) {
+			return Rect{}, false
+		}
+		x0, y0 := m.move(r.X, r.Y)
+		x1, y1 := m.move(r.Right(), r.Bottom())
+		r = intersectRect(Rect{x0, y0, x1 - x0, y1 - y0}, Rect{m.win[0], m.win[1], m.win[2] - m.win[0], m.win[3] - m.win[1]})
+		if r.W <= 0 || r.H <= 0 {
+			return Rect{}, false
+		}
+	}
+	return r, true
 }
 
 // reviewElem is something a frame drew: a stock component, a block of text
@@ -71,8 +148,15 @@ type smallText struct {
 	firstOfMany string // the first text, for a scope's message
 }
 
-// element records an element and returns its id for inkAt.
+// element records an element and returns its id for inkAt, or 0 while
+// muted.
 func (l *reviewLog) element(name string, r Rect) int32 {
+	if l.mute {
+		return 0
+	}
+	if l.layer != nil {
+		r = l.layer.rect(r)
+	}
 	l.elems = append(l.elems, reviewElem{name: name, r: r})
 	return int32(len(l.elems))
 }
@@ -81,7 +165,27 @@ func (l *reviewLog) element(name string, r Rect) int32 {
 // with whatever element inked it before. Id 0 is no element: the overlay's
 // drawing, which owns no pixels.
 func (l *reviewLog) inkAt(id int32, x, y int) {
-	if id == 0 || x < 0 || y < 0 || x >= l.w || y >= l.h {
+	if id == 0 || l.mute {
+		return
+	}
+	if l.layer != nil {
+		r, ok := l.layer.pixel(x, y)
+		if !ok {
+			return
+		}
+		for cy := int(math.Floor(r.Y)); float64(cy) < r.Bottom(); cy++ {
+			for cx := int(math.Floor(r.X)); float64(cx) < r.Right(); cx++ {
+				l.inkCanvas(id, cx, cy)
+			}
+		}
+		return
+	}
+	l.inkCanvas(id, x, y)
+}
+
+// inkCanvas is inkAt for a pixel of the canvas itself.
+func (l *reviewLog) inkCanvas(id int32, x, y int) {
+	if x < 0 || y < 0 || x >= l.w || y >= l.h {
 		return
 	}
 	i := y*l.w + x
@@ -114,7 +218,7 @@ func (l *reviewLog) inkRect(id int32, r Rect) {
 // nothing while presenting.
 func (c Ctx) within(name string, r Rect) func() {
 	l := c.review
-	if l == nil || l.overlay || l.scope != "" {
+	if l == nil || l.overlay || l.mute || l.scope != "" {
 		return noop
 	}
 	l.scope, l.scopeID = name, l.element(name, r)
@@ -126,6 +230,12 @@ func noop() {}
 // noteSmall records text drawn at size where least is the smallest readable
 // size.
 func (l *reviewLog) noteSmall(name string, size, least int, box Rect) {
+	if l.mute {
+		return
+	}
+	if l.layer != nil {
+		size, box = l.layer.size(size), l.layer.rect(box)
+	}
 	owner, scoped := name, l.scope != ""
 	if scoped {
 		owner = l.scope
@@ -227,6 +337,12 @@ func intersectRect(a, b Rect) Rect {
 // add records an issue, once: an element drawn twice in a frame (a moved
 // Composite draws on black and on white) reports twice.
 func (l *reviewLog) add(sev Severity, code string, r Rect, msg string) {
+	if l.mute {
+		return
+	}
+	if l.layer != nil && r != (Rect{}) {
+		r = l.layer.rect(r)
+	}
 	if l.overlay {
 		msg = "Theme.Overlay: " + msg
 	} else if l.scope != "" && strings.HasPrefix(code, "text-") {
@@ -258,6 +374,9 @@ func quoteText(kind, s string) string {
 // in pixels, and lines the box of each line as drawn.
 func checkInk(p *Pixels, cov []coverage, f *Font, size int, text, name string, box Rect, lines []Rect) {
 	l := p.review
+	if l.mute {
+		return
+	}
 	if least := f.Drawn(max(int(MinText*float64(p.H)), 6)); size < least {
 		l.noteSmall(name, size, least, box)
 	}
@@ -266,9 +385,14 @@ func checkInk(p *Pixels, cov []coverage, f *Font, size int, text, name string, b
 		id = l.element(name, box)
 		e := &l.elems[id-1]
 		e.text, e.size, e.lines = text, size, lines
+		if l.layer != nil {
+			e.size, e.lines = l.layer.size(size), make([]Rect, len(lines))
+			for i, r := range lines {
+				e.lines[i] = l.layer.rect(r)
+			}
+		}
 	}
-	// How far ink reaches past each edge: left, top, right, bottom.
-	var past [4]int
+	ink := noInk
 	for _, c := range cov {
 		for y := 0; y < c.h; y++ {
 			py := c.y0 + y
@@ -277,24 +401,36 @@ func checkInk(p *Pixels, cov []coverage, f *Font, size int, text, name string, b
 					continue
 				}
 				px := c.x0 + x
-				past[0] = max(past[0], -px)
-				past[1] = max(past[1], -py)
-				past[2] = max(past[2], px-p.W+1)
-				past[3] = max(past[3], py-p.H+1)
+				ink = [4]float64{min(ink[0], float64(px)), min(ink[1], float64(py)), max(ink[2], float64(px+1)), max(ink[3], float64(py+1))}
 				if id != 0 {
 					l.inkAt(id, px, py)
 				}
 			}
 		}
 	}
-	reportPast(p, past, size, name, box)
+	l.reportEdges(ink, size, name, box)
 }
 
-// reportPast reports ink that reaches past the canvas edges by the given
-// pixels: left, top, right, bottom. A pixel is rounding; up to a quarter of
-// the text's size is the tail of a letter cut off, a warning; more is text
-// lost, an error.
-func reportPast(p *Pixels, past [4]int, size int, name string, box Rect) {
+// noInk is the extent of no ink at all, for reportEdges.
+var noInk = [4]float64{math.Inf(1), math.Inf(1), math.Inf(-1), math.Inf(-1)}
+
+// reportEdges reports ink reaching past the canvas edges. ink is its extent
+// (left, top, right and bottom, in canvas pixels), rounded as its drawing
+// rounds. A pixel is rounding; up to a quarter of the text's size is the
+// tail of a letter cut off, a warning; more is text lost, an error.
+func (l *reviewLog) reportEdges(ink [4]float64, size int, name string, box Rect) {
+	if l.mute || ink[0] > ink[2] {
+		return
+	}
+	if l.layer != nil {
+		ink[0], ink[1] = l.layer.point(ink[0], ink[1])
+		ink[2], ink[3] = l.layer.point(ink[2], ink[3])
+		size = l.layer.size(size)
+	}
+	past := [4]int{
+		int(math.Ceil(-ink[0])), int(math.Ceil(-ink[1])),
+		int(math.Ceil(ink[2])) - l.w, int(math.Ceil(ink[3])) - l.h,
+	}
 	edges := [4]string{"left", "top", "right", "bottom"}
 	var parts []string
 	most := 0
@@ -311,5 +447,5 @@ func reportPast(p *Pixels, past [4]int, size int, name string, box Rect) {
 	if most*4 <= size {
 		sev = SeverityWarning
 	}
-	p.review.add(sev, "text-offcanvas", box, name+" runs "+strings.Join(parts, " and "))
+	l.add(sev, "text-offcanvas", box, name+" runs "+strings.Join(parts, " and "))
 }

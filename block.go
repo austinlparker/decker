@@ -74,14 +74,14 @@ func (b Block) Draw(p *Pixels, s string, x, y float64) (w, h float64) {
 	for _, c := range placed {
 		drawBlockRunePx(p, c.r, c.x, c.y, k, c.c, c.a)
 	}
-	if l := p.review; l != nil {
+	if l := p.review; l != nil && !l.mute {
 		name := quoteText("Block", s)
 		id := l.scopeID
 		if id == 0 && !l.overlay {
 			id = l.element(name, Rect{left, y, w, h})
 			l.elems[id-1].text = s
 		}
-		var past [4]int
+		ink := noInk
 		for _, c := range placed {
 			if c.a < 0.5 {
 				continue
@@ -89,12 +89,12 @@ func (b Block) Draw(p *Pixels, s string, x, y float64) (w, h float64) {
 			if id != 0 {
 				l.inkRect(id, Rect{c.x, c.y, k, 2 * k})
 			}
-			past[0] = max(past[0], int(math.Round(-c.x)))
-			past[1] = max(past[1], int(math.Round(-c.y)))
-			past[2] = max(past[2], int(math.Round(c.x+k))-p.W)
-			past[3] = max(past[3], int(math.Round(c.y+2*k))-p.H)
+			ink = [4]float64{
+				min(ink[0], math.Round(c.x)), min(ink[1], math.Round(c.y)),
+				max(ink[2], math.Round(c.x+k)), max(ink[3], math.Round(c.y+2*k)),
+			}
 		}
-		reportPast(p, past, int(2*k), name, Rect{left, y, w, h})
+		l.reportEdges(ink, int(2*k), name, Rect{left, y, w, h})
 	}
 	return w, h
 }
