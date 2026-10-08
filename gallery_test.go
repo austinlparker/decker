@@ -1770,7 +1770,7 @@ func slideScales() Slide {
 			_, plot = plot.CutLeft(nameW + gap)
 			_, plot = plot.CutRight(tickW / 2)
 			ax := NiceScale(0, spans[0].dur, int(plot.W/tickW), plot.X, plot.Right())
-			for v := range ax.Ticks() {
+			for _, v := range ax.Ticks() {
 				x := ax.At(v)
 				p.Rect(x, plot.Y, 1, plot.H, th.Faint, 1)
 				ticks.Draw(p, ax.Label(v)+"s", x, axis.Y+gap/2)

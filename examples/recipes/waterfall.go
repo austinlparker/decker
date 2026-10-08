@@ -213,7 +213,7 @@ func drawWaterfall(c decker.Ctx, p *decker.Pixels, l waterfallLayout, hilite int
 	// Gridlines and tick labels.
 	tick := l.text
 	tick.Color, tick.Align = th.Muted, decker.Center
-	for v := range l.ms.Ticks() {
+	for _, v := range l.ms.Ticks() {
 		x := l.ms.At(v)
 		p.Rect(x, l.plot.Y, 1, l.plot.H, th.Faint, 1)
 		tick.Draw(p, l.ms.Label(v)+"ms", x, l.axis.Y+l.gap/3)
