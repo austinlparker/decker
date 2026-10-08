@@ -5,6 +5,8 @@
 // function that draws one frame from a [Ctx] onto a [Scene], and [Main] gives
 // the deck its command line: present, presenter view, dev reload, snapshots,
 // contact sheets and video.
+// The presenter can open a deck window in Ghostty on macOS with its own
+// terminal font size; Ghostty and kitty also support full-resolution previews.
 //
 // A minimal talk loads its fonts once and draws from the frame's context:
 //

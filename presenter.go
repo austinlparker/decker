@@ -1,8 +1,12 @@
 package decker
 
 import (
+	"context"
 	"fmt"
+	"math"
+	"os"
 	"strings"
+	"sync"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -13,17 +17,52 @@ import (
 // runPresenter runs the presenter view (-presenter) until the user quits:
 // notes, previews and a timer in a window of its own, linked to the deck over
 // socket. Its keys drive the deck, so a clicker aimed here runs the show.
-func runPresenter(d *Deck, socket string, length time.Duration) error {
-	p := newPresenter(d, socket, length)
-	_, err := tea.NewProgram(p).Run()
+func runPresenter(d *Deck, o options) error {
+	if o.presentationFontSize <= 0 || math.IsNaN(o.presentationFontSize) || math.IsInf(o.presentationFontSize, 0) {
+		return fmt.Errorf("-presentation-font-size: want a positive, finite size in points")
+	}
+	images, err := imagePreviews(o.previews)
+	if err != nil {
+		return err
+	}
+	window, err := newPresentationWindow(o.socket, o.presentationFontSize)
+	if err != nil {
+		return err
+	}
+	p := newPresenter(d, o.socket, o.length)
+	p.st.Slide, p.st.Step = max(o.slide-1, 0), max(o.step-1, 0)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	window.ctx = ctx
+	p.launch = window.open
+	if images {
+		p.images = newKittyImages()
+		defer func() { fmt.Fprint(os.Stdout, p.images.clear()) }()
+	}
+	_, err = tea.NewProgram(p, tea.WithFilter(presenterFilter)).Run()
 	p.link.close()
 	return err
+}
+
+// A resize may arrive after an upload command was queued but before RawMsg
+// executes. Check again before Bubble Tea writes it to the terminal.
+func presenterFilter(m tea.Model, msg tea.Msg) tea.Msg {
+	if raw, ok := msg.(tea.RawMsg); ok {
+		if upload, ok := raw.Msg.(kittyUploadMsg); ok {
+			p := m.(presenter)
+			if p.images == nil || !p.images.valid(upload) {
+				return nil
+			}
+		}
+	}
+	return msg
 }
 
 func newPresenter(d *Deck, socket string, length time.Duration) presenter {
 	return presenter{
 		slides: d.Slides, theme: d.Theme, sty: d.Theme.styles(), socket: socket, length: length,
 		link: &linkClient{}, previews: map[previewKey]string{}, now: time.Now(),
+		drawMu: &sync.Mutex{},
 	}
 }
 
@@ -35,12 +74,19 @@ type presenter struct {
 	length   time.Duration
 	link     *linkClient
 	previews map[previewKey]string // drawn with half blocks
+	images   *kittyImages
+	drawMu   *sync.Mutex // slide Views expect one caller at a time
 
-	st     linkState // the deck's last report; Outline is nil until the first
-	linked bool
-	w, h   int
-	now    time.Time
-	count  string // numeric prefix for jumps, e.g. "12g"
+	st            linkState // the deck's last report; Outline is nil until the first
+	linked        bool
+	w, h          int
+	now           time.Time
+	count         string // numeric prefix for jumps, e.g. "12g"
+	launch        func(slide, step int) error
+	launching     bool
+	launchBusy    bool
+	launchErr     string
+	launchAttempt int
 
 	// The talk timer starts when the deck first leaves slide 1, or with t.
 	running bool
@@ -49,10 +95,15 @@ type presenter struct {
 }
 
 type (
-	presTickMsg  time.Time
-	linkUpMsg    struct{}
-	linkDownMsg  struct{}
-	linkStateMsg linkState
+	presTickMsg           time.Time
+	linkUpMsg             struct{}
+	linkDownMsg           struct{}
+	linkStateMsg          linkState
+	presentationOpenedMsg struct {
+		attempt int
+		err     error
+	}
+	presentationWaitMsg int
 )
 
 const reconnectEvery = 500 * time.Millisecond
@@ -87,23 +138,66 @@ func (p presenter) listen() tea.Cmd {
 func (p presenter) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
+		changed := p.w != msg.Width || p.h != msg.Height
 		p.w, p.h = msg.Width, msg.Height
+		if changed {
+			clear(p.previews)
+			if p.images != nil {
+				return p, tea.Sequence(tea.Raw(p.images.clear()), p.upload())
+			}
+		}
 	case presTickMsg:
 		p.now = time.Time(msg)
 		return p, p.tick()
 	case linkUpMsg:
 		p.linked = true
+		p.launching, p.launchErr = false, ""
 		return p, p.listen()
 	case linkDownMsg:
 		p.linked = false
 		p.link.close()
 		return p, p.connect(reconnectEvery)
 	case linkStateMsg:
+		resized := p.st.W != msg.W || p.st.H != msg.H
 		p.st = linkState(msg)
 		if !p.running && p.banked == 0 && p.st.Slide > 0 {
 			p.running, p.since = true, time.Now()
 		}
-		return p, p.listen()
+		if resized {
+			clear(p.previews)
+			if p.images != nil {
+				return p, tea.Batch(p.listen(), tea.Sequence(tea.Raw(p.images.clear()), p.upload()))
+			}
+		}
+		return p, tea.Batch(p.listen(), p.upload())
+	case kittyUploadMsg:
+		if p.images != nil {
+			if p.images.finish(msg) != "" {
+				return p, tea.Raw(msg)
+			}
+		}
+	case tea.RawMsg:
+		if upload, ok := msg.Msg.(kittyUploadMsg); ok && p.images != nil && p.images.valid(upload) {
+			p.images.ready[upload.key] = true
+		}
+	case presentationOpenedMsg:
+		if msg.attempt != p.launchAttempt {
+			return p, nil
+		}
+		p.launchBusy = false
+		if p.linked {
+			return p, nil
+		}
+		if msg.err != nil {
+			p.launching, p.launchErr = false, msg.err.Error()
+			return p, nil
+		}
+		return p, tea.Tick(10*time.Second, func(time.Time) tea.Msg { return presentationWaitMsg(msg.attempt) })
+	case presentationWaitMsg:
+		if int(msg) == p.launchAttempt && p.launching && !p.linked {
+			p.launching = false
+			p.launchErr = "The presentation has not connected. Press p to retry, or check its window."
+		}
 	case tea.KeyPressMsg:
 		return p.handleKey(msg.String())
 	}
@@ -119,7 +213,19 @@ func (p presenter) handleKey(k string) (tea.Model, tea.Cmd) {
 	}
 	switch {
 	case k == "q" || k == "ctrl+c":
+		if p.images != nil {
+			return p, tea.Sequence(tea.Raw(p.images.clear()), tea.Quit)
+		}
 		return p, tea.Quit
+	case k == "p":
+		if p.linked || p.launching || p.launchBusy || p.launch == nil {
+			return p, nil
+		}
+		p.launching, p.launchBusy, p.launchErr = true, true, ""
+		p.launchAttempt++
+		slide, step := max(p.st.Slide+1, 1), max(p.st.Step+1, 1)
+		attempt := p.launchAttempt
+		return p, func() tea.Msg { return presentationOpenedMsg{attempt, p.launch(slide, step)} }
 	case k == "t":
 		if p.running {
 			p.banked += time.Since(p.since)
@@ -186,8 +292,21 @@ func (p presenter) View() tea.View {
 }
 
 func (p presenter) waitingView() string {
+	setup := "Run the deck in another window."
+	if p.launch != nil {
+		setup = "Press p to open the presentation in a new Ghostty window."
+	}
+	if p.launching {
+		setup = "Opening the presentation…"
+	} else if p.launchErr != "" {
+		setup = p.launchErr
+	}
+	style := p.sty.text
+	if p.launch != nil {
+		style = style.Width(max(p.w-2*presMargin, 1)).MaxHeight(max(p.h-footerLines-4, 1))
+	}
 	msg := p.sty.accent.Render("Waiting for the deck…") + "\n\n" +
-		p.sty.text.Render("Run the deck in another window.") + "\n" +
+		style.Render(setup) + "\n" +
 		p.sty.faint.Render(p.socket)
 	mid := lipgloss.Place(p.w, max(p.h-footerLines, 1), lipgloss.Center, lipgloss.Center, msg)
 	return mid + "\n" + p.footer()
@@ -253,7 +372,13 @@ func (p presenter) mainView() string {
 	}
 	noteBlock := p.sty.accent2.Render("NOTES") + "\n" + strings.Join(lines, "\n")
 
-	parts := []string{header, ""}
+	launchStatus := ""
+	if p.launching {
+		launchStatus = p.sty.accent.Render("Opening the presentation…")
+	} else if p.launchErr != "" {
+		launchStatus = p.sty.warn.Render(truncate(strings.ReplaceAll(p.launchErr, "\n", " "), inner))
+	}
+	parts := []string{header, launchStatus}
 	if previews != "" {
 		parts = append(parts, previews, "")
 	}
@@ -290,12 +415,55 @@ func (p presenter) preview(k previewKey) string {
 	if !p.matches(k.slide) {
 		return p.placeholder(k.pw, k.ph, "preview out of date: restart the presenter view")
 	}
+	if p.images != nil && p.images.ready[k] {
+		return kittyPlaceholders(p.images.ids[k], k.pw, k.ph)
+	}
 	if s, ok := p.previews[k]; ok {
 		return s
 	}
+	p.drawMu.Lock()
 	s := renderPreview(p.slides, k, p.theme)
+	p.drawMu.Unlock()
 	p.previews[k] = s
 	return s
+}
+
+// upload draws and encodes missing previews off the event loop. Placeholders
+// replace the cell fallback only after the terminal has received the image.
+func (p presenter) upload() tea.Cmd {
+	if p.images == nil || p.st.Outline == nil {
+		return nil
+	}
+	k, ok := p.key(p.st.Slide, p.st.Step)
+	if !ok {
+		return nil
+	}
+	targets := []previewKey{k}
+	if next, _, ok := p.nextTarget(); ok {
+		nk := k
+		nk.slide, nk.step = next[0], next[1]
+		targets = append(targets, nk)
+	}
+	var cmds []tea.Cmd
+	for _, k := range targets {
+		if _, ok := p.images.id(k); ok || !p.matches(k.slide) {
+			continue
+		}
+		id, free := p.images.add(k)
+		gen := p.images.gen
+		cmd := func() tea.Msg {
+			p.drawMu.Lock()
+			img := slideImage(p.slides, k, p.theme)
+			p.drawMu.Unlock()
+			return kittyUploadMsg{gen, k, id, kittyTransmit(id, img, k.pw, k.ph)}
+		}
+		if free != "" {
+			cmds = append(cmds, tea.Sequence(tea.Raw(free), cmd))
+		} else {
+			cmds = append(cmds, cmd)
+		}
+	}
+	return tea.Batch(cmds...)
 }
 
 func (p presenter) footer() string {
@@ -342,6 +510,9 @@ func (p presenter) footer() string {
 
 	line1 := spread(timer+"   "+bar+"   "+status, p.sty.muted.Render(p.now.Format("15:04")), inner)
 	keys := p.sty.faint.Render("→ ← step   ] [ slide   12g jump   r replay   t timer   T reset   q quit")
+	if p.launch != nil {
+		keys = p.sty.faint.Render("p open deck   → ← step   ] [ slide   12g jump   r replay   t timer   T reset   q quit")
+	}
 	rule := p.sty.faint.Render(strings.Repeat("─", inner))
 	return indent(rule+"\n"+line1+"\n"+truncate(keys, inner), strings.Repeat(" ", presMargin))
 }
