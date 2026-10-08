@@ -84,6 +84,19 @@ func fits(lines []string, maxW float64, measure func(line string) float64) bool 
 
 const minFitSize = 6
 
+// largestSize counts down from from and returns the first size fits accepts,
+// or floor once it gets there, accepted or not. fits is called for every size
+// tried, the returned one last, so it can keep the layout it made there. A
+// from at or below floor is tried once and returned as it is; callers that
+// mean floor as a minimum pass max(from, floor).
+func largestSize(from, floor int, fits func(size int) bool) int {
+	size := from
+	for !fits(size) && size > floor {
+		size--
+	}
+	return size
+}
+
 type fitKey struct {
 	f          *Font
 	text       string // text, or length-prefixed FitAll parts
@@ -110,13 +123,12 @@ func (f *Font) fit(parts []string, maxW, maxH float64, maxSize int, leading floa
 		}
 		return lines
 	}
-	for size := maxSize; size > minFitSize; size-- {
-		lines := wrap(size)
-		if fits(lines, maxW, func(l string) float64 { return f.Measure(l, size) }) && float64(len(lines))*float64(size)*leading <= maxH {
-			return size, lines
-		}
-	}
-	return minFitSize, wrap(minFitSize)
+	var lines []string
+	size := largestSize(max(maxSize, minFitSize), minFitSize, func(size int) bool {
+		lines = wrap(size)
+		return fits(lines, maxW, func(l string) float64 { return f.Measure(l, size) }) && float64(len(lines))*float64(size)*leading <= maxH
+	})
+	return size, lines
 }
 
 // Fit returns the largest size (at most maxSize) at which s, wrapped to maxW,

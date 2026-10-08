@@ -203,15 +203,12 @@ func (t Table) fit(c Ctx, r Rect) *tableLayout {
 	}
 
 	minSize := c.SmallText(c.Theme.Body)
-	size := max(c.Theme.Body.Drawn(c.Size(tableMaxText)), minSize)
 	var lines [][][]string
-	for ; ; size-- {
+	size := largestSize(max(c.Theme.Body.Drawn(c.Size(tableMaxText)), minSize), minSize, func(size int) bool {
 		var ok bool
 		lines, ok = wrap(size)
-		if (ok && height(lines, size, math.MaxInt) <= r.H) || size <= minSize {
-			break
-		}
-	}
+		return ok && height(lines, size, math.MaxInt) <= r.H
+	})
 
 	limit := math.MaxInt
 	if height(lines, size, limit) > r.H {

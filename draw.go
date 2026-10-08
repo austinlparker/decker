@@ -246,15 +246,17 @@ func (d CycleDiagram) drawLegend(c Ctx, p *Pixels, g cycleGeom, top float64, loo
 		}
 		return h + float64(g.n-1)*float64(s)*0.25
 	}
-	ls := c.Theme.Body.Drawn(c.Size(0.08))
-	for ls > c.SmallText(c.Theme.Body) && height(ls) > room {
-		ls = c.Theme.Body.Drawn(ls - 1)
-	}
+	var legendH float64
+	// Not legendH <= room: a NaN room shrinks nothing.
+	ls := largestSize(c.Theme.Body.Drawn(c.Size(0.08)), c.SmallText(c.Theme.Body), func(s int) bool {
+		legendH = height(s)
+		return !(legendH > room)
+	})
 	if c.review != nil {
-		c.Fits("CycleDiagram legend", Rect{g.legendX, top, g.legendW, room}, g.legendW, height(ls))
+		c.Fits("CycleDiagram legend", Rect{g.legendX, top, g.legendW, room}, g.legendW, legendH)
 	}
 	labelW := g.legendW - numW(ls)
-	y := top + max(0, (room-height(ls))/2)
+	y := top + max(0, (room-legendH)/2)
 	for i, l := range d.Labels {
 		step := d.Step0 + i
 		if !c.Reached(step) {
@@ -278,19 +280,16 @@ func BulletList(c Ctx, p *Pixels, lines []string, x, y, w, h float64, firstStep 
 	// The mark is 0.32 of the text size wide; the gap after it grows with the
 	// text.
 	indent := func(size int) float64 { return max(c.Unit(0.05), float64(size)*0.6) }
-	size := c.Size(0.17)
-	for {
-		total := 0.0
+	var total float64
+	size := largestSize(c.Size(0.17), c.SmallText(c.Theme.Body), func(size int) bool {
+		total = 0.0
 		for _, l := range lines {
 			total += wrappedHeight(c.Theme.Body, l, size, w-indent(size))
 		}
 		total += float64(len(lines)-1) * float64(size) * 0.45
-		if total <= h || size <= c.SmallText(c.Theme.Body) {
-			c.Fits("BulletList", Rect{x, y, w, h}, w, total)
-			break
-		}
-		size--
-	}
+		return total <= h
+	})
+	c.Fits("BulletList", Rect{x, y, w, h}, w, total)
 	size = c.Theme.Body.Drawn(size)
 	for i, l := range lines {
 		step := i + firstStep

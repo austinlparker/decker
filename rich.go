@@ -421,12 +421,9 @@ func (r Rich) Fit(spans []Span, maxW, maxH float64, maxSize int) int {
 	sig := richSig(r.Font, spans)
 	return richFitted.get(richFitKey{sig, maxW, maxH, maxSize, lead}, func() int {
 		r.MaxW = maxW
-		for size := maxSize; size > minFitSize; size-- {
+		return largestSize(max(maxSize, minFitSize), minFitSize, func(size int) bool {
 			l := r.layoutSig(sig, spans, size)
-			if l.w <= maxW && float64(len(l.lines))*float64(size)*lead <= maxH {
-				return size
-			}
-		}
-		return minFitSize
+			return l.w <= maxW && float64(len(l.lines))*float64(size)*lead <= maxH
+		})
 	})
 }

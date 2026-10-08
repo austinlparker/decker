@@ -331,8 +331,9 @@ func layoutCats(f *Font, labels []string, maxW, maxH float64, base int, skip boo
 }
 
 func layoutCatsAt(f *Font, labels []string, maxW, maxH float64, base, stride int) catLayout {
-	for size := base; ; size-- {
-		out := catLayout{size: size, stride: stride, lines: make([][]string, len(labels))}
+	var out catLayout
+	largestSize(base, chartMinTxt, func(size int) bool {
+		out = catLayout{size: size, stride: stride, lines: make([][]string, len(labels))}
 		ok := true
 		for i := 0; i < len(labels); i += stride {
 			out.lines[i] = f.Wrap(labels[i], size, maxW)
@@ -345,10 +346,9 @@ func layoutCatsAt(f *Font, labels []string, maxW, maxH float64, base, stride int
 			out.h = max(out.h, h)
 			ok = ok && h <= maxH
 		}
-		if ok || size <= chartMinTxt {
-			return out
-		}
-	}
+		return ok
+	})
+	return out
 }
 
 // legendRow draws a one-line key of swatches and names across the top of r,
@@ -760,14 +760,15 @@ var legendLayouts = memo[legendKey, legendLayout]{max: 1000}
 // labels, wrapped beside a swatch and a share column, fit avail x room.
 func layoutLegend(f *Font, labels []string, avail, room float64, maxSize, minSize int, shares bool) legendLayout {
 	return legendLayouts.get(legendKey{f, labelsKey(labels), avail, room, maxSize, minSize, shares}, func() legendLayout {
-		for size := maxSize; ; size-- {
+		var out legendLayout
+		largestSize(maxSize, minSize, func(size int) bool {
 			fs := float64(size)
 			pct := 0.0
 			if shares {
 				pct = f.Measure("100%", size)
 			}
 			labelW := max(avail-fs*0.7-fs*0.7-fs*0.9-pct, fs)
-			out := legendLayout{size: size, lines: make([][]string, len(labels)), pct: pct}
+			out = legendLayout{size: size, lines: make([][]string, len(labels)), pct: pct}
 			for i, l := range labels {
 				out.lines[i] = f.Wrap(l, size, labelW)
 				lw := 0.0
@@ -779,10 +780,9 @@ func layoutLegend(f *Font, labels []string, avail, room float64, maxSize, minSiz
 			}
 			out.h += float64(max(len(labels)-1, 0)) * fs * 0.45
 			out.w += fs*0.7*2 + fs*0.9 + pct
-			if (out.h <= room && out.w <= avail) || size <= minSize {
-				return out
-			}
-		}
+			return out.h <= room && out.w <= avail
+		})
+		return out
 	})
 }
 
@@ -1054,14 +1054,11 @@ var statSizes = memo[statKey, int]{max: 500}
 // and its tabular width is at most maxW.
 func statSize(f *Font, text string, maxW, maxH float64, maxSize int) int {
 	return statSizes.get(statKey{f, text, maxW, maxH, maxSize}, func() int {
-		size := maxSize
-		for ; size > minFitSize; size-- {
+		return largestSize(maxSize, minFitSize, func(size int) bool {
 			rf, rs := f.resolve(size)
-			if _, w := tabular(f, size, text); w <= maxW && rf.CapHeight(rs) <= maxH {
-				break
-			}
-		}
-		return size
+			_, w := tabular(f, size, text)
+			return w <= maxW && rf.CapHeight(rs) <= maxH
+		})
 	})
 }
 
