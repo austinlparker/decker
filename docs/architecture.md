@@ -26,6 +26,7 @@ invariants, the golden tests, and a recipe for each kind of addition.
 | `transition.go`, `transfx.go`, `morph.go`, `direction.go` | slide transitions: each mixes two scenes, for the terminal and video alike. `transition.go` has the kinds and directions and the ones that move or sweep frames (push, cover, uncover, split, wipe, dissolve); `transfx.go` the ones that rework pixels (fades, iris, zoom, pixelate, glitch); the morph moves placed elements |
 | `model.go`, `keys.go`, `termout.go`, `dev.go` | the app: navigation, the key table, writing frames, dev reload |
 | `presenter.go`, `link.go`, `preview.go` | the presenter view, the socket link to the deck, slide previews |
+| `present_window.go`, `kitty.go` | launch a Ghostty deck window with its own font size; upload and manage full-resolution presenter images |
 | `png.go` | PNG snapshots and contact sheets, painted from cell grids |
 | `video.go` | rendering a deck to a video |
 | `decktest/` | the test suite for decks |

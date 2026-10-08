@@ -889,6 +889,30 @@ func goldenPresenter(t *testing.T, g *goldenEntries) {
 		key := func(s string) string { return fmt.Sprintf("presenter/%dx%d/%s", w, h, s) }
 		g.addString(key("waiting"), presenterFor(d, w, h, false, -1, 0, previews).View().Content)
 		g.addString(key("waiting-linked"), presenterFor(d, w, h, true, -1, 0, previews).View().Content)
+		launch := presenterFor(d, w, h, false, -1, 0, previews)
+		launch.launch = func(int, int) error { return nil }
+		g.addString(key("launch/waiting"), launch.View().Content)
+		launch.launching = true
+		g.addString(key("launch/opening"), launch.View().Content)
+		launch.launching, launch.launchErr = false, "Ghostty could not open the presentation: Automation permission denied"
+		g.addString(key("launch/error"), launch.View().Content)
+		launch = presenterFor(d, w, h, false, 1, 1, previews)
+		launch.launch = func(int, int) error { return nil }
+		launch.launchErr = "The presentation has not connected. Press p to retry, or check its window."
+		g.addString(key("launch/disconnected"), launch.View().Content)
+		images := presenterFor(d, w, h, true, 1, 1, previews)
+		images.images = newKittyImages()
+		if k, ok := images.key(1, 1); ok {
+			images.images.add(k)
+			images.images.ready[k] = true
+			if next, _, ok := images.nextTarget(); ok {
+				nk := k
+				nk.slide, nk.step = next[0], next[1]
+				images.images.add(nk)
+				images.images.ready[nk] = true
+			}
+		}
+		g.addString(key("image-previews"), images.View().Content)
 		for _, at := range []struct{ slide, step int }{{0, 0}, {1, 1}, {2, 0}, {2, 3}, {4, 0}, {5, 1}} {
 			for _, tm := range timers {
 				if tm.name != "running" && at.slide != 2 {

@@ -120,16 +120,23 @@ These commands run from your talk's directory:
 
 ```sh
 go run . -dev                         # rebuild on save; keep your slide and step
-go run . -presenter -length 45m        # second window: notes, timer and previews
+go run . -presenter -length 45m        # notes, timer and previews; p opens the deck
 go run . -list                        # titles, step counts and sections
 go run . -snapshot -step 2 -w 160 -h 45 -png frame.png
 go run . -sheet sheet.png             # all slides at their final step
 go run . -video talk.mp4 -fps 30       # silent video; needs ffmpeg
 ```
 
-For the presenter view, keep the deck running in the first window and start
-`-presenter` in the second. It connects using the deck's name and reconnects
-after a dev rebuild. See the [CLI reference](docs/cli.md) for every flag,
+In Ghostty 1.3+ on macOS, start `-presenter` and press `p` to open the deck
+in a separate window at 4pt. Change that size with
+`-presentation-font-size 5`. The presenter keeps its normal font size;
+move the deck window to your projector and navigate from the presenter.
+Full-resolution image previews are automatic in Ghostty and kitty;
+`-previews cells` selects half-block previews instead.
+
+You can also start the deck and `-presenter` manually in separate terminals.
+They connect using the deck's name and reconnect after a dev rebuild.
+See the [CLI reference](docs/cli.md) for every flag,
 default, export behavior and socket options.
 
 | Key | Action |
