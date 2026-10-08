@@ -88,9 +88,9 @@ func (p *Pixels) Fill(c RGB) {
 func (p *Pixels) Rect(x, y, w, h float64, c RGB, a float64) {
 	x0, y0, x1, y1 := p.Box(x, y, x+w, y+h)
 	for py := y0; py <= y1; py++ {
-		cy := Clamp01(min(float64(py)+1, y+h) - max(float64(py), y))
+		cy := coverSpan(float64(py), y, y+h)
 		for px := x0; px <= x1; px++ {
-			cx := Clamp01(min(float64(px)+1, x+w) - max(float64(px), x))
+			cx := coverSpan(float64(px), x, x+w)
 			p.Blend(px, py, c, a*cx*cy)
 		}
 	}

@@ -146,9 +146,9 @@ func (c coverage) fillRect(x0, y0, x1, y1, alpha float64) {
 	ix0, iy0 := max(int(math.Floor(x0)), 0), max(int(math.Floor(y0)), 0)
 	ix1, iy1 := min(int(math.Ceil(x1)), c.w), min(int(math.Ceil(y1)), c.h)
 	for y := iy0; y < iy1; y++ {
-		cy := float32(min(float64(y+1), y1) - max(float64(y), y0))
+		cy := float32(coverSpan(float64(y), y0, y1))
 		for x := ix0; x < ix1; x++ {
-			cx := float32(min(float64(x+1), x1) - max(float64(x), x0))
+			cx := float32(coverSpan(float64(x), x0, x1))
 			if v := cx * cy * al; v > c.a[y*c.w+x] {
 				c.a[y*c.w+x] = v
 			}

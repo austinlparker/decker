@@ -32,10 +32,10 @@ func (t *Theme) defaultSeries() [5]RGB {
 // Muted. A negative i counts from the end of the cycle.
 func (t *Theme) SeriesColor(i int) RGB {
 	if len(t.Series) > 0 {
-		return t.Series[((i%len(t.Series))+len(t.Series))%len(t.Series)]
+		return t.Series[wrapIndex(i, len(t.Series))]
 	}
 	d := t.defaultSeries()
-	return d[((i%len(d))+len(d))%len(d)]
+	return d[wrapIndex(i, len(d))]
 }
 
 func finite(v float64) bool { return !math.IsNaN(v) && !math.IsInf(v, 0) }
@@ -749,8 +749,7 @@ func (l LineChart) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 				continue
 			}
 			if x2, y2, ok2 := pt(i + 1); ok2 {
-				f := Clamp01((reveal - x) / (x2 - x))
-				p.Line(x, y, Lerp(x, x2, f), Lerp(y, y2, f), width, col, 1)
+				revealedSegment(p, x, y, x2, y2, reveal, width, col)
 			}
 			_, _, hasPrev := pt(i - 1)
 			_, _, hasNext := pt(i + 1)
@@ -1001,17 +1000,25 @@ func Sparkline(c Ctx, p *Pixels, r Rect, values []float64, col RGB, prog float64
 		}
 		hx, hy, have = x(i), y(i), true
 		if i+1 < len(values) && finite(values[i+1]) {
-			f := 1.0
-			if dx := x(i+1) - x(i); dx > 0 {
-				f = Clamp01((reveal - x(i)) / dx)
-			}
-			hx, hy = Lerp(x(i), x(i+1), f), Lerp(y(i), y(i+1), f)
-			p.Line(x(i), y(i), hx, hy, width, col, 1)
+			hx, hy = revealedSegment(p, x(i), y(i), x(i+1), y(i+1), reveal, width, col)
 		}
 	}
 	if have {
 		p.Disc(hx, hy, dot, col, 1)
 	}
+}
+
+// revealedSegment strokes the segment from (x0, y0) toward (x1, y1) as far
+// as x = reveal and returns where it stops: how a chart's line draws on from
+// left to right. A segment that doesn't run rightward is drawn whole.
+func revealedSegment(p *Pixels, x0, y0, x1, y1, reveal, width float64, col RGB) (x, y float64) {
+	f := 1.0
+	if dx := x1 - x0; dx > 0 {
+		f = Clamp01((reveal - x0) / dx)
+	}
+	x, y = Lerp(x0, x1, f), Lerp(y0, y1, f)
+	p.Line(x0, y0, x, y, width, col, 1)
+	return x, y
 }
 
 // Stat is a big number that counts up from zero to Value when its step begins,
