@@ -1,6 +1,9 @@
 package decker
 
-import "testing"
+import (
+	"math"
+	"testing"
+)
 
 func TestRectCuts(t *testing.T) {
 	r := Rect{10, 20, 100, 50}
@@ -62,5 +65,95 @@ func TestRectPlace(t *testing.T) {
 	c := Ctx{W: 200, H: 50}
 	if got := c.Rect(0.5, 0.5, 0.25, 0.1); got != (Rect{100, 50, 50, 10}) {
 		t.Errorf("Ctx.Rect: %v", got)
+	}
+}
+
+func TestRectIntersectAndOverlaps(t *testing.T) {
+	r := Rect{0, 0, 100, 50}
+	for _, tc := range []struct {
+		o    Rect
+		want Rect
+	}{
+		{Rect{60, 30, 100, 100}, Rect{60, 30, 40, 20}},
+		{Rect{10, 10, 20, 20}, Rect{10, 10, 20, 20}}, // inside: unchanged
+		{Rect{-10, -10, 200, 200}, r},                // around: r unchanged
+		{Rect{100, 0, 10, 50}, Rect{}},               // touching an edge
+		{Rect{100, 50, 10, 10}, Rect{}},              // touching a corner
+		{Rect{300, 300, 10, 10}, Rect{}},             // apart
+		{Rect{10, 10, 0, 20}, Rect{}},                // empty, though inside
+		{Rect{10, 10, -5, 20}, Rect{}},
+	} {
+		if got := r.Intersect(tc.o); got != tc.want {
+			t.Errorf("Intersect(%v) = %v, want %v", tc.o, got, tc.want)
+		}
+		if got := tc.o.Intersect(r); got != tc.want {
+			t.Errorf("Intersect(%v) the other way = %v, want %v", tc.o, got, tc.want)
+		}
+		if got, want := r.Overlaps(tc.o), !tc.want.Empty(); got != want || tc.o.Overlaps(r) != want {
+			t.Errorf("Overlaps(%v) = %v, want %v", tc.o, got, want)
+		}
+	}
+}
+
+func TestRectUnion(t *testing.T) {
+	r := Rect{0, 0, 100, 50}
+	for _, tc := range []struct {
+		a, b, want Rect
+	}{
+		{r, Rect{60, 30, 100, 100}, Rect{0, 0, 160, 130}},
+		{r, Rect{-20, 70, 10, 10}, Rect{-20, 0, 120, 80}},
+		{r, Rect{10, 10, 20, 20}, r},
+		{r, Rect{}, r},                // the zero Rect adds nothing...
+		{Rect{}, r, r},                // ...from either side
+		{r, Rect{500, 500, 0, 10}, r}, // nor does an empty one far away
+		{Rect{5, 5, 0, 0}, Rect{}, Rect{5, 5, 0, 0}},
+	} {
+		if got := tc.a.Union(tc.b); got != tc.want {
+			t.Errorf("%v.Union(%v) = %v, want %v", tc.a, tc.b, got, tc.want)
+		}
+	}
+	var bounds Rect
+	for _, b := range []Rect{{10, 10, 5, 5}, {40, -3, 2, 2}, {0, 20, 1, 1}} {
+		bounds = bounds.Union(b)
+	}
+	if bounds != (Rect{0, -3, 42, 24}) {
+		t.Errorf("gathered bounds %v", bounds)
+	}
+	// -0.2+(0.30000000000000004 - -0.2) rounds to 0.3, short of the right
+	// edge, so the width is nudged to reach it.
+	a, b := Rect{-0.2, 0, 0.1, 1}, Rect{0.1, 0, 0.2, 1}
+	if u := a.Union(b); !u.Contains(a) || !u.Contains(b) {
+		t.Errorf("%v.Union(%v) = %v leaves one out", a, b, u)
+	}
+}
+
+func TestRectContains(t *testing.T) {
+	r := Rect{0, 0, 100, 50}
+	for _, tc := range []struct {
+		o    Rect
+		want bool
+	}{
+		{r, true},
+		{Rect{10, 10, 20, 20}, true},
+		{Rect{0, 0, 100, 10}, true},   // sharing edges
+		{Rect{90, 10, 20, 20}, false}, // overhanging
+		{Rect{-1, 0, 10, 10}, false},
+		{Rect{500, 500, 0, 0}, true}, // empty: inside everything
+		{Rect{500, 500, -3, 2}, true},
+	} {
+		if got := r.Contains(tc.o); got != tc.want {
+			t.Errorf("Contains(%v) = %v, want %v", tc.o, got, tc.want)
+		}
+	}
+	if line := (Rect{0, 0, 0, 50}); !line.Contains(Rect{0, 0, 0, 10}) || line.Contains(Rect{0, 0, 1, 1}) {
+		t.Error("an empty rect should contain only empty rects")
+	}
+	for _, e := range []Rect{{}, {0, 0, 5, 0}, {0, 0, -1, 5}, {0, 0, math.NaN(), 5}} {
+		if !e.Empty() {
+			t.Errorf("%v is not Empty", e)
+		}
+	}
+	if (Rect{0, 0, 0.5, 0.5}).Empty() {
+		t.Error("a small rect is Empty")
 	}
 }

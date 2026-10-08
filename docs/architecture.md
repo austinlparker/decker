@@ -6,8 +6,9 @@ invariants, the golden tests, and a recipe for each kind of addition.
 | File | What's in it |
 | --- | --- |
 | `deck.go`, `slide.go`, `ctx.go` | `Deck`, `Slide` with its `Source` citations, and `Ctx` with its layout in screen fractions |
-| `layout.go` | `Rect`: boxes cut from the canvas for layout |
-| `cli.go` | `Main`: the command line (live, dev, presenter, list and its JSON outline, handout, snapshot, sheet, video) |
+| `layout.go` | `Rect`: boxes cut from the canvas for layout, and compared once placed (intersect, union, contains, overlaps) |
+| `scale.go` | `Scale`: data values mapped onto pixels with round ticks and labels, for hand-drawn axes; shares its tick rounding with the charts' |
+| `cli.go` | `Main`: the command line (live, dev, presenter, list and its JSON outline, review, handout, snapshot, sheet, video) |
 | `handout.go` | `-handout`: a Markdown handout with each slide's thumbnail, notes and sources, and every source once |
 | `theme.go`, `color.go` | `Theme`; `RGB`, `Hex`, `Mix` |
 | `draw.go` | stock components: `Panel`, `Arrow`, `Label`, `PageNumber`, `ProgressBar`, `Chip`, `CycleDiagram`, `BulletList`… |

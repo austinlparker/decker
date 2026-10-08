@@ -44,9 +44,15 @@ var wraps = memo[wrapKey, []string]{max: 8192}
 // maxW does, so "What Your MCP / Server Does" beats "What Your MCP Server /
 // Does".
 func (f *Font) Wrap(s string, size int, maxW float64) []string {
-	return slices.Clone(wraps.get(wrapKey{f, s, size, maxW}, func() []string {
+	return slices.Clone(f.wrapped(s, size, maxW))
+}
+
+// wrapped is Wrap without the copy, for callers that only read the lines; the
+// slice is the cache's and must not be modified.
+func (f *Font) wrapped(s string, size int, maxW float64) []string {
+	return wraps.get(wrapKey{f, s, size, maxW}, func() []string {
 		return wrapBalanced(s, maxW, func(l string) float64 { return f.Measure(l, size) })
-	}))
+	})
 }
 
 // wrapBalanced is wrapGreedy per paragraph, narrowed by bisection to the

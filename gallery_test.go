@@ -202,6 +202,7 @@ func gallery() Deck {
 		slideTableCols(),
 		slideBlockCatalog(),
 		slideSources(),
+		slideScales(),
 	}}
 }
 
@@ -1756,5 +1757,94 @@ func slideSources() Slide {
 				_, h := cite.Draw(p, fmt.Sprintf("[%d] %s", i+1, s.Label), c.X(0.03), y)
 				y += h
 			}
+		}}
+}
+
+// slideScales exercises the primitives for purpose-built visuals: a trace
+// waterfall on a seconds axis from a Scale, a plate sized to wrapped text by
+// Text.Measure, and two boxes compared with Intersect, Union, Overlaps and
+// Contains as one glides into the other.
+func slideScales() Slide {
+	spans := []struct {
+		name       string
+		start, dur float64
+	}{
+		{"GET /checkout", 0, 0.93},
+		{"auth", 0.05, 0.14},
+		{"db.query", 0.21, 0.47},
+		{"render", 0.7, 0.2},
+	}
+	return Slide{Title: "Scales and measures", Transition: TransitionPush,
+		View: func(c Ctx, sc *Scene) {
+			p, th := sc.Px, c.Theme
+			outline := func(r Rect, col RGB) { p.RoundRect(r.X, r.Y, r.W, r.H, 1, 1, col, 1) }
+			top := heading(c, p, "Scales and measures")
+			gap := c.Unit(0.02)
+			page := NewRect(c.X(0.03), top+gap, c.X(0.94), c.Y(0.97)-top-gap)
+			left, right := page.CutLeft(page.W * 0.62)
+			_, right = right.CutLeft(2 * gap)
+
+			// The waterfall: names and tick room sized by Measure, bars and
+			// gridlines placed by At, tick labels from Label with the step's
+			// decimals.
+			ticks := Text{Font: th.Body, Size: c.SmallText(th.Body), Color: th.Muted, Align: Center}
+			names := Text{Font: th.Body, Size: c.SmallText(th.Body), Color: th.Text, Align: Right}
+			tickW, tickH := ticks.Measure("0.0s")
+			nameW := 0.0
+			for _, s := range spans {
+				w, _ := names.Measure(s.name)
+				nameW = max(nameW, w)
+			}
+			axis, plot := left.CutBottom(tickH + gap/2)
+			_, plot = plot.CutLeft(nameW + gap)
+			_, plot = plot.CutRight(tickW / 2)
+			ax := NiceScale(0, spans[0].dur, int(plot.W/tickW), plot.X, plot.Right())
+			for v := range ax.Ticks() {
+				x := ax.At(v)
+				p.Rect(x, plot.Y, 1, plot.H, th.Faint, 1)
+				ticks.Draw(p, ax.Label(v)+"s", x, axis.Y+gap/2)
+			}
+			for i, r := range plot.Rows(gap/2, 1, 1, 1, 1) {
+				s := spans[i]
+				grow := Ease(c.T-0.15*float64(i), 0.8)
+				x0, x1 := ax.At(s.start), ax.At(s.start+s.dur*grow)
+				p.RoundRect(x0, r.Y, max(x1-x0, 1), r.H, min(r.H/4, gap/2), 0, th.SeriesColor(i), 1)
+				names.DrawMid(p, s.name, plot.X-gap/2, r.Y+r.H/2)
+			}
+
+			// A plate sized to its wrapped caption before either is drawn.
+			pad := gap / 2
+			note := Text{Font: th.Body, Size: c.SmallText(th.Body), Color: th.Text, MaxW: right.W - 2*pad}
+			const caption = "db.query is half of the request: cache it"
+			w, h := note.Measure(caption)
+			plate := right.Anchor(w+2*pad, h+2*pad, 0, 0)
+			p.RoundRect(plate.X, plate.Y, plate.W, plate.H, pad, 0, th.Panel, 1)
+			p.RoundRect(plate.X, plate.Y, plate.W, plate.H, pad, 1, th.Accent, 1)
+			note.Draw(p, caption, plate.X+pad, plate.Y+pad)
+
+			// Two boxes: b glides in from overhanging the area (Contains
+			// warns) to overlapping a, their union framed, their overlap
+			// filled, and Overlaps writing the caption.
+			_, boxes := right.CutTop(plate.H + gap)
+			status, boxes := boxes.CutBottom(tickH + gap/2)
+			a := boxes.Sub(0.05, 0.05, 0.5, 0.6)
+			b := boxes.Sub(Lerp(0.8, 0.3, Ease(c.T-0.3, 1.2)), 0.35, 0.38, 0.6)
+			u := a.Union(b)
+			outline(u.Inset(-2, -2), th.Faint)
+			if i := a.Intersect(b); a.Overlaps(b) {
+				p.Rect(i.X, i.Y, i.W, i.H, th.Good, 0.6)
+			}
+			outline(a, th.Accent2)
+			bc := th.Accent
+			if !boxes.Contains(b) {
+				bc = th.Warn
+			}
+			outline(b, bc)
+			msg := "apart"
+			if a.Overlaps(b) {
+				msg = "overlap"
+			}
+			ticks.Align = Left
+			ticks.Draw(p, msg, status.X, status.Y+gap/2)
 		}}
 }

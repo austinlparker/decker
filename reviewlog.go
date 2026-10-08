@@ -125,7 +125,7 @@ func (l *reviewLog) noteSmall(name string, size, least int, box Rect) {
 		if s := &l.small[i]; s.owner == owner && s.overlay == l.overlay {
 			s.n++
 			s.lo, s.hi = min(s.lo, size), max(s.hi, size)
-			s.box = unionRect(s.box, box)
+			s.box = s.box.Union(box)
 			return
 		}
 	}
@@ -181,21 +181,9 @@ func (l *reviewLog) flush() {
 		if a.name == b.name || n < 4 || n*20 < min(a.ink, b.ink) {
 			continue
 		}
-		l.add(SeverityWarning, "overlap", intersectRect(a.r, b.r), a.name+" and "+b.name+" overlap")
+		l.add(SeverityWarning, "overlap", a.r.Intersect(b.r), a.name+" and "+b.name+" overlap")
 	}
 	l.overlaps = nil
-}
-
-// unionRect is the smallest rect holding a and b.
-func unionRect(a, b Rect) Rect {
-	x0, y0 := min(a.X, b.X), min(a.Y, b.Y)
-	return Rect{x0, y0, max(a.Right(), b.Right()) - x0, max(a.Bottom(), b.Bottom()) - y0}
-}
-
-// intersectRect is where a and b meet, empty if they don't.
-func intersectRect(a, b Rect) Rect {
-	x0, y0 := max(a.X, b.X), max(a.Y, b.Y)
-	return Rect{x0, y0, max(min(a.Right(), b.Right())-x0, 0), max(min(a.Bottom(), b.Bottom())-y0, 0)}
 }
 
 // add records an issue, once: an element drawn twice in a frame (a moved

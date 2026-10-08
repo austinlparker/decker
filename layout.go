@@ -1,10 +1,14 @@
 package decker
 
+import "math"
+
 // Rect is a box on the pixel canvas: X, Y is its top-left corner and W, H its
 // size, all in pixels. Layout is cutting rects out of rects: start from
 // Ctx.Frame or Ctx.Rect, then Inset, Cut, Rows, Cols, Grid or Anchor, and hand the
 // pieces to whatever draws there. Every method returns new rects; widths and
-// heights never go below zero.
+// heights never go below zero. Intersect, Union, Contains and Overlaps compare
+// boxes once they're placed; to them an Empty rect is no area, wherever it
+// sits.
 //
 //	head, body := c.Frame().Inset(c.Unit(0.04), c.Unit(0.03)).CutTop(c.Y(0.18))
 //	left, right := body.CutLeft(body.W * 0.4)
@@ -121,4 +125,96 @@ func (r Rect) Anchor(w, h, ax, ay float64) Rect {
 // LerpRect moves a toward b: p=0 is a, p=1 is b.
 func LerpRect(a, b Rect, p float64) Rect {
 	return Rect{Lerp(a.X, b.X, p), Lerp(a.Y, b.Y, p), Lerp(a.W, b.W, p), Lerp(a.H, b.H, p)}
+}
+
+// Empty reports whether r has no area: a width or height that is zero,
+// negative or NaN.
+func (r Rect) Empty() bool { return !(r.W > 0 && r.H > 0) }
+
+// Intersect returns the box covered by both r and o. When they share no area,
+// because they only touch, don't meet or either is empty, it returns the zero
+// Rect. A rect inside the other comes back unchanged.
+func (r Rect) Intersect(o Rect) Rect {
+	x, w, okx := spanOverlap(r.X, r.W, o.X, o.W)
+	y, h, oky := spanOverlap(r.Y, r.H, o.Y, o.H)
+	if !okx || !oky {
+		return Rect{}
+	}
+	return Rect{x, y, w, h}
+}
+
+// Union returns the smallest box covering both r and o. An empty rect adds
+// nothing: if o is empty Union returns r, else if r is empty it returns o. So
+// the zero Rect is where to start gathering the bounds of several boxes.
+func (r Rect) Union(o Rect) Rect {
+	if o.Empty() {
+		return r
+	}
+	if r.Empty() {
+		return o
+	}
+	x, w := spanCover(r.X, r.W, o.X, o.W)
+	y, h := spanCover(r.Y, r.H, o.Y, o.H)
+	return Rect{x, y, w, h}
+}
+
+// Contains reports whether o lies inside r, edges included. An empty o is
+// inside every rect, as the empty set is inside every set, so an empty r
+// contains only empty rects.
+func (r Rect) Contains(o Rect) bool {
+	if o.Empty() {
+		return true
+	}
+	return !r.Empty() && o.X >= r.X && o.Y >= r.Y && o.Right() <= r.Right() && o.Bottom() <= r.Bottom()
+}
+
+// Overlaps reports whether r and o share some area. Rects that only touch at
+// an edge or a corner don't overlap, and an empty rect overlaps nothing: it is
+// true exactly when Intersect returns a non-empty rect.
+func (r Rect) Overlaps(o Rect) bool {
+	return max(r.X, o.X) < min(r.Right(), o.Right()) && max(r.Y, o.Y) < min(r.Bottom(), o.Bottom())
+}
+
+// spanOverlap returns the start and size of the length the spans a..a+as and
+// b..b+bs share; ok is false if they share none.
+//
+// A Rect keeps its size, not its far edge, and start+(end-start) can round to
+// either side of end. So spanOverlap and spanCover keep a span's own size when
+// the result is that span, and otherwise nudge the size an ulp at a time until
+// the far edge lies inside both spans (an overlap) or reaches past both (a
+// cover). Contains then agrees with what Intersect and Union build.
+func spanOverlap(a, as, b, bs float64) (start, size float64, ok bool) {
+	ae, be := a+as, b+bs
+	start, end := max(a, b), min(ae, be)
+	switch {
+	case !(start < end):
+		return 0, 0, false
+	case start == a && end == ae:
+		return a, as, true
+	case start == b && end == be:
+		return b, bs, true
+	}
+	size = end - start
+	for start+size > end && size > 0 {
+		size = math.Nextafter(size, 0)
+	}
+	return start, size, true
+}
+
+// spanCover returns the start and size of the shortest span covering both
+// a..a+as and b..b+bs.
+func spanCover(a, as, b, bs float64) (start, size float64) {
+	ae, be := a+as, b+bs
+	start, end := min(a, b), max(ae, be)
+	switch {
+	case start == a && end == ae:
+		return a, as
+	case start == b && end == be:
+		return b, bs
+	}
+	size = end - start
+	for start+size < end {
+		size = math.Nextafter(size, math.Inf(1))
+	}
+	return start, size
 }
