@@ -21,12 +21,29 @@ type Ctx struct {
 
 	// Theme is the deck's theme; never nil inside View.
 	Theme *Theme
+
+	// sources is the slide's Slide.Sources, set with the position. A pointer
+	// and not the slice itself, because a slice field would make Ctx
+	// incomparable.
+	sources *[]Source
 }
 
 // at returns c positioned at slide i of slides.
 func (c Ctx) at(slides []Slide, i int) Ctx {
 	c.Index, c.Count, c.Section = i, len(slides), sectionAt(slides, i)
+	c.sources = &slides[i].Sources
 	return c
+}
+
+// Sources returns the slide's Slide.Sources, so a View or Theme.Overlay can
+// draw a citation from the same data the presenter view and the handout
+// show. Like Index, it is set only by the engine: a Ctx built by hand
+// returns nil. The slice is the slide's own; callers must not modify it.
+func (c Ctx) Sources() []Source {
+	if c.sources == nil {
+		return nil
+	}
+	return *c.sources
 }
 
 // Reached reports whether the slide is at or past step.

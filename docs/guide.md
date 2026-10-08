@@ -36,7 +36,8 @@ FIGlet loader currently loads ASCII input glyphs only.
 
 One idea per slide: a headline and at most a couple of short lines or a
 visual. Put the detail in the speaker notes (`Notes`, shown in the presenter
-view). Keep titles under about 24 characters so they stay full size.
+view) and what you cite in `Sources`. Keep titles under about 24 characters
+so they stay full size.
 
 ### Choosing and loading fonts
 
@@ -126,6 +127,8 @@ go run . -dev                # rebuild and reload on every save, staying on the 
 go run . -presenter          # the presenter view, in a second window
 go run . -presenter -presentation-font-size 5 # p opens the deck at 5pt in Ghostty
 go run . -list               # slide titles, step counts and sections
+go run . -list -json         # the same outline as JSON, with notes and sources
+go run . -handout handout    # handout/handout.md: thumbnails, notes and sources
 go run . -snapshot -slide 6 -step 4 -t 2.5 -w 240 -h 67 -png frame.png
 go run . -sheet sheet.png -w 682 -h 171 -shrink 8
 go run . -video talk.mp4 -fps 30
@@ -143,6 +146,13 @@ seconds since the slide appeared; the default is `decker.Settled` (1000), which 
 the selected step fully settled. Omitting `-step` selects the first step;
 to capture the completed slide, pass its final step explicitly. `-step` and `-slide` are 1-based. `-sheet` renders
 every slide at its last step, four across.
+
+`-handout DIR` writes a document to rehearse from or hand out: `DIR/handout.md`
+and a thumbnail of every slide (`01.png`, `02.png`…) at its last step, at
+`-w`×`-h` cells. The Markdown gives each slide its title, section, build
+count, thumbnail, notes as written and sources, then ends with every source
+once and the slides that cite it. `-list -json` prints the outline (1-based
+slide number, title, steps, section, notes and sources) for scripts.
 
 `-video` renders the whole deck with its animations and transitions. Each
 build step stays on screen for `-hold` seconds (a slide can ask for longer
@@ -217,7 +227,8 @@ The presenter view shows:
 - the slide number, title and build step, and a `BLANK` tag while the deck is
   blanked (`b`, `w`);
 - small previews of what's on screen now and what comes next;
-- the current slide's notes;
+- the current slide's notes, with its `Sources` under them (notes and
+  sources share the room when both are long);
 - a 30-minute timer, which starts when you leave slide 1 (or press `t`);
 - a pace check: how far ahead or behind an even pace you are, counting
   build steps, so a slide with four builds gets four times a section
@@ -264,8 +275,8 @@ previews. Blanking closes the notes and help.
 Only in the presenter view: `p` opens the deck in a new Ghostty window
 (macOS), `t` starts or pauses the timer, `T` resets it.
 
-Only in the deck: `n` shows the notes on the projector (a fallback if the
-presenter view isn't running), `?` shows help (`esc` closes it) and
+Only in the deck: `n` shows the notes and sources on the projector (a
+fallback if the presenter view isn't running), `?` shows help (`esc` closes it) and
 `ctrl+l` redraws the screen. In dev mode the deck also has a one-line
 footer with the build status and slide counter. The key table is [`keys.go`](../keys.go).
 
@@ -321,6 +332,9 @@ func mySlide() decker.Slide {
 		Notes:      "say the thing",                 // shown in the presenter view
 		Section:    "Part one",                      // chapter; later slides inherit it until one sets another
 		Transition: decker.TransitionWipe.Over(0.6), // Push (default), Dissolve, Wipe, Morph, Fade, FadeThrough, Cover, Uncover, Split, Iris, Zoom, Pixelate, Glitch, None; Over sets seconds, From a side
+		Sources: []decker.Source{ // what it cites: presenter view, -handout, c.Sources()
+			{Label: "OpenTelemetry Logs Data Model, v1.40", URL: "https://opentelemetry.io/docs/specs/otel/logs/data-model/"},
+		},
 		View: func(c decker.Ctx, sc *decker.Scene) {
 			p := sc.Px // the pixel canvas; c.PW() × c.PH() pixels
 
@@ -358,6 +372,10 @@ slide. The `Ctx` it receives holds everything that changes between frames:
   of slides, and its section (`Slide.Section`, inherited from the nearest
   slide before it that sets one). They exist for `Theme.Overlay`: a page
   number, a progress bar or a chapter name on every slide.
+- `c.Sources()`: the slide's `Slide.Sources`, for a citation line drawn by the
+  slide or the overlay from the same data the presenter view and `-handout`
+  show. Don't modify the slice. Like the position, it is empty in a `Ctx`
+  built by hand.
 - `c.Theme`: the talk's colors and typefaces.
 
 A frame depends only on `Ctx`, so any moment can be replayed, snapshotted, or

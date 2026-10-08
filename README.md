@@ -139,6 +139,7 @@ These commands run from your talk's directory:
 go run . -dev                         # rebuild on save; keep your slide and step
 go run . -presenter -length 45m        # notes, timer and previews; p opens the deck
 go run . -list                        # titles, step counts and sections
+go run . -handout handout             # handout.md: thumbnails, notes and sources
 go run . -snapshot -step 2 -w 160 -h 45 -png frame.png
 go run . -sheet sheet.png             # all slides at their final step
 go run . -video talk.mp4 -fps 30       # silent video; needs ffmpeg

@@ -4,7 +4,7 @@
 // A [Deck] holds a [Theme] and a list of slides. Each [Slide] has a View, a
 // function that draws one frame from a [Ctx] onto a [Scene], and [Main] gives
 // the deck its command line: present, presenter view, dev reload, snapshots,
-// contact sheets and video.
+// contact sheets, handouts and video.
 // The presenter can open a deck window in Ghostty on macOS with its own
 // terminal font size; Ghostty and kitty also support full-resolution previews.
 //
@@ -50,10 +50,11 @@
 //
 // # Main types
 //
-//   - [Deck], [Slide]: the talk, and one slide with its steps, notes and
-//     [Transition].
+//   - [Deck], [Slide]: the talk, and one slide with its steps, notes,
+//     [Source] citations and [Transition].
 //   - [Ctx]: what changes between frames (T, Step, StepT), the slide's position
-//     (Index, Count, Section), plus layout helpers.
+//     (Index, Count, Section) and its sources ([Ctx.Sources]), plus layout
+//     helpers.
 //   - [Rect]: a box on the canvas; layout cuts and splits rects
 //     ([Rect.CutTop], [Rect.Cols], [Rect.Grid]).
 //   - [Theme]: colors, typefaces, chart series colors and an optional overlay

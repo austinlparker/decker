@@ -1,9 +1,11 @@
 package decker
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sync/atomic"
@@ -14,11 +16,11 @@ import (
 
 type options struct {
 	slide, step, fps     int
-	dev, list            bool
+	dev, list, json      bool
 	snapshot             bool
 	at                   float64
 	width, height        int
-	png, sheet           string
+	png, sheet, handout  string
 	shrink               int
 	presenter            bool
 	presentationFontSize float64
@@ -31,8 +33,9 @@ type options struct {
 }
 
 // Main runs a deck from the command line: live in the terminal by default, or
-// as dev mode, presenter view, snapshot, contact sheet or video, as the flags
-// say. It parses the command line, so register the talk's own flags first.
+// as dev mode, presenter view, slide list, handout, snapshot, contact sheet or
+// video, as the flags say. It parses the command line, so register the talk's
+// own flags first.
 func Main(d Deck) {
 	if err := run(&d); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -50,9 +53,13 @@ func run(d *Deck) error {
 		return runVideo(d, o)
 	case o.presenter:
 		return runPresenter(d, o)
+	case o.list && o.json:
+		return writeOutline(os.Stdout, d)
 	case o.list:
 		listSlides(d)
 		return nil
+	case o.handout != "":
+		return runHandout(d, o)
 	case o.sheet != "":
 		return runSheet(d, o)
 	case o.snapshot:
@@ -68,11 +75,13 @@ func parseFlags(name string) options {
 	flag.IntVar(&o.fps, "fps", 60, "animation frames per second")
 	flag.BoolVar(&o.dev, "dev", false, "rebuild and reload when .go files change")
 	flag.BoolVar(&o.list, "list", false, "print slide titles and exit")
+	flag.BoolVar(&o.json, "json", false, "with -list: print the outline (titles, steps, sections, notes, sources) as JSON")
 	flag.BoolVar(&o.snapshot, "snapshot", false, "print one frame of -slide to stdout and exit")
 	flag.Float64Var(&o.at, "t", Settled, "with -snapshot: seconds since the slide appeared")
 	flag.IntVar(&o.width, "w", 120, "with -snapshot: frame width")
 	flag.IntVar(&o.height, "h", 36, "with -snapshot: frame height")
 	flag.StringVar(&o.png, "png", "", "with -snapshot: write the frame as a PNG image instead of printing it")
+	flag.StringVar(&o.handout, "handout", "", "write handout.md (each slide's thumbnail, notes and sources) and the thumbnail PNGs into this directory and exit")
 	flag.StringVar(&o.sheet, "sheet", "", "write every slide (last step, settled) into one PNG contact sheet and exit")
 	flag.IntVar(&o.shrink, "shrink", 4, "with -sheet: shrink each frame by this factor (use 8 for very big terminals)")
 	flag.BoolVar(&o.presenter, "presenter", false, "run the presenter view (notes, timer, next slide) and drive a deck running in another window")
@@ -112,6 +121,31 @@ func listSlides(d *Deck) {
 		}
 		fmt.Printf("%3d  %s (%d step%s)%s\n", i+1, s.Title, s.steps(), plural, sec)
 	}
+}
+
+// outlineSlide is one slide in -list -json.
+type outlineSlide struct {
+	Slide   int      `json:"slide"` // 1-based, like -slide
+	Title   string   `json:"title"`
+	Steps   int      `json:"steps"`
+	Section string   `json:"section"`
+	Notes   string   `json:"notes"`
+	Sources []Source `json:"sources"`
+}
+
+// writeOutline writes the deck's outline as a JSON array (-list -json), for
+// scripts that check or publish a talk without parsing -list's columns.
+func writeOutline(w io.Writer, d *Deck) error {
+	out := make([]outlineSlide, len(d.Slides))
+	for i, s := range d.Slides {
+		// An empty list rather than null, so readers needn't check for both.
+		sources := append([]Source{}, s.Sources...)
+		out[i] = outlineSlide{i + 1, s.Title, s.steps(), sectionAt(d.Slides, i), s.Notes, sources}
+	}
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	enc.SetEscapeHTML(false)
+	return enc.Encode(out)
 }
 
 // stillFrame renders slide idx at step, secs after it appeared, at w×h cells.
