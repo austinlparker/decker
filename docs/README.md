@@ -21,6 +21,12 @@ README. Its preview is generated from the repository root with:
 go run ./examples/hello -snapshot -step 2 -w 240 -h 67 -png docs/assets/hello.png
 ```
 
+Two more examples are for talk authors. The [starter](../examples/starter) is a
+talk to copy, with an `AGENTS.md` for its repository. The
+[recipes](../examples/recipes) are visuals built from primitives (a trace
+waterfall, an architecture diagram, a request flow) to copy and change.
+Both review clean with `go run ./examples/starter -review review`.
+
 The README's example clips come from the [showcase example](../examples/showcase/main.go).
 Each clip is a range of its slides, exported with `-video` and converted to
 a GIF (needs ffmpeg with libx264):
