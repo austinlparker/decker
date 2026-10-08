@@ -129,6 +129,29 @@ func (t Text) Draw(p *Pixels, s string, x, y float64) (w, h float64) {
 	return w, h
 }
 
+// Measure returns the size Draw would return for s, without drawing it: the
+// widest line's width, and the height of its lines once wrapped to MaxW. Lay
+// a block out with it before drawing, to size a plate behind it or center it
+// in a box. It allocates nothing, so a View can call it every frame.
+func (t Text) Measure(s string) (w, h float64) {
+	f, size := t.resolved()
+	lineH := float64(size) * leadingOr(t.Leading)
+	n := 0
+	if t.MaxW > 0 {
+		lines := f.wrapped(s, size, t.MaxW)
+		for _, l := range lines {
+			w = max(w, f.Measure(l, size))
+		}
+		n = len(lines)
+	} else {
+		for l := range strings.SplitSeq(s, "\n") {
+			w = max(w, f.Measure(l, size))
+			n++
+		}
+	}
+	return w, lineH * float64(n)
+}
+
 func (t Text) stamp(cov coverage, f *Font, size int, lines []string, widths []float64, x, y, lineH float64) {
 	baseOff := t.baseOff(f, size)
 	gi := 0

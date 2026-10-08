@@ -53,7 +53,10 @@
 //   - [Ctx]: what changes between frames (T, Step, StepT), the slide's position
 //     (Index, Count, Section), plus layout helpers.
 //   - [Rect]: a box on the canvas; layout cuts and splits rects
-//     ([Rect.CutTop], [Rect.Cols], [Rect.Grid]).
+//     ([Rect.CutTop], [Rect.Cols], [Rect.Grid]) and compares placed ones
+//     ([Rect.Intersect], [Rect.Union], [Rect.Contains], [Rect.Overlaps]).
+//   - [Scale]: data values mapped onto pixels, with round ticks from
+//     [NiceScale], for axes a slide draws itself.
 //   - [Theme]: colors, typefaces, chart series colors and an optional overlay
 //     the engine uses. Display, Body and Mono fonts are required.
 //   - [Scene], [Pixels]: what a View draws on (the engine makes the scene and
@@ -61,7 +64,8 @@
 //     a native character layer; that layer is omitted from video exports.
 //     [Scene.Place] hands the engine a keyed element to draw instead, which
 //     [TransitionMorph] can move from one slide to the next.
-//   - [Text], [Font]: smooth antialiased type, fitted and wrapped to a box.
+//   - [Text], [Font]: smooth antialiased type, fitted and wrapped to a box,
+//     and measured before drawing ([Text.Measure]).
 //   - [Rich], [Span]: the same type with mixed fonts, colors and decorations
 //     inside a line ([ParseSpans] reads a light markup).
 //   - [Block], [FigletFont]: FIGlet block letters scaled to fill a box ([FitBlock]);

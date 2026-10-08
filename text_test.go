@@ -72,6 +72,51 @@ func TestFitAllFitsTogetherAndReturnsACopy(t *testing.T) {
 	}
 }
 
+func TestTextMeasureMatchesDraw(t *testing.T) {
+	p := NewPixels(120, 80, testTheme.Background)
+	texts := []string{
+		"", "Hi", "two\nlines", "\n\n", "trailing \n", "界 é",
+		"   spaced   out  ", "a long sentence that wraps across several lines of a box",
+		"What Your MCP Server Does", "overlongwordthatcannotbreak and more\nafter a break",
+	}
+	for _, font := range []*Font{testTheme.Display, testTheme.Body, testTheme.Mono} {
+		for _, size := range []int{0, 3, 9, 13, 20, 48} {
+			for _, maxW := range []float64{0, -5, 30, 80, 300} {
+				for _, leading := range []float64{0, 1, 1.4} {
+					for i, s := range texts {
+						tx := Text{Font: font, Size: size, MaxW: maxW, Leading: leading, Align: Align(i % 3)}
+						dw, dh := tx.Draw(p, s, 10, 5)
+						if mw, mh := tx.Measure(s); mw != dw || mh != dh {
+							t.Errorf("size %d maxW %v leading %v %q: Measure = %v×%v, Draw = %v×%v", size, maxW, leading, s, mw, mh, dw, dh)
+						}
+					}
+				}
+			}
+		}
+	}
+	// Font.Small takes over below SmallBelow, in Measure as in Draw.
+	small := StockFont("SpaceGrotesk-Medium")
+	small.Small, small.SmallBelow = testTheme.Mono, 14
+	for _, size := range []int{10, 13, 14} {
+		tx := Text{Font: small, Size: size, MaxW: 50}
+		dw, dh := tx.Draw(p, "small type wraps", 0, 0)
+		if mw, mh := tx.Measure("small type wraps"); mw != dw || mh != dh {
+			t.Errorf("size %d with Small: Measure = %v×%v, Draw = %v×%v", size, mw, mh, dw, dh)
+		}
+	}
+}
+
+func TestTextMeasureAllocatesNothing(t *testing.T) {
+	for _, maxW := range []float64{0, 60} {
+		tx := Text{Font: testTheme.Body, Size: 14, MaxW: maxW}
+		s := "a few words to wrap\nand a second paragraph"
+		tx.Measure(s) // fills the glyph and wrap caches
+		if n := testing.AllocsPerRun(50, func() { tx.Measure(s) }); n != 0 {
+			t.Errorf("Measure with MaxW %v allocated %v times", maxW, n)
+		}
+	}
+}
+
 func TestTextDrawsPixels(t *testing.T) {
 	p := NewPixels(80, 40, testTheme.Background)
 	Text{Font: testTheme.Display, Size: 16, Color: testTheme.Text}.Draw(p, "Hi", 10, 10)
