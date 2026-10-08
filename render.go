@@ -1,6 +1,10 @@
 package decker
 
-import "fmt"
+import (
+	"fmt"
+	"slices"
+	"strconv"
+)
 
 // renderSlide draws s ready to show: its View, the elements it placed, then
 // the theme's Overlay, once. A nil View is a blank slide. A panic is replaced
@@ -33,7 +37,13 @@ func (s *Scene) finish() {
 	s.finished = true
 	s.safely(func() {
 		for _, e := range s.placed {
+			if s.ctx.review == nil {
+				e.draw(s.Px, e.r)
+				continue
+			}
+			done := s.ctx.within("Place "+strconv.Quote(e.key), e.r)
 			e.draw(s.Px, e.r)
+			done()
 		}
 		s.overlay()
 	})
@@ -42,8 +52,12 @@ func (s *Scene) finish() {
 func (s *Scene) overlay() {
 	if s.slide && s.ctx.Theme.Overlay != nil {
 		if l := s.Px.review; l != nil {
+			before := slices.Clone(s.Px.Pix)
 			l.overlay = true
-			defer func() { l.overlay = false }()
+			defer func() {
+				l.overlay = false
+				l.overlayDrew(before, s.Px.Pix)
+			}()
 		}
 		s.ctx.Theme.Overlay(s.ctx, s.Px)
 	}

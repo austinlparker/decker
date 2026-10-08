@@ -538,7 +538,9 @@ go run . -review review
 ```
 
 It draws every build of every slide, settled, at each size, and listens
-while the frames are drawn (the frames are the ones the deck shows). Each
+while the frames are drawn (the frames are the ones the deck shows). It also
+compares frames: a build that looks the same as the one before it, a slide
+that draws differently when drawn again, a morph with nothing to move. Each
 issue has a severity, a stable code, the rect it is about and a message with
 the numbers:
 
@@ -549,14 +551,33 @@ the numbers:
 | `text-offcanvas` | error, or a warning for the tail of a letter | `Text`, `Rich` or `Block` ink runs past an edge of the canvas |
 | `overflow` | error | a block needs more room than its rect: a `Timeline`, `Process` step, `BulletList`, cycle legend, or a slide's own `c.Fits` |
 | `panic` | error | the View, a placed element or the overlay panicked |
+| `impure` | error | the slide draws differently the second time with the same `Ctx`: it keeps state between frames or reads the clock |
 | `text-small` | warning | text below the smallest readable size (`c.SmallText`); a component's text counts once for the component |
 | `table-cell-cut` | warning | `Table` cells shortened with "..." |
+| `overlap` | warning | two elements (blocks of text, stock components, placed elements) ink the same pixels |
+| `overlay-collision` | warning | `Theme.Overlay` draws over something the slide drew |
+| `step-unchanged` | warning | a build looks the same as the one before it, settled and while it enters: `Steps` is one too many, or a `c.Reached` names the wrong step |
+| `morph-unmatched` | warning | a slide enters with `TransitionMorph` but shares no `Place` key with the slide before, so it cross-fades |
 | `code-title-hidden`, `code-title-cut` | warning, note | a `Code` block's title tab has no room, or was shortened |
+| `never-settles` | note | a tenth of the frame or more keeps changing after the slide settles, which the terminal must redraw every frame |
 
 `-sizes 240x67,682x171` changes the sizes, `-slide` and `-until` limit the
 slides, and `-strict` fails on warnings too. The report is also written to
 `review/index.md` (by slide and build) and `review/report.json`, whose
-slides and builds are 1-based like the command line.
+slides and builds are 1-based like the command line, with pictures:
+
+- `review/frames/11-2-320x90.png` for each build with issues: the frame,
+  scaled up, with a faint outline around everything it drew and a numbered
+  box around each issue, listed under it. `-frames all` writes every build,
+  `-frames none` none.
+- `review/sheet-320x90.png` per size: every build at a glance, each framed
+  in the color of its worst issue (red errors, amber warnings, blue notes).
+  An intermediate build that clips shows up here even when the last one is
+  fine.
+
+The images come from the pixel canvas, so `Scene.Text`, `Put` and `Sprite`
+characters are not in them. For one frame while you work on it,
+`-snapshot -png frame.png -bounds` draws the same outlines and boxes.
 
 A slide that means to have an issue says so: `Allow: []string{"text-offcanvas"}`
 on a headline that bleeds off the edge on purpose.

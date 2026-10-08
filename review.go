@@ -2,10 +2,10 @@ package decker
 
 import (
 	"fmt"
+	"math"
 	"slices"
 	"strconv"
 	"strings"
-	"unicode/utf8"
 )
 
 // Severity ranks an [Issue]: how much of what a slide meant to show is
@@ -71,170 +71,212 @@ type ReviewOptions struct {
 // asks for slides that work at all three.
 var reviewSizes = [][2]int{{240, 67}, {320, 90}, {682, 171}}
 
+func (o ReviewOptions) sizes() [][2]int {
+	if o.Sizes == nil {
+		return reviewSizes
+	}
+	return o.Sizes
+}
+
+func (o ReviewOptions) slides(n int) []int {
+	if o.Slides != nil {
+		return o.Slides
+	}
+	all := make([]int, n)
+	for i := range all {
+		all[i] = i
+	}
+	return all
+}
+
 // Review renders every build of every slide, settled, at each size, and
-// returns what is wrong with them, in slide, build and size order. Stock
-// components report what they cannot fit (a Code block's hidden lines, a
-// Table's dropped rows), text reports running off the canvas or being too
-// small to read, a panic is an issue rather than a crash, and a slide's own
-// drawing reports through [Ctx.Report] and [Ctx.Fits]. Codes a slide lists
-// in Slide.Allow are left out.
+// returns what is wrong with them, in slide, build and size order:
 //
-// The frames are the ones the deck shows: Review only listens while they
-// are drawn.
+//   - Content lost: a Code block's hidden lines, a Table's dropped rows,
+//     text off the canvas, a block bigger than its rect (stock components
+//     and [Ctx.Fits]), a panic. These are errors.
+//   - Content hard to read: text below the readable size, two elements
+//     inked over each other, the theme's overlay drawn over the slide.
+//   - Builds that don't build: a step that looks the same as the one
+//     before it, and a TransitionMorph with no element to move.
+//   - Frames that aren't pure: a slide that draws differently the second
+//     time it is drawn the same way, an error since replay, snapshots, video
+//     and goldens all depend on it.
+//   - Slides that never settle and redraw a large area every frame, a
+//     note, since the terminal must keep up.
+//
+// A slide's own drawing reports through [Ctx.Report] and [Ctx.Fits]. Codes
+// a slide lists in Slide.Allow are left out. The frames are the ones the
+// deck shows: Review only listens while they are drawn.
 func (d *Deck) Review(o ReviewOptions) []Issue {
-	sizes := o.Sizes
-	if sizes == nil {
-		sizes = reviewSizes
-	}
-	slides := o.Slides
-	if slides == nil {
-		for i := range d.Slides {
-			slides = append(slides, i)
-		}
-	}
 	var out []Issue
-	for _, i := range slides {
-		for step := range d.Steps(i) {
-			for _, sz := range sizes {
-				out = append(out, d.reviewFrame(i, step, sz[0], sz[1])...)
-			}
-		}
-	}
+	d.reviewEach(o, func(f *reviewedFrame) { out = append(out, f.issues...) })
 	return out
 }
 
-// reviewFrame draws slide i at step, settled, at w×h cells, and returns the
-// issues it reports, less those the slide allows.
-func (d *Deck) reviewFrame(i, step, w, h int) []Issue {
-	s := d.Slides[i]
-	log := &reviewLog{}
-	c := Ctx{W: w, H: h, T: Settled, Step: step, StepT: Settled, Theme: d.Theme, review: log}.at(d.Slides, i)
-	renderSlide(s, c).Release()
+// reviewedFrame is one frame of a review, with what it reported. It is
+// only valid inside the reviewEach callback that receives it.
+type reviewedFrame struct {
+	slide, step, w, h int
+	issues            []Issue
+	sc                *Scene // nil for an issue about the slide as a whole
+	elems             []reviewElem
+	log               *reviewLog
+}
+
+// reviewEach reviews the frames o names in order, handing each to each.
+func (d *Deck) reviewEach(o ReviewOptions, each func(*reviewedFrame)) {
+	sizes := o.sizes()
+	for _, i := range o.slides(len(d.Slides)) {
+		s := d.Slides[i]
+		prev := make([]uint64, len(sizes)) // the build before's frame, per size
+		var first uint64
+		for step := range d.Steps(i) {
+			for si, sz := range sizes {
+				f := d.reviewFrame(i, step, sz, Settled)
+				h := frameHash(f.sc)
+				if step == 0 && si == 0 {
+					first = h
+					d.checkMorph(f)
+				}
+				if step > 0 && h == prev[si] && d.stepStill(i, step, sz, h) {
+					f.log.add(SeverityWarning, "step-unchanged", Rect{},
+						fmt.Sprintf("build %d looks the same as build %d, settled and while it enters: check Steps and the step numbers given to c.Reached and c.Since", step+1, step))
+				}
+				prev[si] = h
+				if moving := d.stillMoving(f); moving >= 0.1 {
+					f.log.add(SeverityInfo, "never-settles", Rect{},
+						fmt.Sprintf("%.0f%% of the frame keeps changing after the slide settles, and the terminal redraws it every frame", moving*100))
+				}
+				f.done(s)
+				each(f)
+				f.sc.Release()
+			}
+		}
+		again := d.plainFrame(i, 0, sizes[0], Settled, Settled)
+		if frameHash(again) != first {
+			f := &reviewedFrame{slide: i, w: sizes[0][0], h: sizes[0][1], log: newReviewLog(0, 0)}
+			f.log.add(SeverityError, "impure", Rect{},
+				"draws differently the second time it is drawn with the same Ctx: it keeps state between frames or reads the clock or math/rand, which breaks replay, snapshots, video and goldens")
+			f.done(s)
+			if len(f.issues) > 0 {
+				each(f)
+			}
+		}
+		again.Release()
+	}
+}
+
+// reviewFrame draws slide i at step under review, t seconds in, at sz cells.
+func (d *Deck) reviewFrame(i, step int, sz [2]int, t float64) *reviewedFrame {
+	log := newReviewLog(sz[0], 2*sz[1])
+	c := Ctx{W: sz[0], H: sz[1], T: t, Step: step, StepT: t, Theme: d.Theme, review: log}.at(d.Slides, i)
+	sc := renderSlide(d.Slides[i], c)
 	log.flush()
-	out := log.issues[:0]
-	for _, is := range log.issues {
+	return &reviewedFrame{slide: i, step: step, w: sz[0], h: sz[1], sc: sc, log: log}
+}
+
+// done places the frame's issues in the deck and drops those the slide
+// allows.
+func (f *reviewedFrame) done(s Slide) {
+	f.elems = f.log.elems
+	for _, is := range f.log.issues {
 		if slices.Contains(s.Allow, is.Code) {
 			continue
 		}
-		is.Slide, is.Step, is.Title, is.W, is.H = i, step, s.Title, w, h
-		out = append(out, is)
+		is.Slide, is.Step, is.Title, is.W, is.H = f.slide, f.step, s.Title, f.w, f.h
+		f.issues = append(f.issues, is)
 	}
-	return out
 }
 
-// reviewLog collects what one frame reports while it is drawn. Ctx and
-// Pixels carry it only under review; while presenting the pointer is nil and
-// every check costs one comparison.
-type reviewLog struct {
-	issues []Issue
-
-	// overlay is set while the theme's overlay draws, so its problems are
-	// told apart from the slide's.
-	overlay bool
-
-	// scope names the stock component drawing now: its text reports as part
-	// of it, since the author chose the component, not each label.
-	scope string
-
-	// small gathers text drawn too small to read, one entry per scope (or
-	// per text outside one), so a chart with eight tiny labels is one issue.
-	small []smallText
+// plainFrame draws slide i as the deck shows it, without review.
+func (d *Deck) plainFrame(i, step int, sz [2]int, t, stepT float64) *Scene {
+	return renderSlide(d.Slides[i], Ctx{W: sz[0], H: sz[1], T: t, Step: step, StepT: stepT, Theme: d.Theme}.at(d.Slides, i))
 }
 
-type smallText struct {
-	owner       string
-	n           int
-	lo, hi      int // the sizes seen
-	least       int // the smallest readable size
-	box         Rect
-	overlay     bool
-	scoped      bool
-	firstOfMany string // the first text, for a scope's message
-}
-
-// enter makes name the owner of what is reported until leave restores the
-// scope enter returns: defer l.leave(l.enter("BarChart")).
-func (l *reviewLog) enter(name string) string {
-	prev := l.scope
-	l.scope = name
-	return prev
-}
-
-func (l *reviewLog) leave(prev string) { l.scope = prev }
-
-// within is enter and leave for a component's Draw, costing nothing while
-// presenting: defer c.within("BarChart")().
-func (c Ctx) within(name string) func() {
-	if c.review == nil {
-		return noop
+// stepStill reports whether build step of slide i, settled to hash, also
+// looks that way while it enters: a step that only plays an animation
+// (a pulse, a shake) settles back to the build before, and that's fine.
+func (d *Deck) stepStill(i, step int, sz [2]int, hash uint64) bool {
+	for _, stepT := range []float64{0.15, 0.4, 1} {
+		sc := d.plainFrame(i, step, sz, Settled, stepT)
+		h := frameHash(sc)
+		sc.Release()
+		if h != hash {
+			return false
+		}
 	}
-	prev := c.review.enter(name)
-	return func() { c.review.leave(prev) }
+	return true
 }
 
-func noop() {}
-
-// noteSmall records text drawn at size where least is the smallest readable
-// size.
-func (l *reviewLog) noteSmall(name string, size, least int, box Rect) {
-	owner, scoped := name, l.scope != ""
-	if scoped {
-		owner = l.scope
+// stillMoving returns the share of f's pixels that differ a moment later.
+// The moment is off any round period, so a loop doesn't look still.
+func (d *Deck) stillMoving(f *reviewedFrame) float64 {
+	const later = Settled + 0.37
+	sc := d.plainFrame(f.slide, f.step, [2]int{f.w, f.h}, later, later)
+	defer sc.Release()
+	n := 0
+	for i, c := range sc.Px.Pix {
+		if c != f.sc.Px.Pix[i] {
+			n++
+		}
 	}
-	for i := range l.small {
-		if s := &l.small[i]; s.owner == owner && s.overlay == l.overlay {
-			s.n++
-			s.lo, s.hi = min(s.lo, size), max(s.hi, size)
-			s.box = unionRect(s.box, box)
+	return float64(n) / float64(len(sc.Px.Pix))
+}
+
+// checkMorph warns when f's slide enters with TransitionMorph but has
+// nothing to move: no element placed under a key the slide before placed.
+func (d *Deck) checkMorph(f *reviewedFrame) {
+	s := d.Slides[f.slide]
+	if f.slide == 0 || s.Transition.resolve().kind != kindMorph {
+		return
+	}
+	if len(f.sc.placed) == 0 {
+		f.log.add(SeverityWarning, "morph-unmatched", Rect{},
+			"enters with TransitionMorph but places no elements (Scene.Place), so it cross-fades")
+		return
+	}
+	prevStep := d.Steps(f.slide-1) - 1
+	prev := drawSlide(d.Slides[f.slide-1], Ctx{W: f.w, H: f.h, T: Settled, Step: prevStep, StepT: Settled, Theme: d.Theme}.at(d.Slides, f.slide-1))
+	defer prev.Release()
+	var mine, theirs []string
+	for _, e := range f.sc.placed {
+		mine = append(mine, strconv.Quote(e.key))
+	}
+	for _, e := range prev.placed {
+		if slices.Contains(mine, strconv.Quote(e.key)) && e.key != "" {
 			return
 		}
+		theirs = append(theirs, strconv.Quote(e.key))
 	}
-	l.small = append(l.small, smallText{owner: owner, n: 1, lo: size, hi: size, least: least, box: box,
-		overlay: l.overlay, scoped: scoped, firstOfMany: name})
+	f.log.add(SeverityWarning, "morph-unmatched", Rect{},
+		fmt.Sprintf("enters with TransitionMorph but shares no Place key with slide %d (it places %s; this slide places %s), so it cross-fades",
+			f.slide, orNone(theirs), strings.Join(mine, ", ")))
 }
 
-// flush turns the gathered small text into issues, after the frame is drawn.
-func (l *reviewLog) flush() {
-	for _, s := range l.small {
-		sizes := fmt.Sprintf("%dpx", s.lo)
-		if s.hi != s.lo {
-			sizes = fmt.Sprintf("%d–%dpx", s.lo, s.hi)
-		}
-		var msg string
-		switch {
-		case !s.scoped:
-			msg = fmt.Sprintf("%s is %s", s.owner, sizes)
-		case s.n == 1:
-			msg = fmt.Sprintf("%s: %s is %s", s.owner, s.firstOfMany, sizes)
-		default:
-			msg = fmt.Sprintf("%s: %d texts at %s, such as %s", s.owner, s.n, sizes, s.firstOfMany)
-		}
-		l.overlay = s.overlay
-		l.add(SeverityWarning, "text-small", s.box, msg+fmt.Sprintf("; the smallest readable size here is %dpx", s.least))
+func orNone(keys []string) string {
+	if len(keys) == 0 {
+		return "none"
 	}
-	l.overlay, l.small = false, nil
+	return strings.Join(keys, ", ")
 }
 
-// unionRect is the smallest rect holding a and b.
-func unionRect(a, b Rect) Rect {
-	x0, y0 := min(a.X, b.X), min(a.Y, b.Y)
-	return Rect{x0, y0, max(a.Right(), b.Right()) - x0, max(a.Bottom(), b.Bottom()) - y0}
-}
-
-// add records an issue, once: an element drawn twice in a frame (a moved
-// Composite draws on black and on white) reports twice.
-func (l *reviewLog) add(sev Severity, code string, r Rect, msg string) {
-	if l.overlay {
-		msg = "Theme.Overlay: " + msg
-	} else if l.scope != "" && strings.HasPrefix(code, "text-") {
-		msg = l.scope + ": " + msg
+// frameHash identifies a finished frame: its pixels and its characters.
+func frameHash(sc *Scene) uint64 {
+	h := uint64(14695981039346656037)
+	mix := func(v uint64) { h = (h ^ v) * 1099511628211 }
+	for _, c := range sc.Px.Pix {
+		mix(uint64(math.Float32bits(c.R)))
+		mix(uint64(math.Float32bits(c.G)))
+		mix(uint64(math.Float32bits(c.B)))
 	}
-	for _, is := range l.issues {
-		if is.Code == code && is.Msg == msg && is.Rect == r {
-			return
+	for _, i := range sc.used {
+		mix(uint64(i))
+		for _, b := range []byte(sc.cells[i].Content) {
+			mix(uint64(b))
 		}
 	}
-	l.issues = append(l.issues, Issue{Severity: sev, Code: code, Rect: r, Msg: msg})
+	return h
 }
 
 // Reviewing reports whether this frame is being checked by [Deck.Review]
@@ -267,70 +309,4 @@ func (c Ctx) Fits(what string, r Rect, w, h float64) bool {
 			fmt.Sprintf("%s needs %.0f×%.0fpx, has %.0f×%.0fpx", what, w, h, r.W, r.H))
 	}
 	return ok
-}
-
-// quoteText names a piece of text in a message: its first line, cut short.
-func quoteText(kind, s string) string {
-	line, _, cut := strings.Cut(strings.TrimSpace(s), "\n")
-	if utf8.RuneCountInString(line) > 28 {
-		line, cut = string([]rune(line)[:27]), true
-	}
-	if cut {
-		line += "…"
-	}
-	return kind + " " + strconv.Quote(line)
-}
-
-// checkInk reports text whose ink runs off the canvas or is drawn too small
-// to read, for Text, Rich and Block under review. cov is the block's
-// coverage, in canvas coordinates; size is the drawn size in pixels, or 0 for
-// block letters, which have no small size.
-func checkInk(p *Pixels, cov []coverage, f *Font, size int, name string, box Rect) {
-	if size > 0 && f != nil {
-		if least := f.Drawn(max(int(MinText*float64(p.H)), 6)); size < least {
-			p.review.noteSmall(name, size, least, box)
-		}
-	}
-	// How far ink reaches past each edge: left, top, right, bottom.
-	var past [4]int
-	for _, c := range cov {
-		for y := 0; y < c.h; y++ {
-			py := c.y0 + y
-			for x := 0; x < c.w; x++ {
-				if c.a[y*c.w+x] < 0.5 {
-					continue
-				}
-				px := c.x0 + x
-				past[0] = max(past[0], -px)
-				past[1] = max(past[1], -py)
-				past[2] = max(past[2], px-p.W+1)
-				past[3] = max(past[3], py-p.H+1)
-			}
-		}
-	}
-	reportPast(p, past, size, name, box)
-}
-
-// reportPast reports ink that reaches past the canvas edges by the given
-// pixels: left, top, right, bottom. A pixel is rounding; up to a quarter of
-// the text's size is the tail of a letter cut off, a warning; more is text
-// lost, an error.
-func reportPast(p *Pixels, past [4]int, size int, name string, box Rect) {
-	edges := [4]string{"left", "top", "right", "bottom"}
-	var parts []string
-	most := 0
-	for i, n := range past {
-		if n > 1 {
-			parts = append(parts, fmt.Sprintf("%dpx past the %s edge", n, edges[i]))
-			most = max(most, n)
-		}
-	}
-	if len(parts) == 0 {
-		return
-	}
-	sev := SeverityError
-	if most*4 <= size {
-		sev = SeverityWarning
-	}
-	p.review.add(sev, "text-offcanvas", box, name+" runs "+strings.Join(parts, " and "))
 }

@@ -242,12 +242,17 @@ func (t Table) fit(c Ctx, r Rect) *tableLayout {
 	return l
 }
 
+// name is how a review message refers to the table.
+func (t Table) name() string {
+	if len(t.Header) > 0 {
+		return quoteText("Table", t.Header[0])
+	}
+	return fmt.Sprintf("Table (%d rows)", len(t.Rows))
+}
+
 // report records the rows a review finds left out and the cells cut short.
 func (t Table) report(c Ctx, r Rect, l *tableLayout) {
-	name := fmt.Sprintf("Table (%d rows)", len(t.Rows))
-	if len(t.Header) > 0 {
-		name = quoteText("Table", t.Header[0])
-	}
+	name := t.name()
 	if l.dropped > 0 {
 		c.review.add(SeverityError, "table-rows-dropped", r,
 			fmt.Sprintf("%s: %d of %d rows don't fit in %.0fpx at %dpx text", name, min(l.dropped, len(t.Rows)), len(t.Rows), r.H, l.size))
@@ -329,7 +334,6 @@ func (t Table) since(c Ctx, i, j int) float64 {
 // The table is laid out the same every frame, so rows that haven't appeared
 // yet still hold their place.
 func (t Table) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
-	defer c.within("Table")()
 	l := t.layout(c, r)
 	if len(l.colW) == 0 {
 		return 0, 0
@@ -339,6 +343,9 @@ func (t Table) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 	}
 	if !c.Reached(t.FirstStep) {
 		return r.W, l.h
+	}
+	if c.review != nil {
+		defer c.within(t.name(), r)()
 	}
 	th := c.Theme
 	size := float64(l.size)

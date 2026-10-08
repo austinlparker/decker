@@ -15,7 +15,7 @@ import (
 // callers lay out around it. Option-heavy components are structs with a Draw
 // method.
 func Panel(c Ctx, p *Pixels, x, y, w, h float64, label string, fill, edge, text RGB, alpha float64) {
-	defer c.within("Panel")()
+	defer c.within("Panel", Rect{x, y, w, h})()
 	r := min(c.Unit(0.03), w/3, h/3)
 	p.RoundRect(x, y, w, h, r, 0, fill, alpha)
 	if edge != (RGB{}) {
@@ -139,7 +139,7 @@ func (g cycleGeom) at(a float64) (float64, float64) {
 // circling, its angle (0 = top, clockwise), the active station (-1 if none),
 // and the legend's x.
 func (d CycleDiagram) Draw(c Ctx, p *Pixels, top float64) (looping bool, theta float64, active int, legendX float64) {
-	defer c.within("CycleDiagram")()
+	defer c.within("CycleDiagram", Rect{0, top, c.PW(), c.Y(0.88) - top})()
 	g := d.geometry(c, top)
 	last := d.Step0 + g.n - 1
 	d.drawRing(c, p, g)
@@ -274,7 +274,7 @@ func (d CycleDiagram) drawLegend(c Ctx, p *Pixels, g cycleGeom, top float64, loo
 // BulletList draws lines as bullets, line i revealed at step i+firstStep, at
 // one size that fits the box.
 func BulletList(c Ctx, p *Pixels, lines []string, x, y, w, h float64, firstStep int) {
-	defer c.within("BulletList")()
+	defer c.within("BulletList", Rect{x, y, w, h})()
 	// The mark is 0.32 of the text size wide; the gap after it grows with the
 	// text.
 	indent := func(size int) float64 { return max(c.Unit(0.05), float64(size)*0.6) }

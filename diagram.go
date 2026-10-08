@@ -23,7 +23,7 @@ type Timeline struct {
 // the size of the whole timeline once built: it fills the length of r along
 // the line and takes as much across it as its text needs.
 func (t Timeline) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
-	defer c.within("Timeline")()
+	defer c.within("Timeline", r)()
 	n := len(t.Items)
 	if n == 0 {
 		return 0, 0
@@ -145,7 +145,7 @@ type Process struct {
 // Draw renders the row at the top of r, built out to the current step, and
 // returns its size once built: the width of r and a chevron's height.
 func (pr Process) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
-	defer c.within("Process")()
+	defer c.within("Process", r)()
 	n := len(pr.Steps)
 	if n == 0 {
 		return 0, 0

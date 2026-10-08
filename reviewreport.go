@@ -3,30 +3,83 @@ package decker
 import (
 	"encoding/json"
 	"fmt"
+	"image"
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"text/tabwriter"
 )
 
-// reviewRun is one -review: what was checked and what was found.
+// reviewRun is one -review: what was checked, what was found, and the
+// images written for it, relative to its directory.
 type reviewRun struct {
 	deck   string
 	sizes  [][2]int
 	slides []int
 	builds int
 	issues []Issue
+	frames map[[2]int][]string // by slide and build
+	sheets []string
 }
 
-// reviewDeck runs Deck.Review for the command line.
-func reviewDeck(d *Deck, sizes [][2]int, slides []int) reviewRun {
-	r := reviewRun{deck: d.Name, sizes: sizes, slides: slides}
+// reviewDeck reviews the deck for the command line. With dir set it writes
+// images there as it goes: an annotated frame for each build with issues
+// (frames "issues"), or for every build ("all"), or none ("none"), and a
+// contact sheet of every build per size.
+func reviewDeck(d *Deck, sizes [][2]int, slides []int, dir, frames string) (reviewRun, error) {
+	r := reviewRun{deck: d.Name, sizes: sizes, slides: slides, frames: map[[2]int][]string{}}
 	for _, i := range slides {
 		r.builds += d.Steps(i)
 	}
-	r.issues = d.Review(ReviewOptions{Sizes: sizes, Slides: slides})
-	return r
+	digits := max(2, len(strconv.Itoa(len(d.Slides))))
+	tiles := map[[2]int][]sheetTile{}
+	var err error
+	save := func(img image.Image, name string) {
+		if err == nil {
+			err = savePNG(img, filepath.Join(dir, name))
+		}
+	}
+	if dir != "" && frames != "none" {
+		if err := os.MkdirAll(filepath.Join(dir, "frames"), 0o755); err != nil {
+			return r, err
+		}
+	}
+	d.reviewEach(ReviewOptions{Sizes: sizes, Slides: slides}, func(f *reviewedFrame) {
+		r.issues = append(r.issues, f.issues...)
+		if dir == "" || f.sc == nil {
+			return
+		}
+		title := d.Slides[f.slide].Title
+		size := [2]int{f.w, f.h}
+		tiles[size] = append(tiles[size], tile(f, title))
+		if frames == "all" || frames == "issues" && len(f.issues) > 0 {
+			name := fmt.Sprintf("frames/%0*d-%d-%s.png", digits, f.slide+1, f.step+1, sizeName(size))
+			save(annotate(f, title), name)
+			k := [2]int{f.slide, f.step}
+			r.frames[k] = append(r.frames[k], name)
+		}
+	})
+	if dir == "" {
+		return r, nil
+	}
+	for _, sz := range sizes {
+		var found []Issue
+		for _, is := range r.issues {
+			if is.W == sz[0] && is.H == sz[1] {
+				found = append(found, is)
+			}
+		}
+		caption := fmt.Sprintf("%s  ·  %s  ·  %s", r.deck, sizeName(sz), plural(len(tiles[sz]), "build", "builds"))
+		if c := issueCounts(found); c != "" {
+			caption += "  ·  " + c
+		}
+		name := "sheet-" + sizeName(sz) + ".png"
+		save(reviewSheet(tiles[sz], caption), name)
+		r.sheets = append(r.sheets, name)
+	}
+	return r, err
 }
 
 // count returns how many issues have each severity.
@@ -124,8 +177,25 @@ func (r reviewRun) writeText(w io.Writer) {
 // summary, then each slide with issues, build by build.
 func (r reviewRun) writeMarkdown(w io.Writer) {
 	fmt.Fprintf(w, "# Review: %s\n\n%s Each build is checked settled, as it looks once its animations finish.\n", r.deck, r.summary())
+	if len(r.sheets) > 0 {
+		fmt.Fprintf(w, "\nEvery build at a glance, framed in the color of its worst issue (red errors, amber warnings, blue notes):")
+		for _, s := range r.sheets {
+			fmt.Fprintf(w, " [%s](%s)", strings.TrimSuffix(strings.TrimPrefix(s, "sheet-"), ".png"), s)
+		}
+		fmt.Fprintln(w)
+	}
 	slide, step := -1, -1
+	endBuild := func() {
+		for _, img := range r.frames[[2]int{slide, step}] {
+			fmt.Fprintf(w, "\n![%d.%d at %s](%s)\n", slide+1, step+1, strings.TrimSuffix(img[strings.LastIndex(img, "-")+1:], ".png"), img)
+		}
+	}
 	for _, g := range r.groups() {
+		if g.Slide != slide || g.Step != step {
+			if step >= 0 {
+				endBuild()
+			}
+		}
 		if g.Slide != slide {
 			slide, step = g.Slide, -1
 			fmt.Fprintf(w, "\n## %d. %s\n", g.Slide+1, g.Title)
@@ -135,6 +205,9 @@ func (r reviewRun) writeMarkdown(w io.Writer) {
 			fmt.Fprintf(w, "\n**Build %d**\n\n", g.Step+1)
 		}
 		fmt.Fprintf(w, "- **%s** `%s` at %s: %s\n", g.Severity, g.Code, strings.Join(g.sizes, ", "), g.Msg)
+	}
+	if step >= 0 {
+		endBuild()
 	}
 }
 

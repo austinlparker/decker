@@ -13,6 +13,7 @@ go run . -presenter -length 45m
 go run . -presenter -presentation-font-size 5 -previews image
 go run . -list
 go run . -snapshot -slide 1 -step 2 -t 1.5 -w 240 -h 67 -png frame.png
+go run . -snapshot -slide 4 -step 2 -w 320 -h 90 -png frame.png -bounds
 go run . -review review -sizes 240x67,682x171
 go run . -sheet sheet.png -w 682 -h 171 -shrink 8
 go run . -video talk.mp4 -slide 1 -until 3 -size 1280x720 -fps 30 -hold 4
@@ -56,6 +57,8 @@ to live presentation, including a deck opened with `p` from the presenter.
 | `-until N` | `0` (end) | Video, review: last included slide, **1-based** |
 | `-sizes LIST` | `240x67,320x90,682x171` | Review: frame sizes in **cells**, comma-separated |
 | `-strict` | `false` | Review: exit non-zero on warnings as well as errors |
+| `-frames MODE` | `issues` | Review: annotated frame images to write: `issues` (builds with issues), `all`, or `none` |
+| `-bounds` | `false` | Snapshot with `-png`: outline what the slide drew and box its review issues, as review images do |
 
 `-sheet`, `-video` and `-png` take filenames. Width/height must be positive;
 use even video dimensions for the `yuv420p` H.264 encoder. Register a talk's
@@ -111,6 +114,13 @@ build to `DIR/index.md`, and as JSON to `DIR/report.json` (slides and builds
 with status 1 when it finds an error, or with `-strict` a warning. Codes a
 slide lists in `Slide.Allow` are left out. The guide's
 [Reviewing a deck](guide.md#reviewing-a-deck) lists the codes.
+
+It also writes images, linked from `index.md`: `DIR/frames/NN-B-WxH.png`
+for each build with issues (`-frames`), the frame from its pixel canvas
+scaled up with what it drew outlined and its issues boxed, numbered and
+listed; and `DIR/sheet-WxH.png` for each size, every build framed in the
+color of its worst issue. The images omit character-layer text, as video
+does.
 
 ## Export behavior
 
