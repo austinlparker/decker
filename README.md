@@ -29,22 +29,23 @@ Built on [Bubble Tea](https://github.com/charmbracelet/bubbletea),
 
 ## What you can make
 
-These clips are exported from the [showcase example](examples/showcase/main.go)
-with decker's own `-video` mode. The same frames play live in the terminal.
+Here's a taste. Each clip below is a few slides from the
+[showcase deck](examples/showcase/main.go), recorded with decker's `-video`
+mode. The same slides run live in your terminal when you give the talk.
 
-**Type and letter effects:** block-letter titles, rich text, and per-letter
-animations such as decode, wave, type-on and rain.
+**Make an entrance.** Open with a title in big block letters that decrypts
+onto the screen, then let a sentence rise in one word at a time.
 
 ![A block-letter DECKER title decrypting in, a sentence rising word by word, and animated letter effects.](docs/assets/showcase-type.gif)
 
-**Charts and numbers:** stats that count up, and line and donut charts that
-build in on their step.
+**Let the numbers land.** Stats count up as you reach them, and charts draw
+themselves in when you're ready to talk about them.
 
 ![Three stat cards counting up, then a line chart drawing on and a donut chart sweeping in.](docs/assets/showcase-data.gif)
 
-**Code, diagrams and magic move:** syntax-highlighted code with a focus that
-walks between lines, connectors that draw on, and elements that glide to new
-positions on the next slide.
+**Walk people through it.** Highlight a few lines of code at a time, draw a
+diagram's arrows in as you explain them, and move a diagram to its new spot
+on the next slide so nobody loses their place.
 
 ![Highlighted Go code with a moving focus bar, a three-box diagram drawing on, and the boxes morphing into a column.](docs/assets/showcase-diagrams.gif)
 
