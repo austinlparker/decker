@@ -181,6 +181,15 @@ func fitValueAxis(f *Font, size int, format func(float64) string, lo, hi float64
 	}
 }
 
+// along maps v to a coordinate along plot's value axis: rightward from its
+// left edge if horizontal, else upward from its bottom.
+func (a axisScale) along(plot Rect, v float64, horizontal bool) float64 {
+	if horizontal {
+		return plot.X + a.at(v)*plot.W
+	}
+	return plot.Bottom() - a.at(v)*plot.H
+}
+
 // at maps a value to 0 (lo) .. 1 (hi), clamped.
 func (a axisScale) at(v float64) float64 {
 	if !(a.hi > a.lo) {
@@ -259,28 +268,87 @@ func fadeFX(a float64) GlyphEffect {
 	return func(int) GlyphFX { return GlyphFX{Alpha: a} }
 }
 
-// chartText draws one line of s with its top at y, fading in at alpha a.
-func chartText(c Ctx, p *Pixels, s string, size int, col RGB, align Align, x, y, a float64) (w, h float64) {
+// chartLabel is the Text a chart writes s in, fading in at alpha a; ok is
+// false when there is nothing to draw.
+func chartLabel(c Ctx, s string, size int, col RGB, align Align, a float64) (t Text, ok bool) {
 	if a <= 0 || s == "" {
-		return 0, 0
+		return t, false
 	}
-	t := Text{Font: c.Theme.Body, Size: size, Color: col, Align: align}
+	t = Text{Font: c.Theme.Body, Size: size, Color: col, Align: align}
 	if a < 1 {
 		t.FX = fadeFX(a)
 	}
-	return t.Draw(p, s, x, y)
+	return t, true
 }
 
-// chartTextMid is chartText with the ink centered on cy.
+// chartText draws s with its top at y, fading in at alpha a.
+func chartText(c Ctx, p *Pixels, s string, size int, col RGB, align Align, x, y, a float64) (w, h float64) {
+	if t, ok := chartLabel(c, s, size, col, align, a); ok {
+		return t.Draw(p, s, x, y)
+	}
+	return 0, 0
+}
+
+// chartTextMid is chartText for one line, with the ink centered on cy.
 func chartTextMid(c Ctx, p *Pixels, s string, size int, col RGB, align Align, x, cy, a float64) {
-	if a <= 0 || s == "" {
-		return
+	if t, ok := chartLabel(c, s, size, col, align, a); ok {
+		t.DrawMid(p, s, x, cy)
 	}
-	t := Text{Font: c.Theme.Body, Size: size, Color: col, Align: align}
-	if a < 1 {
-		t.FX = fadeFX(a)
+}
+
+// chartSwatch draws series i's swatch with its left edge at x, centered on a
+// line of size text whose top is y, then s in col, off swatch widths from x.
+func chartSwatch(c Ctx, p *Pixels, i int, s string, size int, col RGB, x, y, off, a float64) (w, h float64) {
+	sw := float64(size) * 0.7
+	p.RoundRect(x, y+(float64(size)*DefaultLeading-sw)/2, sw, sw, sw*0.25, 0, c.Theme.SeriesColor(i), a)
+	return chartText(c, p, s, size, col, Left, x+sw*off, y, a)
+}
+
+// chartFrame draws what BarChart and LineChart share around their data: the
+// legend, the value gridlines and their labels, and the category labels.
+type chartFrame struct {
+	c     Ctx
+	p     *Pixels
+	size  int // label text size
+	gap   float64
+	frame float64 // how far the frame has faded in, 0..1
+}
+
+// legend draws a key along the top of r when there are two or more series,
+// and returns how far below r's top the plot starts.
+func (f chartFrame) legend(r Rect, names []string, series int) (top float64) {
+	fs := float64(f.size)
+	if series < 2 {
+		return fs * 0.6
 	}
-	t.DrawMid(p, s, x, cy)
+	lineH := fs * DefaultLeading
+	legendRow(f.c, f.p, Rect{r.X, r.Y, r.W, min(lineH, r.H)}, names, series, f.frame)
+	return lineH + f.gap
+}
+
+// grid draws a gridline across plot at each of ax's ticks, labeled below the
+// plot for a horizontal value axis and left of it otherwise.
+func (f chartFrame) grid(plot Rect, ax valueAxis, horizontal bool) {
+	th := f.c.Theme
+	grid := max(f.c.Unit(0.005), 1)
+	for i, v := range ax.ticks {
+		g := ax.along(plot, v, horizontal)
+		if horizontal {
+			f.p.Rect(g-grid/2, plot.Y, grid, plot.H, th.Faint, f.frame)
+			chartText(f.c, f.p, ax.text[i], f.size, th.Muted, Center, g, plot.Bottom()+f.gap/2, f.frame)
+		} else {
+			f.p.Rect(plot.X, g-grid/2, plot.W, grid, th.Faint, f.frame)
+			chartTextMid(f.c, f.p, ax.text[i], f.size, th.Muted, Right, plot.X-f.gap, g, f.frame)
+		}
+	}
+}
+
+// categories draws every cats.stride-th of the first n category labels with
+// their tops at y, centered in slots slot wide starting at x.
+func (f chartFrame) categories(cats catLayout, n int, x, slot, y float64) {
+	for i := 0; i < n && i < len(cats.text); i += cats.stride {
+		chartText(f.c, f.p, cats.text[i], cats.size, f.c.Theme.Muted, Center, x+(float64(i)+0.5)*slot, y, f.frame)
+	}
 }
 
 // catLayout is category labels wrapped, and shrunk if need be, to a slot.
@@ -289,7 +357,8 @@ type catLayout struct {
 	size   int
 	stride int
 	lines  [][]string
-	w, h   float64 // the widest line and the tallest label
+	text   []string // lines joined with "\n", ready to draw
+	w, h   float64  // the widest line and the tallest label
 }
 
 // labelsKey encodes lengths so embedded separators cannot alias another
@@ -348,7 +417,18 @@ func layoutCatsAt(f *Font, labels []string, maxW, maxH float64, base, stride int
 		}
 		return ok
 	})
+	out.text = joinLines(out.lines)
 	return out
+}
+
+// joinLines joins each label's wrapped lines with "\n", so a memoized layout
+// holds text ready to draw and a frame doesn't join it again.
+func joinLines(lines [][]string) []string {
+	text := make([]string, len(lines))
+	for i, ls := range lines {
+		text[i] = strings.Join(ls, "\n")
+	}
+	return text
 }
 
 // legendRow draws a one-line key of swatches and names across the top of r,
@@ -370,8 +450,7 @@ func legendRow(c Ctx, p *Pixels, r Rect, names []string, count int, a float64) {
 		if x+sw*1.4+th.Body.Measure(name, size) > r.Right() {
 			return
 		}
-		p.RoundRect(x, r.Y+(float64(size)*DefaultLeading-sw)/2, sw, sw, sw*0.25, 0, th.SeriesColor(i), a)
-		w, _ := chartText(c, p, name, size, th.Muted, Left, x+sw*1.4, r.Y, a)
+		w, _ := chartSwatch(c, p, i, name, size, th.Muted, x, r.Y, 1.4, a)
 		x += sw*1.4 + w + gap
 	}
 }
@@ -432,11 +511,8 @@ func (b BarChart) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 	// plot's size.
 	tickW := newValueAxis(th.Body, size, format, lo, hi, fixed, 5).w
 
-	top := fs * 0.6
-	if k > 1 {
-		top = lineH + gap
-		legendRow(c, p, Rect{r.X, r.Y, r.W, min(lineH, r.H)}, b.Names, k, frame)
-	}
+	fr := chartFrame{c, p, size, gap, frame}
+	top := fr.legend(r, b.Names, k)
 	// Room for a value label past the end of the longest bar, and past the end
 	// of the longest negative bar.
 	valRoom := 0.0
@@ -504,26 +580,10 @@ func (b BarChart) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 		room = plot.W
 	}
 	ax := fitValueAxis(th.Body, size, format, lo, hi, fixed, room, b.Horizontal)
-	sc, ticks, tickText := ax.axisScale, ax.ticks, ax.text
-
-	// pos maps a value to a coordinate along the value axis.
-	pos := func(v float64) float64 {
-		if b.Horizontal {
-			return plot.X + sc.at(v)*plot.W
-		}
-		return plot.Bottom() - sc.at(v)*plot.H
-	}
+	sc := ax.axisScale
+	pos := func(v float64) float64 { return sc.along(plot, v, b.Horizontal) }
+	fr.grid(plot, ax, b.Horizontal)
 	grid := max(c.Unit(0.005), 1)
-	for i, v := range ticks {
-		g := pos(v)
-		if b.Horizontal {
-			p.Rect(g-grid/2, plot.Y, grid, plot.H, th.Faint, frame)
-			chartText(c, p, tickText[i], size, th.Muted, Center, g, plot.Bottom()+gap/2, frame)
-		} else {
-			p.Rect(plot.X, g-grid/2, plot.W, grid, th.Faint, frame)
-			chartTextMid(c, p, tickText[i], size, th.Muted, Right, plot.X-gap, g, frame)
-		}
-	}
 	zero := pos(0)
 	if b.Horizontal {
 		p.Rect(zero-grid/2, plot.Y, grid, plot.H, th.Muted, frame*0.7)
@@ -535,18 +595,13 @@ func (b BarChart) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 	if b.Horizontal {
 		slot = plot.H / float64(max(n, 1))
 	}
-	for i := 0; i < n; i++ {
-		if i >= len(cats.lines) {
-			break
-		}
-		txt := strings.Join(cats.lines[i], "\n")
-		mid := (float64(i) + 0.5) * slot
-		if b.Horizontal {
+	if b.Horizontal {
+		for i := 0; i < n && i < len(cats.text); i++ {
 			lh := float64(len(cats.lines[i])) * float64(cats.size) * DefaultLeading
-			chartText(c, p, txt, cats.size, th.Muted, Right, catRight, plot.Y+mid-lh/2, frame)
-		} else {
-			chartText(c, p, txt, cats.size, th.Muted, Center, plot.X+mid, plot.Bottom()+loRoom+gap, frame)
+			chartText(c, p, cats.text[i], cats.size, th.Muted, Right, catRight, plot.Y+(float64(i)+0.5)*slot-lh/2, frame)
 		}
+	} else {
+		fr.categories(cats, n, plot.X, slot, plot.Bottom()+loRoom+gap)
 	}
 
 	// The bars. A group fills 70% of its slot, so bars never touch the next
@@ -645,8 +700,6 @@ func (l LineChart) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 	defer c.within("LineChart", r)()
 	th := c.Theme
 	size := c.SmallText(th.Body)
-	fs := float64(size)
-	lineH := fs * DefaultLeading
 	gap := c.Unit(0.02)
 	n := max(len(l.Labels), longest(l.Series))
 	format := formatOr(l.Format)
@@ -665,11 +718,8 @@ func (l LineChart) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 	fixed := (l.Min != 0 || l.Max != 0) && hi > lo
 	tickW := newValueAxis(th.Body, size, format, lo, hi, fixed, 5).w
 
-	top := fs * 0.6
-	if len(l.Series) > 1 {
-		top = lineH + gap
-		legendRow(c, p, Rect{r.X, r.Y, r.W, min(lineH, r.H)}, l.Names, len(l.Series), frame)
-	}
+	fr := chartFrame{c, p, size, gap, frame}
+	top := fr.legend(r, l.Names, len(l.Series))
 	left := tickW + gap
 	slot := max(r.W-left, 0) / float64(max(n, 1))
 	cats := layoutCats(th.Body, l.Labels, slot*0.92, r.H*0.25, size, true)
@@ -683,17 +733,9 @@ func (l LineChart) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 	}
 
 	ax := fitValueAxis(th.Body, size, format, lo, hi, fixed, plot.H, false)
-	sc, ticks, tickText := ax.axisScale, ax.ticks, ax.text
-	grid := max(c.Unit(0.005), 1)
-	for i, v := range ticks {
-		y := plot.Bottom() - sc.at(v)*plot.H
-		p.Rect(plot.X, y-grid/2, plot.W, grid, th.Faint, frame)
-		chartTextMid(c, p, tickText[i], size, th.Muted, Right, plot.X-gap, y, frame)
-	}
-	for i := 0; i < n && i < len(cats.lines); i += cats.stride {
-		chartText(c, p, strings.Join(cats.lines[i], "\n"), cats.size, th.Muted, Center,
-			plot.X+(float64(i)+0.5)*slot, plot.Bottom()+gap, frame)
-	}
+	sc := ax.axisScale
+	fr.grid(plot, ax, false)
+	fr.categories(cats, n, plot.X, slot, plot.Bottom()+gap)
 
 	reveal := plot.X + Ease(since-chartLead, chartSweep)*plot.W
 	width := max(c.Unit(0.014), 2)
@@ -703,7 +745,7 @@ func (l LineChart) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 			if i < 0 || i >= len(s) || !finite(s[i]) {
 				return 0, 0, false
 			}
-			return plot.X + (float64(i)+0.5)*slot, plot.Bottom() - sc.at(s[i])*plot.H, true
+			return plot.X + (float64(i)+0.5)*slot, sc.along(plot, s[i], false), true
 		}
 		for i := 0; i < len(s); i++ {
 			x, y, ok := pt(i)
@@ -750,8 +792,9 @@ type legendKey struct {
 type legendLayout struct {
 	size  int
 	lines [][]string
-	w, h  float64 // content width and height
-	pct   float64 // width of the share column
+	text  []string // lines joined with "\n", ready to draw
+	w, h  float64  // content width and height
+	pct   float64  // width of the share column
 }
 
 var legendLayouts = memo[legendKey, legendLayout]{max: 1000}
@@ -782,6 +825,7 @@ func layoutLegend(f *Font, labels []string, avail, room float64, maxSize, minSiz
 			out.w += fs*0.7*2 + fs*0.9 + pct
 			return out.h <= room && out.w <= avail
 		})
+		out.text = joinLines(out.lines)
 		return out
 	})
 }
@@ -909,14 +953,12 @@ func (d DonutChart) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 	if hasLegend {
 		size := lay.size
 		fs := float64(size)
-		sw := fs * 0.7
 		lx := cx + outer + gap
 		y := cy - lay.h/2
 		for i := range n {
 			a := Ease(since-chartLead-0.08*float64(i), chartFade)
 			lh := float64(len(lay.lines[i])) * fs * DefaultLeading
-			p.RoundRect(lx, y+(fs*DefaultLeading-sw)/2, sw, sw, sw*0.25, 0, th.SeriesColor(i), a)
-			chartText(c, p, strings.Join(lay.lines[i], "\n"), size, th.Text, Left, lx+sw*1.7, y, a)
+			chartSwatch(c, p, i, lay.text[i], size, th.Text, lx, y, 1.7, a)
 			if lay.pct > 0 {
 				share := "0%"
 				if total > 0 {
