@@ -117,18 +117,14 @@ func (t Timeline) fit(c Ctx, textW, textH float64) (ls, ds int, labelH, detailH,
 	ls = max(th.Display.Drawn(ls), c.SmallText(th.Display))
 	ds = max(th.Body.Drawn(ds), c.SmallText(th.Body))
 	for _, it := range t.Items {
-		lines := th.Display.Wrap(it.Label, ls, textW)
+		lines := th.Display.wrapped(it.Label, ls, textW)
 		labelH = max(labelH, float64(len(lines))*float64(ls)*DefaultLeading)
-		for _, l := range lines {
-			widest = max(widest, th.Display.Measure(l, ls))
-		}
-		lines = th.Body.Wrap(it.Detail, ds, textW)
+		widest = max(widest, th.Display.widest(lines, ls))
+		lines = th.Body.wrapped(it.Detail, ds, textW)
 		if it.Detail != "" {
 			detailH = max(detailH, float64(len(lines))*float64(ds)*DefaultLeading)
 		}
-		for _, l := range lines {
-			widest = max(widest, th.Body.Measure(l, ds))
-		}
+		widest = max(widest, th.Body.widest(lines, ds))
 	}
 	return ls, ds, labelH, detailH, widest
 }
@@ -166,14 +162,10 @@ func (pr Process) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 	size = max(th.Body.Drawn(size), c.SmallText(th.Body))
 	if c.review != nil {
 		for i, s := range pr.Steps {
-			lines := th.Body.Wrap(s, size, textW)
-			needW := 0.0
-			for _, l := range lines {
-				needW = max(needW, th.Body.Measure(l, size))
-			}
+			lines := th.Body.wrapped(s, size, textW)
 			x := r.X + float64(i)*(cw-tip+gap)
 			c.Fits(quoteText("Process step", s), Rect{x + tip, r.Y + (h-textH)/2, textW, textH},
-				needW, float64(len(lines))*float64(size)*DefaultLeading)
+				th.Body.widest(lines, size), float64(len(lines))*float64(size)*DefaultLeading)
 		}
 	}
 
@@ -201,7 +193,7 @@ func (pr Process) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 		p.Polyline(closed, max(c.Unit(0.005), 1), edge, e)
 
 		mid := x + left + (cw-tip-left)/2
-		wrapped := strings.Join(th.Body.Wrap(s, size, textW), "\n")
+		wrapped := strings.Join(th.Body.wrapped(s, size, textW), "\n")
 		lines := float64(strings.Count(wrapped, "\n") + 1)
 		// The text fades with the shape: at e == 0 nothing of the step shows.
 		tx := Text{Font: th.Body, Size: size, Align: Center, Color: text, FX: func(int) GlyphFX { return GlyphFX{Alpha: e} }}

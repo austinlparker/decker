@@ -55,6 +55,15 @@ func (f *Font) wrapped(s string, size int, maxW float64) []string {
 	})
 }
 
+// widest is the width of the widest of lines at size, 0 for none.
+func (f *Font) widest(lines []string, size int) float64 {
+	w := 0.0
+	for _, l := range lines {
+		w = max(w, f.Measure(l, size))
+	}
+	return w
+}
+
 // wrapBalanced is wrapGreedy per paragraph, narrowed by bisection to the
 // tightest width that adds no lines. Greedy line count never falls as the
 // width shrinks, so the bisection is sound.
@@ -119,7 +128,7 @@ var fitted = memo[fitKey, fitResult]{max: 5000}
 func (f *Font) fit(parts []string, maxW, maxH float64, maxSize int, leading float64) (int, []string) {
 	wrap := func(size int) (lines []string) {
 		for _, part := range parts {
-			lines = append(lines, f.Wrap(part, size, maxW)...)
+			lines = append(lines, f.wrapped(part, size, maxW)...)
 		}
 		return lines
 	}

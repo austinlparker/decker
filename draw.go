@@ -109,7 +109,7 @@ func plateText(p *Pixels, f *Font, size int, s string, cx, cy float64, fg, bg RG
 }
 
 func wrappedHeight(f *Font, s string, size int, maxW float64) float64 {
-	return float64(len(f.Wrap(s, size, maxW))) * float64(size) * DefaultLeading
+	return float64(len(f.wrapped(s, size, maxW))) * float64(size) * DefaultLeading
 }
 
 // CycleDiagram is a ring of numbered stations with a legend, one station per

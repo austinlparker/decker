@@ -99,9 +99,11 @@ func (t Text) baseOff(f *Font, size int) float64 {
 // spaces included, plus one per line break.
 func (t Text) Draw(p *Pixels, s string, x, y float64) (w, h float64) {
 	f, size := t.resolved()
-	lines := strings.Split(s, "\n")
+	var lines []string
 	if t.MaxW > 0 {
-		lines = f.Wrap(s, size, t.MaxW)
+		lines = f.wrapped(s, size, t.MaxW)
+	} else {
+		lines = strings.Split(s, "\n")
 	}
 	lineH := float64(size) * leadingOr(t.Leading)
 	widths := make([]float64, len(lines))
@@ -146,10 +148,7 @@ func (t Text) Measure(s string) (w, h float64) {
 	n := 0
 	if t.MaxW > 0 {
 		lines := f.wrapped(s, size, t.MaxW)
-		for _, l := range lines {
-			w = max(w, f.Measure(l, size))
-		}
-		n = len(lines)
+		w, n = f.widest(lines, size), len(lines)
 	} else {
 		for l := range strings.SplitSeq(s, "\n") {
 			w = max(w, f.Measure(l, size))

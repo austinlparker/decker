@@ -814,11 +814,7 @@ func layoutLegend(f *Font, labels []string, avail, room float64, maxSize, minSiz
 			out = legendLayout{size: size, lines: make([][]string, len(labels)), pct: pct}
 			for i, l := range labels {
 				out.lines[i] = f.Wrap(l, size, labelW)
-				lw := 0.0
-				for _, ln := range out.lines[i] {
-					lw = max(lw, f.Measure(ln, size))
-				}
-				out.w = max(out.w, lw)
+				out.w = max(out.w, f.widest(out.lines[i], size))
 				out.h += float64(len(out.lines[i])) * fs * DefaultLeading
 			}
 			out.h += float64(max(len(labels)-1, 0)) * fs * 0.45
@@ -1117,7 +1113,7 @@ func (s Stat) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 	var labelLines []string
 	labelH := 0.0
 	if s.Label != "" {
-		labelLines = th.Body.Wrap(s.Label, ls, r.W)
+		labelLines = th.Body.wrapped(s.Label, ls, r.W)
 		labelH = float64(len(labelLines))*float64(ls)*DefaultLeading + gap
 	}
 	final := s.text(Settled)
