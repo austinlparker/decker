@@ -6,7 +6,8 @@ import "errors"
 // Pass it to Main from the talk's main function.
 type Deck struct {
 	// Name identifies the deck on this machine: it names the presenter socket
-	// and the binary -dev rebuilds into. Keep it short.
+	// and the binary --dev rebuilds into, and the command line's help shows
+	// it as the program's name. Keep it short.
 	Name string
 
 	// Theme is required, and so are its Display, Body and Mono fonts.
@@ -17,7 +18,7 @@ type Deck struct {
 }
 
 // Render draws slide i (0-based) as a styled string of exactly c.W×c.H cells,
-// as -snapshot prints it. A nil c.Theme uses the deck's, and c.Index, c.Count
+// as the snapshot command prints it. A nil c.Theme uses the deck's, and c.Index, c.Count
 // and c.Section are set from i and the deck; a panic renders as its error.
 func (d *Deck) Render(i int, c Ctx) string {
 	g := d.cells(i, c)
@@ -55,8 +56,8 @@ func (d *Deck) Draw(i int, c Ctx) error {
 }
 
 // still renders slide i at step, secs after the slide and the step began,
-// at w×h cells: a frame as -snapshot, -sheet, the handout and the presenter
-// view's previews show it. The caller releases the grid.
+// at w×h cells: a frame as the snapshot, sheet and handout commands and the
+// presenter view's previews show it. The caller releases the grid.
 func (d *Deck) still(i, step int, secs float64, w, h int) *grid {
 	return d.cells(i, stillCtx(w, h, step, secs))
 }

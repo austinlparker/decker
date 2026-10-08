@@ -81,7 +81,7 @@ type model struct {
 	// all while blanked.
 	blank blankMode
 
-	dev *devState // nil unless -dev
+	dev *devState // nil unless --dev
 
 	link      *linkServer // nil unless the presenter link is on
 	published [5]int      // slide, step, w, h, blank last sent over the link

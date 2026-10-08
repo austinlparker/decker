@@ -10,7 +10,7 @@ import (
 	"text/tabwriter"
 )
 
-// reviewRun is one -review: what was checked, what was found, and the
+// reviewRun is one review command: what was checked, what was found, and the
 // images written for it, relative to its directory.
 type reviewRun struct {
 	deck   string

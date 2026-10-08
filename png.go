@@ -16,7 +16,7 @@ import (
 // A snapshot cell is cellW×cellH pixels.
 const cellW, cellH = 8, 16
 
-// writePNG saves frameImage's rendering to path (-snapshot -png).
+// writePNG saves frameImage's rendering to path (snapshot --png).
 func writePNG(g *grid, path string) error { return savePNG(frameImage(g), path) }
 
 // frameImage paints a frame as a terminal would, to preview slides without

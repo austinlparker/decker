@@ -138,7 +138,6 @@ or `arg:""` for a positional, and has `Run(d *Deck) error`, plus
 `Validate() error` for checks the tags can't say. Commands share flags by
 embedding a group (`position`, `deckFlags`, `frameFlags`). Put a flag on the
 commands it applies to and no others, so kong rejects it elsewhere. Rendering
-without a terminal should go through `frameFlags.still` or
-`renderSlideGrid`/`Deck.Render` (cells), or `renderSlide` (pixels), not a
-live model. Add cases to `TestCommandLine` and `TestCommandLineRejects`, and
+without a terminal should go through `Deck.still` or `Deck.cells` (cells),
+or `renderSlide` (pixels), not a live model. Add cases to `TestCommandLine` and `TestCommandLineRejects`, and
 update "Running a deck" in `docs/guide.md` and `docs/cli.md`.
