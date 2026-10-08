@@ -124,6 +124,7 @@ and defaults:
 go run .                     # present, from slide 1
 go run . -dev                # rebuild and reload on every save, staying on the current slide
 go run . -presenter          # the presenter view, in a second window
+go run . -presenter -presentation-font-size 5 # p opens the deck at 5pt in Ghostty
 go run . -list               # slide titles, step counts and sections
 go run . -snapshot -slide 6 -step 4 -t 2.5 -w 240 -h 67 -png frame.png
 go run . -sheet sheet.png -w 682 -h 171 -shrink 8
@@ -183,6 +184,25 @@ in the **presenter view**: a second window on your laptop screen, at a normal
 font size, that drives the deck.
 
 ```sh
+go run . -presenter   # on your screen: notes, timer and previews
+```
+
+In Ghostty 1.3+ on macOS, press `p` to open the deck in a new window at a
+4pt font. Move that window to the projector. The presenter stays at its
+normal font size, and focus returns to it after the deck window opens.
+Use `-presentation-font-size 5` for a different deck-window font size.
+macOS may ask for permission to automate Ghostty the first time.
+
+The new window runs the same executable, even when you used `go run`, with
+the same working directory, socket, and talk-specific command-line flags.
+It starts at `-slide`/`-step`, or the last reported position after a
+disconnect. Repeated `p` presses do not open duplicate windows; after the
+deck closes, `p` can reopen it. Quitting the presenter leaves the deck
+running. Launch failures appear in the presenter and can be retried with `p`.
+
+Other terminals and platforms can start the two windows manually:
+
+```sh
 go run .              # window 1, on the projector: the deck
 go run . -presenter   # window 2, on your screen: the presenter view
 ```
@@ -202,6 +222,13 @@ The presenter view shows:
 - a pace check: how far ahead or behind an even pace you are, counting
   build steps, so a slide with four builds gets four times a section
   opener's share of the time.
+
+Ghostty and kitty show full-resolution slide images automatically using
+the Kitty graphics protocol. Other terminals, and sessions inside tmux or
+zellij, use half-block previews. Use `-previews image` to force image
+previews, or `-previews cells` to force cells. Images render at the deck's
+actual dimensions and settled build step; while an image loads, its cell
+preview remains visible. Resizing either window refreshes the images.
 
 For a different talk length, pass `-length 45m` to the presenter view.
 
@@ -234,7 +261,8 @@ it is up. Pressed in the presenter view, the keys blank the deck, and the
 presenter view shows `BLANK` in its header while keeping the notes and
 previews. Blanking closes the notes and help.
 
-Only in the presenter view: `t` starts or pauses the timer, `T` resets it.
+Only in the presenter view: `p` opens the deck in a new Ghostty window
+(macOS), `t` starts or pauses the timer, `T` resets it.
 
 Only in the deck: `n` shows the notes on the projector (a fallback if the
 presenter view isn't running), `?` shows help (`esc` closes it) and

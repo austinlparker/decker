@@ -13,19 +13,21 @@ import (
 )
 
 type options struct {
-	slide, step, fps int
-	dev, list        bool
-	snapshot         bool
-	at               float64
-	width, height    int
-	png, sheet       string
-	shrink           int
-	presenter        bool
-	socket           string
-	length           time.Duration
-	video, size      string
-	hold             float64
-	until            int
+	slide, step, fps     int
+	dev, list            bool
+	snapshot             bool
+	at                   float64
+	width, height        int
+	png, sheet           string
+	shrink               int
+	presenter            bool
+	presentationFontSize float64
+	previews             string
+	socket               string
+	length               time.Duration
+	video, size          string
+	hold                 float64
+	until                int
 }
 
 // Main runs a deck from the command line: live in the terminal by default, or
@@ -47,7 +49,7 @@ func run(d *Deck) error {
 	case o.video != "":
 		return runVideo(d, o)
 	case o.presenter:
-		return runPresenter(d, o.socket, o.length)
+		return runPresenter(d, o)
 	case o.list:
 		listSlides(d)
 		return nil
@@ -76,6 +78,8 @@ func parseFlags(name string) options {
 	flag.BoolVar(&o.presenter, "presenter", false, "run the presenter view (notes, timer, next slide) and drive a deck running in another window")
 	flag.StringVar(&o.socket, "socket", defaultSocket(name), "Unix socket linking the deck and the presenter view")
 	flag.DurationVar(&o.length, "length", 30*time.Minute, "with -presenter: the talk's length, for the timer and pace")
+	flag.Float64Var(&o.presentationFontSize, "presentation-font-size", 4, "with -presenter: font size in points for the Ghostty window opened with p")
+	flag.StringVar(&o.previews, "previews", "auto", "with -presenter: slide previews as auto, image, or cells")
 	flag.StringVar(&o.video, "video", "", "render the deck to this video file (MP4, needs ffmpeg) and exit; starts at -slide")
 	flag.StringVar(&o.size, "size", "1920x1080", "with -video: the video's size in pixels")
 	flag.Float64Var(&o.hold, "hold", 4, "with -video: seconds each build step stays on screen")

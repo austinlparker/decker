@@ -1,5 +1,7 @@
 package decker
 
+import "image"
+
 // previewKey names one preview: a slide at a step in a pw×ph box, drawn for a
 // dw×dh deck.
 type previewKey struct{ slide, step, pw, ph, dw, dh int }
@@ -13,10 +15,17 @@ func (p presenter) key(i, step int) (k previewKey, ok bool) {
 		return k, false
 	}
 	pw := (p.inner() - presGutter - 4) / 2 // each frame adds 2 columns
+	if p.images != nil {
+		pw = min(pw, kittyMaxCells)
+	}
 	// A cell shows one pixel across and two down, like the deck's, so the
 	// deck's shape in cells carries over directly.
 	ph := pw * dh / dw
-	if most := p.h - presHeader - footerLines - 3 - 6; ph > most { // label + frame, and 6 lines of notes
+	most := p.h - presHeader - footerLines - 3 - 6 // label + frame, and 6 lines of notes
+	if p.images != nil {
+		most = min(most, kittyMaxCells)
+	}
+	if ph > most {
 		ph = most
 		pw = ph * dw / dh
 	}
@@ -35,4 +44,24 @@ func renderPreview(slides []Slide, k previewKey, t *Theme) string {
 	px := g.pixels()
 	boxScale(sc.Px.Pix, sc.Px.W, sc.Px.H, px.Pix, px.W, px.H)
 	return sc.Render()
+}
+
+// slideImage preserves the live deck's layout and slide metadata. Pixel-only
+// slides need just one image pixel per canvas pixel; native character layers
+// use the snapshot rasterizer so their glyphs remain readable too.
+func slideImage(slides []Slide, k previewKey, t *Theme) *image.RGBA {
+	g := renderSlideGrid(slides[k.slide], Ctx{W: k.dw, H: k.dh, T: Settled, Step: k.step, StepT: Settled, Theme: t}.at(slides, k.slide))
+	defer g.release()
+	for _, c := range g.Cells {
+		if c.ch != " " && c.ch != "" && c.ch != halfBlock {
+			return frameImage(g)
+		}
+	}
+	px := g.pixels()
+	img := image.NewRGBA(image.Rect(0, 0, px.W, px.H))
+	for i, c := range px.Pix {
+		q := c.q()
+		img.Pix[4*i], img.Pix[4*i+1], img.Pix[4*i+2], img.Pix[4*i+3] = q[0], q[1], q[2], 255
+	}
+	return img
 }
