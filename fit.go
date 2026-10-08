@@ -143,12 +143,17 @@ func (f *Font) fit(parts []string, maxW, maxH float64, maxSize int, leading floa
 // Fit returns the largest size (at most maxSize) at which s, wrapped to maxW,
 // fits maxW×maxH, with the wrapped text. A zero leading means DefaultLeading.
 func (f *Font) Fit(s string, maxW, maxH float64, maxSize int, leading float64) (int, string) {
+	r := f.fitText(s, maxW, maxH, maxSize, leading)
+	return r.size, strings.Join(r.lines, "\n")
+}
+
+// fitText is Fit's remembered result, its lines the cache's own.
+func (f *Font) fitText(s string, maxW, maxH float64, maxSize int, leading float64) fitResult {
 	leading = leadingOr(leading)
-	r := fitted.get(fitKey{f, s, maxW, maxH, maxSize, leading, false}, func() fitResult {
+	return fitted.get(fitKey{f, s, maxW, maxH, maxSize, leading, false}, func() fitResult {
 		size, lines := f.fit([]string{s}, maxW, maxH, maxSize, leading)
 		return fitResult{size, lines}
 	})
-	return r.size, strings.Join(r.lines, "\n")
 }
 
 // FitAll is Fit for several parts stacked at DefaultLeading; it returns the

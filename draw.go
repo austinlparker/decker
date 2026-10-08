@@ -23,12 +23,7 @@ func Panel(c Ctx, p *Pixels, x, y, w, h float64, label string, fill, edge, text 
 	}
 	if label != "" {
 		s, t := c.Theme.Body.Fit(label, w-c.Unit(0.04), h-c.Unit(0.02), c.Size(0.1), 0)
-		tx := Text{Font: c.Theme.Body, Size: s, Align: Center, Color: Mix(fill, text, alpha)}
-		if lines := float64(strings.Count(t, "\n") + 1); lines > 1 {
-			tx.Draw(p, t, x+w/2, y+h/2-lines*float64(s)*DefaultLeading/2)
-		} else {
-			tx.DrawMid(p, t, x+w/2, y+h/2)
-		}
+		Text{Font: c.Theme.Body, Size: s, Align: Center, Color: Mix(fill, text, alpha)}.drawCentered(p, t, x+w/2, y+h/2)
 	}
 }
 

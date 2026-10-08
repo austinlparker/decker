@@ -264,10 +264,6 @@ func longest(series [][]float64) int {
 	return n
 }
 
-func fadeFX(a float64) GlyphEffect {
-	return func(int) GlyphFX { return GlyphFX{Alpha: a} }
-}
-
 // chartLabel is the Text a chart writes s in, fading in at alpha a; ok is
 // false when there is nothing to draw.
 func chartLabel(c Ctx, s string, size int, col RGB, align Align, a float64) (t Text, ok bool) {

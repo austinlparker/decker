@@ -88,6 +88,16 @@ func (t Text) midTop(f *Font, size int, top, bot, cy float64) float64 {
 	return baseline - t.baseOff(f, size)
 }
 
+// drawCentered draws s with the block centered vertically on cy (x as for
+// Draw): one line by its ink, as DrawMid does, and more by their line boxes.
+func (t Text) drawCentered(p *Pixels, s string, x, cy float64) {
+	if n := float64(strings.Count(s, "\n") + 1); n > 1 {
+		t.Draw(p, s, x, cy-n*float64(t.Size)*leadingOr(t.Leading)/2)
+	} else {
+		t.DrawMid(p, s, x, cy)
+	}
+}
+
 // Baseline is the distance from the top of a line to its baseline, as Draw lays
 // it out.
 func (t Text) Baseline() float64 {
