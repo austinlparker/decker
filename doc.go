@@ -98,14 +98,17 @@
 // [Pixels.Polyline], [Pixels.Bezier], [Pixels.DashedLine]) are in shapes.go.
 // Stock components ([Panel], [Arrow], [CycleDiagram], [BulletList],
 // [PageNumber], [ProgressBar], [Timeline], [Process], [Table], and [Code] with
-// its [SyntaxColors] and [LineRange] focus) and easing helpers ([Ease],
+// its [SyntaxColors], [LineRange] focus, [CodeOverflow] modes and
+// [Code.Measure]) and easing helpers ([Ease],
 // [CubicBezier], [Spring]) are in draw.go, diagram.go, table.go, code.go and
 // anim.go. Charts ([BarChart], [LineChart], [DonutChart], [Sparkline]) and the
 // counting [Stat] are in chart.go; their series colors are [Theme.Series]. The
 // guide covers the command line, keys and presenter view; the README starts
-// with a runnable talk.
+// with a runnable talk, and the [authoring guide] covers writing one, by
+// hand or with an agent.
 //
 // [hello example]: https://github.com/austinlparker/decker/blob/main/examples/hello/main.go
 // [guide]: https://github.com/austinlparker/decker/blob/main/docs/guide.md
 // [CLI reference]: https://github.com/austinlparker/decker/blob/main/docs/cli.md
+// [authoring guide]: https://github.com/austinlparker/decker/blob/main/docs/authoring.md
 package decker
