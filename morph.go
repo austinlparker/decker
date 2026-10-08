@@ -76,6 +76,18 @@ func layer(like *Pixels) *Pixels {
 	return &Pixels{W: like.W, H: like.H, Pix: make([]RGB, len(like.Pix)), review: like.review}
 }
 
+// snapshot lends a layer holding p's pixels in the box x0..x1 × y0..y1,
+// inclusive, on p's background; the rest of it is undefined. Hand it back
+// to layers.
+func snapshot(p *Pixels, x0, y0, x1, y1 int) *Pixels {
+	l := layer(p)
+	for y := y0; y <= y1; y++ {
+		copy(l.Pix[y*p.W+x0:y*p.W+x1+1], p.Pix[y*p.W+x0:y*p.W+x1+1])
+	}
+	l.BG = p.BG
+	return l
+}
+
 // fade mixes draw(r) into p at weight a, as if drawn on a layer of its own,
 // within margin pixels of r. With under set, it instead mixes from under(r)
 // to draw(r): one element turning into another, with no dip in between where
@@ -96,21 +108,13 @@ func fade(p *Pixels, r Rect, margin int, a float64, draw, under func(*Pixels, Re
 	if x0 > x1 || y0 > y1 {
 		return
 	}
-	snap := func(l *Pixels) {
-		for y := y0; y <= y1; y++ {
-			copy(l.Pix[y*p.W+x0:y*p.W+x1+1], p.Pix[y*p.W+x0:y*p.W+x1+1])
-		}
-		l.BG = p.BG
-	}
-	top := layer(p)
+	top := snapshot(p, x0, y0, x1, y1)
 	defer layers.put(top)
-	snap(top)
 	draw(top, r)
 	base := p
 	if under != nil {
-		base = layer(p)
+		base = snapshot(p, x0, y0, x1, y1)
 		defer layers.put(base)
-		snap(base)
 		under(base, r)
 	}
 	for y := y0; y <= y1; y++ {

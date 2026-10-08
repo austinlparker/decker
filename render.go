@@ -60,15 +60,12 @@ func (s *Scene) drawOwned(e placed) {
 		e.draw(p, e.r)
 		return
 	}
-	w := x1 - x0 + 1
-	before := make([]RGB, w*(y1-y0+1))
-	for y := y0; y <= y1; y++ {
-		copy(before[(y-y0)*w:(y-y0+1)*w], p.Pix[y*p.W+x0:y*p.W+x1+1])
-	}
+	before := snapshot(p, x0, y0, x1, y1)
+	defer layers.put(before)
 	e.draw(p, e.r)
 	for y := y0; y <= y1; y++ {
 		for x := x0; x <= x1; x++ {
-			if p.Pix[y*p.W+x] != before[(y-y0)*w+x-x0] {
+			if i := y*p.W + x; p.Pix[i] != before.Pix[i] {
 				l.inkAt(l.scopeID, x, y)
 			}
 		}
