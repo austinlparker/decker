@@ -29,6 +29,7 @@ func morph(from, to *Scene, p float64, _ Direction, t *Theme) {
 	drawn := to.finished // its elements and the overlay too
 	to.finished = true
 	to.safely(func() {
+		to.drawing = "a placed element"
 		margin := to.Px.H / 10 // room for a glow around the rect
 		for j, o := range olds {
 			if !to.taken[j] {

@@ -24,53 +24,22 @@ import (
 )
 
 // Slides renders every slide at every step, at three sizes and four moments
-// (appearing, mid-entrance, entered, settled), failing on panics.
+// (appearing, mid-entrance, entered, settled), as the deck draws them
+// (Deck.Draw), and fails on the first panic: in a View, a placed element or
+// the theme's overlay.
 func Slides(t *testing.T, d decker.Deck) {
 	t.Helper()
-	for i, s := range d.Slides {
+	for i := range d.Slides {
 		for _, size := range [][2]int{{80, 24}, {120, 36}, {200, 50}} {
 			for step := 0; step < d.Steps(i); step++ {
 				for _, at := range []float64{0, 0.3, 1.5, decker.Settled} {
-					view(t, s, decker.Ctx{W: size[0], H: size[1], T: at, Step: step, StepT: at, Theme: d.Theme,
-						Index: i, Count: len(d.Slides), Section: d.Section(i)})
+					if err := d.Draw(i, decker.Ctx{W: size[0], H: size[1], T: at, Step: step, StepT: at}); err != nil {
+						t.Fatalf("%v (at %dx%d, build %d, t=%v)", err, size[0], size[1], step+1, at)
+					}
 				}
 			}
 		}
 	}
-}
-
-// view draws one frame straight from the slide (its View, the theme's
-// overlay, then the elements it placed) so a panic in any of them fails the
-// test instead of being drawn. The engine draws the overlay last, but
-// Scene.Render, which draws the placed elements, also releases the scene.
-func view(t *testing.T, s decker.Slide, c decker.Ctx) {
-	t.Helper()
-	if part, r := drawFrame(s, c); r != nil {
-		t.Fatalf("slide %q: %s panicked at %dx%d step %d t=%v: %v", s.Title, part, c.W, c.H, c.Step, c.T, r)
-	}
-}
-
-// drawFrame draws one frame and returns what panicked, if anything: "View",
-// "a placed element" or "Theme.Overlay". The scene is off-screen, so a panic
-// reaches here rather than being drawn.
-func drawFrame(s decker.Slide, c decker.Ctx) (part string, r any) {
-	sc := decker.NewScene(c.W, c.H, c.Theme)
-	defer func() {
-		if r = recover(); r != nil {
-			sc.Release()
-		}
-	}()
-	part = "View"
-	if s.View != nil {
-		s.View(c, sc)
-	}
-	part = "Theme.Overlay"
-	if c.Theme.Overlay != nil {
-		c.Theme.Overlay(c, sc.Px)
-	}
-	part = "a placed element"
-	sc.Render()
-	return "", nil
 }
 
 // Review fails t for every error a review of the deck finds: a build that
@@ -195,12 +164,13 @@ func Frames(b *testing.B, d decker.Deck) {
 	for _, size := range [][2]int{{240, 67}, {320, 90}, {682, 171}} {
 		for i := range d.Slides {
 			b.Run(fmt.Sprintf("%dx%d/%d", size[0], size[1], i+1), func(b *testing.B) {
-				c := decker.Ctx{W: size[0], H: size[1], T: 1.3, Step: d.Steps(i) - 1, StepT: 1.3,
-					Index: i, Count: len(d.Slides), Section: d.Section(i)}
+				c := decker.Ctx{W: size[0], H: size[1], T: 1.3, Step: d.Steps(i) - 1, StepT: 1.3}
 				for b.Loop() {
 					c.T += 1.0 / 60
 					c.StepT += 1.0 / 60
-					d.Draw(i, c)
+					if err := d.Draw(i, c); err != nil {
+						b.Fatal(err)
+					}
 				}
 			})
 		}

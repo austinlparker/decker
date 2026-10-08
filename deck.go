@@ -42,9 +42,16 @@ func (d *Deck) builds() int {
 }
 
 // Draw renders slide i into cells without encoding them: the live deck's
-// per-frame work, for benchmarks. Like Render it sets c's position from i.
-func (d *Deck) Draw(i int, c Ctx) {
-	d.cells(i, c).release()
+// per-frame work, for tests and benchmarks. Like Render it sets c's position
+// from i, and a panic shows in the frame as its error. Draw also returns
+// that panic, as an error naming the slide, the part that panicked ("View",
+// "a placed element" or "Theme.Overlay") and the panic value, which it wraps
+// if it is an error; it returns nil when nothing panicked.
+func (d *Deck) Draw(i int, c Ctx) error {
+	sc := d.scene(i, c)
+	err := sc.err(i)
+	sc.flatten().release()
+	return err
 }
 
 // still renders slide i at step, secs after the slide and the step began,
@@ -62,9 +69,11 @@ func stillCtx(w, h, step int, secs float64) Ctx {
 
 // cells renders slide i as Render does, without encoding it; the caller
 // releases the grid.
-func (d *Deck) cells(i int, c Ctx) *grid {
-	return renderSlideGrid(d.Slides[i], d.withTheme(i, c))
-}
+func (d *Deck) cells(i int, c Ctx) *grid { return d.scene(i, c).flatten() }
+
+// scene renders slide i ready to show (renderSlide) as Render does; the
+// caller releases the scene.
+func (d *Deck) scene(i int, c Ctx) *Scene { return renderSlide(d.Slides[i], d.withTheme(i, c)) }
 
 // withTheme is c drawing slide i: on the deck's theme unless c has one, and
 // at slide i's position in the deck.

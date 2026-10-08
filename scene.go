@@ -35,10 +35,13 @@ type Scene struct {
 
 	// A slide's scene (drawSlide) knows its slide and Ctx, for the overlay
 	// and a panic's message; finished is set once its elements and overlay
-	// are drawn.
+	// are drawn. drawing names the part of the slide being drawn, and fault
+	// is the panic the scene showed, for Deck.Draw to report.
 	slide, finished bool
 	ctx             Ctx
 	title           string
+	drawing         string
+	fault           any
 }
 
 type movedCell struct {
@@ -84,7 +87,7 @@ func (s *Scene) Release() {
 	s.clearChars()
 	clear(s.placed)
 	s.placed = s.placed[:0]
-	s.slide, s.finished, s.ctx, s.title = false, false, Ctx{}, ""
+	s.slide, s.finished, s.ctx, s.title, s.drawing, s.fault = false, false, Ctx{}, "", "", nil
 	s.Px.review = nil
 	scenes.put(s)
 }
