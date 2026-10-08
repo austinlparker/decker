@@ -69,9 +69,7 @@ func annotate(f *reviewedFrame, title string) *image.RGBA {
 	// The frame, scaled up by whole pixels so its pixels stay crisp.
 	big := make([]RGB, fw*fh)
 	boxScale(big, fw, fh, src.Pix, src.W, src.H)
-	for y := range fh {
-		copy(p.Pix[(int(oy)+y)*W+int(ox):], big[y*fw:(y+1)*fw])
-	}
+	paste(p, int(ox), int(oy), big, fw)
 	// The canvas edge, so ink cut off by it reads as cut off.
 	p.RoundRect(ox-2, oy-2, float64(fw)+4, float64(fh)+4, 0, 1, reviewMuted, 0.5)
 
@@ -148,47 +146,33 @@ func tile(f *reviewedFrame, title string) sheetTile {
 	return t
 }
 
-// reviewSheet lays tiles out four across, each under its label and framed in
-// the color of its worst issue.
+// reviewSheet lays tiles out sheetCols across, each under its label and
+// framed in the color of its worst issue, below a caption.
 func reviewSheet(tiles []sheetTile, caption string) *image.RGBA {
-	const cols, gap, border = 4, 14, 3
+	const gap, border = 14, 3
 	font := reviewFont()
-	tw, th := tiles[0].w, tiles[0].h
+	th := tiles[0].h
 	const labelH = reviewText*4/3 + 4
-	cellW, cellH := tw+2*border, labelH+th+2*border
-	rows := (len(tiles) + cols - 1) / cols
 	const headH = reviewText*4/3 + gap
-	W := cols*cellW + (cols+1)*gap
-	H := headH + rows*cellH + (rows+1)*gap
-	p := NewPixels(W, H, reviewPlate)
+	l := sheetLayout{n: len(tiles), w: tiles[0].w + 2*border, h: labelH + th + 2*border, gap: gap}
+	w, h := l.size()
+	p := NewPixels(w, headH+h, reviewPlate)
 	Text{Font: font, Size: reviewText, Color: reviewInk}.Draw(p, caption, gap, gap)
 	for i, t := range tiles {
-		x := gap + (i%cols)*(cellW+gap)
-		y := headH + gap + (i/cols)*(cellH+gap)
+		x, y := l.at(i)
+		y += headH
 		col, ok := reviewColors[t.worst]
 		if !ok {
 			col = Hex("#2A303A")
 		}
 		label := t.label
-		if lines := font.Wrap(label, reviewText-2, float64(cellW)); len(lines) > 0 && lines[0] != label {
+		if lines := font.Wrap(label, reviewText-2, float64(l.w)); len(lines) > 0 && lines[0] != label {
 			label = lines[0] + "…"
 		}
 		Text{Font: font, Size: reviewText - 2, Color: reviewMuted}.Draw(p, label, float64(x), float64(y))
 		fy := y + labelH
-		p.Rect(float64(x), float64(fy), float64(cellW), float64(th+2*border), col, 1)
-		for ty := range t.h {
-			copy(p.Pix[(fy+border+ty)*W+x+border:], t.pix[ty*t.w:(ty+1)*t.w])
-		}
+		p.Rect(float64(x), float64(fy), float64(l.w), float64(th+2*border), col, 1)
+		paste(p, x+border, fy+border, t.pix, t.w)
 	}
 	return pixelsImage(p)
-}
-
-// pixelsImage converts a canvas to an image, for PNG.
-func pixelsImage(p *Pixels) *image.RGBA {
-	img := image.NewRGBA(image.Rect(0, 0, p.W, p.H))
-	for i, c := range p.Pix {
-		q := c.q()
-		img.Pix[4*i], img.Pix[4*i+1], img.Pix[4*i+2], img.Pix[4*i+3] = q[0], q[1], q[2], 255
-	}
-	return img
 }

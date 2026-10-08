@@ -57,11 +57,5 @@ func slideImage(d *Deck, k previewKey) *image.RGBA {
 			return frameImage(g)
 		}
 	}
-	px := g.pixels()
-	img := image.NewRGBA(image.Rect(0, 0, px.W, px.H))
-	for i, c := range px.Pix {
-		q := c.q()
-		img.Pix[4*i], img.Pix[4*i+1], img.Pix[4*i+2], img.Pix[4*i+3] = q[0], q[1], q[2], 255
-	}
-	return img
+	return pixelsImage(g.pixels())
 }
