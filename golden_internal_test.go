@@ -994,8 +994,8 @@ func goldenPresenter(t *testing.T, g *goldenEntries) {
 	for _, i := range []int{0, 2, 5} {
 		for _, step := range []int{0, 1} {
 			g.addString(fmt.Sprintf("presenter/renderPreview/%d.%d", i, step),
-				renderPreview(d.Slides, previewKey{i, step, 50, 12, 682, 171}, testTheme),
-				renderPreview(d.Slides, previewKey{i, step, 30, 9, 120, 40}, testTheme))
+				renderPreview(d, previewKey{i, step, 50, 12, 682, 171}),
+				renderPreview(d, previewKey{i, step, 30, 9, 120, 40}))
 		}
 	}
 	g.addString("presenter/nextTarget", func() string {

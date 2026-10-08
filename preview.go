@@ -32,15 +32,15 @@ func (p presenter) key(i, step int) (k previewKey, ok bool) {
 	return previewKey{i, step, pw, ph, dw, dh}, ph >= 5 && pw >= 20
 }
 
-// renderPreview draws slide k.slide of slides at a size it's designed for (240
+// renderPreview draws slide k.slide of d at a size it's designed for (240
 // cells wide, in the deck's shape), then shrinks it into pw×ph cells; drawing
 // at preview size would lay the slide out for a tiny screen instead.
-func renderPreview(slides []Slide, k previewKey, t *Theme) string {
+func renderPreview(d *Deck, k previewKey) string {
 	const rw = 240
 	rh := max(rw*k.dh/k.dw, 20)
-	g := renderSlideGrid(slides[k.slide], Ctx{W: rw, H: rh, T: Settled, Step: k.step, StepT: Settled, Theme: t}.at(slides, k.slide))
+	g := d.still(k.slide, k.step, Settled, rw, rh)
 	defer g.release()
-	sc := NewScene(k.pw, k.ph, t)
+	sc := NewScene(k.pw, k.ph, d.Theme)
 	px := g.pixels()
 	boxScale(sc.Px.Pix, sc.Px.W, sc.Px.H, px.Pix, px.W, px.H)
 	return sc.Render()
@@ -49,8 +49,8 @@ func renderPreview(slides []Slide, k previewKey, t *Theme) string {
 // slideImage preserves the live deck's layout and slide metadata. Pixel-only
 // slides need just one image pixel per canvas pixel; native character layers
 // use the snapshot rasterizer so their glyphs remain readable too.
-func slideImage(slides []Slide, k previewKey, t *Theme) *image.RGBA {
-	g := renderSlideGrid(slides[k.slide], Ctx{W: k.dw, H: k.dh, T: Settled, Step: k.step, StepT: Settled, Theme: t}.at(slides, k.slide))
+func slideImage(d *Deck, k previewKey) *image.RGBA {
+	g := d.still(k.slide, k.step, Settled, k.dw, k.dh)
 	defer g.release()
 	for _, c := range g.Cells {
 		if c.ch != " " && c.ch != "" && c.ch != halfBlock {

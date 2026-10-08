@@ -60,15 +60,14 @@ func presenterFilter(m tea.Model, msg tea.Msg) tea.Msg {
 
 func newPresenter(d *Deck, socket string, length time.Duration) presenter {
 	return presenter{
-		slides: d.Slides, theme: d.Theme, sty: d.Theme.styles(), socket: socket, length: length,
+		deck: d, sty: d.Theme.styles(), socket: socket, length: length,
 		link: &linkClient{}, previews: map[previewKey]string{}, now: time.Now(),
 		drawMu: &sync.Mutex{},
 	}
 }
 
 type presenter struct {
-	slides   []Slide // this build's slides, used only to draw previews
-	theme    *Theme
+	deck     *Deck // this build's, for its theme and to draw previews
 	sty      styles
 	socket   string
 	length   time.Duration
@@ -286,7 +285,7 @@ func (p presenter) View() tea.View {
 	}
 	v := tea.NewView(view())
 	v.AltScreen = true
-	v.BackgroundColor = p.theme.Background.Color()
+	v.BackgroundColor = p.deck.Theme.Background.Color()
 	v.WindowTitle = "presenter"
 	return v
 }
@@ -356,8 +355,8 @@ func (p presenter) mainView() string {
 			nk.slide, nk.step = next[0], next[1]
 			nextLabel, nextBox = label, p.preview(nk)
 		}
-		now := lipgloss.JoinVertical(lipgloss.Left, p.sty.accent.Render("NOW"), frame(p.preview(k), p.theme.Accent))
-		next := lipgloss.JoinVertical(lipgloss.Left, p.sty.muted.Render(truncate(nextLabel, k.pw+2)), frame(nextBox, p.theme.Faint))
+		now := lipgloss.JoinVertical(lipgloss.Left, p.sty.accent.Render("NOW"), frame(p.preview(k), p.deck.Theme.Accent))
+		next := lipgloss.JoinVertical(lipgloss.Left, p.sty.muted.Render(truncate(nextLabel, k.pw+2)), frame(nextBox, p.deck.Theme.Faint))
 		previews = lipgloss.JoinHorizontal(lipgloss.Top, now, strings.Repeat(" ", presGutter), next)
 		rest -= lipgloss.Height(previews) + 1
 	}
@@ -366,7 +365,7 @@ func (p presenter) mainView() string {
 	if notes == "" {
 		notes = p.sty.faint.Render("(no notes for this slide)")
 	}
-	lines := strings.Split(lipgloss.NewStyle().Width(inner).Foreground(p.theme.Text.Color()).Render(notes), "\n")
+	lines := strings.Split(lipgloss.NewStyle().Width(inner).Foreground(p.deck.Theme.Text.Color()).Render(notes), "\n")
 	if avail := rest - 1; len(lines) > avail { // the NOTES label takes a line
 		lines = append(lines[:max(avail-1, 0)], p.sty.faint.Render("…"))
 	}
@@ -406,7 +405,7 @@ func (p presenter) nextTarget() (next [2]int, label string, ok bool) {
 // matches reports whether this build's slide i is the deck's slide i; in dev
 // mode the deck rebuilds and the presenter view doesn't, so they can drift.
 func (p presenter) matches(i int) bool {
-	return i < len(p.slides) && i < len(p.st.Outline) && p.slides[i].Title == p.st.Outline[i].Title
+	return i < len(p.deck.Slides) && i < len(p.st.Outline) && p.deck.Slides[i].Title == p.st.Outline[i].Title
 }
 
 // preview draws the slide k names, settled. A slide whose title no longer
@@ -422,7 +421,7 @@ func (p presenter) preview(k previewKey) string {
 		return s
 	}
 	p.drawMu.Lock()
-	s := renderPreview(p.slides, k, p.theme)
+	s := renderPreview(p.deck, k)
 	p.drawMu.Unlock()
 	p.previews[k] = s
 	return s
@@ -453,7 +452,7 @@ func (p presenter) upload() tea.Cmd {
 		gen := p.images.gen
 		cmd := func() tea.Msg {
 			p.drawMu.Lock()
-			img := slideImage(p.slides, k, p.theme)
+			img := slideImage(p.deck, k)
 			p.drawMu.Unlock()
 			return kittyUploadMsg{gen, k, id, kittyTransmit(id, img, k.pw, k.ph)}
 		}

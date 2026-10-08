@@ -20,7 +20,7 @@ type Deck struct {
 // as -snapshot prints it. A nil c.Theme uses the deck's, and c.Index, c.Count
 // and c.Section are set from i and the deck; a panic renders as its error.
 func (d *Deck) Render(i int, c Ctx) string {
-	g := renderSlideGrid(d.Slides[i], d.withTheme(i, c))
+	g := d.cells(i, c)
 	defer g.release()
 	return g.String()
 }
@@ -35,9 +35,30 @@ func (d *Deck) Steps(i int) int { return d.Slides[i].steps() }
 // Draw renders slide i into cells without encoding them: the live deck's
 // per-frame work, for benchmarks. Like Render it sets c's position from i.
 func (d *Deck) Draw(i int, c Ctx) {
-	renderSlideGrid(d.Slides[i], d.withTheme(i, c)).release()
+	d.cells(i, c).release()
 }
 
+// still renders slide i at step, secs after the slide and the step began,
+// at w×h cells: a frame as -snapshot, -sheet, the handout and the presenter
+// view's previews show it. The caller releases the grid.
+func (d *Deck) still(i, step int, secs float64, w, h int) *grid {
+	return d.cells(i, stillCtx(w, h, step, secs))
+}
+
+// stillCtx is a w×h frame at step, secs after the slide and the step began;
+// Deck.withTheme fills in the rest.
+func stillCtx(w, h, step int, secs float64) Ctx {
+	return Ctx{W: w, H: h, T: secs, Step: step, StepT: secs}
+}
+
+// cells renders slide i as Render does, without encoding it; the caller
+// releases the grid.
+func (d *Deck) cells(i int, c Ctx) *grid {
+	return renderSlideGrid(d.Slides[i], d.withTheme(i, c))
+}
+
+// withTheme is c drawing slide i: on the deck's theme unless c has one, and
+// at slide i's position in the deck.
 func (d *Deck) withTheme(i int, c Ctx) Ctx {
 	if c.Theme == nil {
 		c.Theme = d.Theme

@@ -69,8 +69,7 @@ func TestKittyPlaceholdersSurviveCellRendering(t *testing.T) {
 }
 
 func TestKittyTransmitRoundTrip(t *testing.T) {
-	slides := testDeck().Slides
-	img := slideImage(slides, previewKey{slide: 0, dw: 682, dh: 171}, testTheme)
+	img := slideImage(testDeck(), previewKey{slide: 0, dw: 682, dh: 171})
 	seq := kittyTransmit(9, img, 60, 15)
 	parts := strings.Split(strings.TrimSuffix(seq, "\x1b\\"), "\x1b\\")
 	if len(parts) < 2 {
@@ -121,7 +120,7 @@ func TestSlideImagePreservesContextAndCharacters(t *testing.T) {
 		sc.Put(1, 1, "hello")
 	}}}
 	k := previewKey{slide: 1, step: 2, dw: 60, dh: 20}
-	img := slideImage(slides, k, testTheme)
+	img := slideImage(&Deck{Theme: testTheme, Slides: slides}, k)
 	if got.W != 60 || got.H != 20 || got.Step != 2 || got.T != Settled || got.StepT != Settled || got.Index != 1 || got.Count != 2 || got.Section != "section" {
 		t.Fatalf("preview context = %+v", got)
 	}

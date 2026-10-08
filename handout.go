@@ -20,7 +20,7 @@ func runHandout(d *Deck, o options) error {
 	}
 	thumbs := thumbNames(len(d.Slides))
 	for i, s := range d.Slides {
-		g := stillFrame(d, i, s.steps()-1, o.at, o.width, o.height)
+		g := d.still(i, s.steps()-1, o.at, o.width, o.height)
 		err := writePNG(g, filepath.Join(o.handout, thumbs[i]))
 		g.release()
 		if err != nil {
