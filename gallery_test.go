@@ -203,6 +203,7 @@ func gallery() Deck {
 		slideBlockCatalog(),
 		slideSources(),
 		slideScales(),
+		slideCodeOverflow(),
 	}}
 }
 
@@ -1846,5 +1847,30 @@ func slideScales() Slide {
 			}
 			ticks.Align = Left
 			ticks.Draw(p, msg, status.X, status.Y+gap/2)
+		}}
+}
+
+// slideCodeOverflow shows the three ways a Code block handles source too
+// long for its rect: CodeScroll walking Focus ranges down a long file over
+// the builds, CodeShrink fitting it all, and an Excerpt keeping its real
+// line numbers.
+func slideCodeOverflow() Slide {
+	var b strings.Builder
+	for i := 1; i <= 30; i++ {
+		fmt.Fprintf(&b, "v%02d := f(%d)\n", i, i)
+	}
+	long := b.String()
+	return Slide{Title: "Code overflow", Steps: 3, Transition: TransitionDefault,
+		View: func(c Ctx, sc *Scene) {
+			p := sc.Px
+			top := heading(c, p, "Code overflow")
+			_, page := c.Frame().Inset(c.X(0.03), c.Y(0.02)).CutTop(top)
+			cols := page.Cols(c.Unit(0.04), 1, 1)
+			Code{Source: long, Lang: "go", LineNumbers: true, Overflow: CodeScroll,
+				Focus: []LineRange{{2, 4}, {14, 17}, {27, 30}}}.Draw(c, p, cols[0])
+			right := cols[1].Rows(c.Unit(0.04), 1, 1)
+			short := strings.Join(strings.SplitAfter(long, "\n")[:8], "")
+			Code{Source: short, Lang: "go", Overflow: CodeShrink}.Draw(c, p, right[0])
+			Code{Source: long, Lang: "go", LineNumbers: true, Excerpt: LineRange{21, 23}}.Draw(c, p, right[1])
 		}}
 }

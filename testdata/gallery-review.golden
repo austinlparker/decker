@@ -125,7 +125,7 @@
 19.4 Builds 240x67 error text-offcanvas: Text "step 3  since0 99.00  since…" runs 86px past the right edge
 19.4 Builds 320x90 error text-offcanvas: Text "step 3  since0 99.00  since…" runs 116px past the right edge
 19.4 Builds 682x171 error text-offcanvas: Text "step 3  since0 99.00  since…" runs 154px past the right edge
-24.1 Position 240x67 warning overlay-collision: Theme.Overlay draws over Text "24 / 53"
+24.1 Position 240x67 warning overlay-collision: Theme.Overlay draws over Text "24 / 54"
 36.1 Element animations 240x67 warning text-small: Panel: 2 texts at 8px, such as Text "ZoomIn,…"; the smallest readable size here is 9px
 36.1 Element animations 320x90 warning text-small: Panel: 2 texts at 11px, such as Text "ZoomIn,…"; the smallest readable size here is 12px
 36.2 Element animations 240x67 warning text-small: Panel: 2 texts at 8px, such as Text "ZoomIn,…"; the smallest readable size here is 9px
@@ -241,3 +241,17 @@
 50.4 Table columns 240x67 warning step-unchanged: build 4 looks the same as build 3, settled and while it enters: check Steps and the step numbers given to c.Reached and c.Since
 50.4 Table columns 320x90 warning step-unchanged: build 4 looks the same as build 3, settled and while it enters: check Steps and the step numbers given to c.Reached and c.Since
 50.4 Table columns 682x171 warning step-unchanged: build 4 looks the same as build 3, settled and while it enters: check Steps and the step numbers given to c.Reached and c.Since
+54.1 Code overflow 240x67 info code-unseen: Code (go, 30 lines): lines 10–11, 21 never scroll into view
+54.1 Code overflow 240x67 warning text-small: Code (go, 8 lines) is set at 6px to fit; the smallest readable size here is 9px
+54.1 Code overflow 240x67 error code-clipped: Code (go, 8 lines): 6 of 8 lines visible (needs 67px tall, has 55px) at 6px
+54.1 Code overflow 320x90 warning text-small: Code (go, 8 lines) is set at 6px to fit; the smallest readable size here is 12px
+54.1 Code overflow 682x171 info code-unseen: Code (go, 30 lines): lines 10–11, 21 never scroll into view
+54.1 Code overflow 682x171 warning text-small: Code (go, 8 lines) is set at 12px to fit; the smallest readable size here is 23px
+54.2 Code overflow 240x67 warning text-small: Code (go, 8 lines) is set at 6px to fit; the smallest readable size here is 9px
+54.2 Code overflow 240x67 error code-clipped: Code (go, 8 lines): 6 of 8 lines visible (needs 67px tall, has 55px) at 6px
+54.2 Code overflow 320x90 warning text-small: Code (go, 8 lines) is set at 6px to fit; the smallest readable size here is 12px
+54.2 Code overflow 682x171 warning text-small: Code (go, 8 lines) is set at 12px to fit; the smallest readable size here is 23px
+54.3 Code overflow 240x67 warning text-small: Code (go, 8 lines) is set at 6px to fit; the smallest readable size here is 9px
+54.3 Code overflow 240x67 error code-clipped: Code (go, 8 lines): 6 of 8 lines visible (needs 67px tall, has 55px) at 6px
+54.3 Code overflow 320x90 warning text-small: Code (go, 8 lines) is set at 6px to fit; the smallest readable size here is 12px
+54.3 Code overflow 682x171 warning text-small: Code (go, 8 lines) is set at 12px to fit; the smallest readable size here is 23px

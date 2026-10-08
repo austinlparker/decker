@@ -532,9 +532,9 @@ func (k Code) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 	th := c.Theme
 	g := k.geom(c, r)
 	if c.review != nil {
+		k.report(c, r, g)
 		defer c.within(k.name(g.Lines), Rect{r.X, r.Y, g.W, g.H})()
 		c.review.inkRect(c.review.scopeID, Rect{r.X, r.Y, g.W, g.H})
-		k.report(c, r, g)
 	}
 	rf, rs, adv, lineH := g.rf, g.Size, g.adv, g.lineH
 	numCols, markCol, codeCol := g.numCols, g.markCol, g.codeCol
