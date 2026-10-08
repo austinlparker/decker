@@ -9,8 +9,7 @@ import (
 
 func TestHandout(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "out", "handout") // made if missing
-	o := options{handout: dir, at: Settled, width: 40, height: 12}
-	if err := runHandout(citedDeck(), o); err != nil {
+	if err := runCLI(citedDeck(), "handout", dir, "-w", "40", "-h", "12"); err != nil {
 		t.Fatal(err)
 	}
 	md, err := os.ReadFile(filepath.Join(dir, "handout.md"))
@@ -87,8 +86,7 @@ Sources:
 	// The same deck gives the same bytes: nothing depends on the clock or
 	// on map order.
 	again := filepath.Join(t.TempDir(), "again")
-	o.handout = again
-	if err := runHandout(citedDeck(), o); err != nil {
+	if err := runCLI(citedDeck(), "handout", again, "-w", "40", "-h", "12"); err != nil {
 		t.Fatal(err)
 	}
 	for _, name := range []string{"handout.md", "02.png"} {
@@ -103,7 +101,7 @@ Sources:
 func TestHandoutWithoutSources(t *testing.T) {
 	dir := t.TempDir()
 	d := &Deck{Name: "bare", Theme: testTheme, Slides: []Slide{{Title: "Only"}}}
-	if err := runHandout(d, options{handout: dir, at: Settled, width: 20, height: 6}); err != nil {
+	if err := runCLI(d, "handout", dir, "-w", "20", "-h", "6"); err != nil {
 		t.Fatal(err)
 	}
 	md, _ := os.ReadFile(filepath.Join(dir, "handout.md"))
@@ -118,13 +116,13 @@ func TestHandoutRejects(t *testing.T) {
 	if err := os.WriteFile(file, nil, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	for name, o := range map[string]options{
-		"zero width":    {handout: t.TempDir(), width: 0, height: 12},
-		"negative":      {handout: t.TempDir(), width: 40, height: -1},
-		"dir is a file": {handout: file, width: 40, height: 12},
-		"under a file":  {handout: filepath.Join(file, "sub"), width: 40, height: 12},
+	for name, args := range map[string][]string{
+		"zero width":    {"handout", t.TempDir(), "-w", "0", "-h", "12"},
+		"negative":      {"handout", t.TempDir(), "-w", "40", "-h", "-1"},
+		"dir is a file": {"handout", file, "-w", "40", "-h", "12"},
+		"under a file":  {"handout", filepath.Join(file, "sub"), "-w", "40", "-h", "12"},
 	} {
-		if err := runHandout(citedDeck(), o); err == nil {
+		if err := runCLI(citedDeck(), args...); err == nil {
 			t.Errorf("%s: accepted", name)
 		}
 	}

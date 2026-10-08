@@ -115,19 +115,19 @@ and attribution with your talk; the bundled conversions retain their
 
 Every deck has the same command line, from `decker.Main`. Run these commands
 from the talk's `main` package. See the [CLI reference](cli.md) for all flags
-and defaults:
+and defaults, or run `go run . --help`:
 
 ```sh
 go run .                     # present, from slide 1
-go run . -dev                # rebuild and reload on every save, staying on the current slide
-go run . -presenter          # the presenter view, in a second window
-go run . -presenter -presentation-font-size 5 # p opens the deck at 5pt in Ghostty
-go run . -list               # slide titles, step counts and sections
-go run . -review review      # check every build at three sizes for clipped or lost content
-go run . -handout handout    # handout/handout.md: thumbnails, notes and sources
-go run . -snapshot -slide 6 -step 4 -t 2.5 -w 240 -h 67 -png frame.png
-go run . -sheet sheet.png -w 682 -h 171 -shrink 8
-go run . -video talk.mp4 -fps 30
+go run . --dev               # rebuild and reload on every save, staying on the current slide
+go run . present             # the presenter view, in a second window
+go run . present --presentation-font-size 5 # p opens the deck at 5pt in Ghostty
+go run . list                # slide titles, step counts and sections
+go run . review review       # check every build at three sizes for clipped or lost content
+go run . handout handout     # handout/handout.md: thumbnails, notes and sources
+go run . snapshot --slide 6 --step 4 -t 2.5 -w 240 -h 67 --png frame.png
+go run . sheet sheet.png -w 682 -h 171 --shrink 8
+go run . video talk.mp4 --fps 30
 ```
 
 In dev mode, a save starts a rebuild. Dev mode watches every package of the
@@ -137,29 +137,29 @@ restarts on the slide and step you were on. If it fails, the compiler errors
 show in a red panel and the old version keeps running. Press `r` to replay
 the current slide's animations.
 
-`-snapshot` renders one frame without a terminal. `-t` is the number of
+`snapshot` renders one frame without a terminal. `-t` is the number of
 seconds since the slide appeared; the default is `decker.Settled` (1000), which shows
-the selected step fully settled. Omitting `-step` selects the first step;
-to capture the completed slide, pass its final step explicitly. `-step` and `-slide` are 1-based. `-sheet` renders
+the selected step fully settled. Omitting `--step` selects the first step;
+to capture the completed slide, pass its final step explicitly. `--step` and `--slide` are 1-based. `sheet` renders
 every slide at its last step, four across.
 
-`-review DIR` checks every build of every slide, settled, at 240×67, 320×90
+`review DIR` checks every build of every slide, settled, at 240×67, 320×90
 and 682×171, and lists what is lost or hard to read: Code lines clipped,
 Table rows dropped, text off the canvas or below the readable size, a
 panic. It writes `DIR/index.md` with pictures of what it found, and exits
 non-zero when it finds an error. See [Reviewing a deck](#reviewing-a-deck).
 
-`-handout DIR` writes a document to rehearse from or hand out: `DIR/handout.md`
+`handout DIR` writes a document to rehearse from or hand out: `DIR/handout.md`
 and a thumbnail of every slide (`01.png`, `02.png`…) at its last step, at
 `-w`×`-h` cells. The Markdown gives each slide its title, section, build
 count, thumbnail, notes as written and sources, then ends with every source
 once and the slides that cite it.
 
-`-video` renders the whole deck with its animations and transitions. Each
-build step stays on screen for `-hold` seconds (a slide can ask for longer
+`video FILE` renders the whole deck with its animations and transitions. Each
+build step stays on screen for `--hold` seconds (a slide can ask for longer
 with its `Hold` field), and a slide's first step also gets the time its
 transition takes. Frames come straight from the pixel canvas, so the video is
-as sharp as its `-size` allows. It needs `ffmpeg` with the `libx264` encoder. Video contains only the pixel
+as sharp as its `--size` allows. It needs `ffmpeg` with the `libx264` encoder. Video contains only the pixel
 canvas, so native terminal text from `Scene.Text`, `Put` and `Sprite` is
 omitted. The video has no sound, and export replaces an existing output file.
 
@@ -174,7 +174,7 @@ omitted. The video has no sound, and export replaces an existing output file.
 - The deck paints its own background, so your terminal theme doesn't matter.
 - Clickers that send page-up/page-down or arrow keys work out of the box, and
   a "blank" button (`b` or `.`) blanks the screen to black.
-- It animates at 60 fps (`-fps 30` if the terminal can't keep up).
+- It animates at 60 fps (`--fps 30` if the terminal can't keep up).
 - The deck writes to the terminal itself rather than through Bubble Tea's
   renderer (`termout.go`): each frame sends only the cells that
   changed, inside synchronized output so the terminal never shows half a
@@ -195,18 +195,18 @@ in the **presenter view**: a second window on your laptop screen, at a normal
 font size, that drives the deck.
 
 ```sh
-go run . -presenter   # on your screen: notes, timer and previews
+go run . present      # on your screen: notes, timer and previews
 ```
 
 In Ghostty 1.3+ on macOS, press `p` to open the deck in a new window at a
 4pt font. Move that window to the projector. The presenter stays at its
 normal font size, and focus returns to it after the deck window opens.
-Use `-presentation-font-size 5` for a different deck-window font size.
+Use `--presentation-font-size 5` for a different deck-window font size.
 macOS may ask for permission to automate Ghostty the first time.
 
 The new window runs the same executable, even when you used `go run`, with
-the same working directory, socket, and talk-specific command-line flags.
-It starts at `-slide`/`-step`, or the last reported position after a
+the same working directory and socket, and the presenter's `--fps` and
+`--dev`. It starts at `--slide`/`--step`, or the last reported position after a
 disconnect. Repeated `p` presses do not open duplicate windows; after the
 deck closes, `p` can reopen it. Quitting the presenter leaves the deck
 running. Launch failures appear in the presenter and can be retried with `p`.
@@ -215,7 +215,7 @@ Other terminals and platforms can start the two windows manually:
 
 ```sh
 go run .              # window 1, on the projector: the deck
-go run . -presenter   # window 2, on your screen: the presenter view
+go run . present      # window 2, on your screen: the presenter view
 ```
 
 Start them in either order. The presenter view waits for the deck, and if
@@ -236,16 +236,16 @@ The presenter view shows:
 
 Ghostty and kitty show full-resolution slide images automatically using
 the Kitty graphics protocol. Other terminals, and sessions inside tmux or
-zellij, use half-block previews. Use `-previews image` to force image
-previews, or `-previews cells` to force cells. Images render at the deck's
+zellij, use half-block previews. Use `--previews image` to force image
+previews, or `--previews cells` to force cells. Images render at the deck's
 actual dimensions and settled build step; while an image loads, its cell
 preview remains visible. Resizing either window refreshes the images.
 
-For a different talk length, pass `-length 45m` to the presenter view.
+For a different talk length, pass `--length 45m` to the presenter view.
 
 The two windows talk over a Unix socket in the temp directory, named after
 the deck. To run two copies of one deck at once, give each pair its own
-`-socket /tmp/other.sock`.
+`--socket /tmp/other.sock`.
 
 ## Keys
 
@@ -332,7 +332,7 @@ func mySlide() decker.Slide {
 		Notes:      "say the thing",                 // shown in the presenter view
 		Section:    "Part one",                      // chapter; later slides inherit it until one sets another
 		Transition: decker.TransitionWipe.Over(0.6), // Push (default), Dissolve, Wipe, Morph, Fade, FadeThrough, Cover, Uncover, Split, Iris, Zoom, Pixelate, Glitch, None; Over sets seconds, From a side
-		Sources: []decker.Source{ // what it cites, for -handout
+		Sources: []decker.Source{ // what it cites, for the handout
 			{Label: "OpenTelemetry Logs Data Model, v1.40", URL: "https://opentelemetry.io/docs/specs/otel/logs/data-model/"},
 		},
 		View: func(c decker.Ctx, sc *decker.Scene) {
@@ -520,7 +520,7 @@ func BenchmarkFrames(b *testing.B) { decktest.Frames(b, talk()) }
 
 `Slides` renders every slide at every build step, at three sizes and four
 moments, and fails on panics in a View, a placed element or the overlay.
-`Review` fails on every error `-review` would report (see below), so a slide
+`Review` fails on every error `review` would report (see below), so a slide
 that starts clipping fails the build. `Golden` hashes every frame of every step at eight moments and
 three sizes, and fails if any of them changed: after changing a slide on
 purpose, record it with `UPDATE_GOLDEN=1 go test -run Golden`. That makes
@@ -536,7 +536,7 @@ running off the bottom. Each only shows up at some sizes, and often only at
 an intermediate build. The review finds them:
 
 ```sh
-go run . -review review
+go run . review review
 ```
 
 ```

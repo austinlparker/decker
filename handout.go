@@ -8,28 +8,33 @@ import (
 	"strings"
 )
 
-// runHandout writes the deck as a handout (-handout DIR) to rehearse from or
-// hand out: DIR/handout.md with each slide's thumbnail, notes and sources,
-// and the thumbnails beside it, each slide's final build at -w×-h and -t.
-func runHandout(d *Deck, o options) error {
-	if o.width < 1 || o.height < 1 {
-		return fmt.Errorf("-handout: -w and -h must be positive, not %dx%d", o.width, o.height)
-	}
-	if err := os.MkdirAll(o.handout, 0o755); err != nil {
-		return fmt.Errorf("-handout: %w", err)
+type handoutCmd struct {
+	Dir string `arg:"" help:"Directory for handout.md and the thumbnails."`
+	frameFlags
+}
+
+func (c handoutCmd) Validate() error { return c.frameFlags.check() }
+
+// Run writes the deck as a handout to rehearse from or hand out:
+// handout.md with each slide's thumbnail, notes and sources, and the
+// thumbnails beside it, each slide's final build at the frame's size and
+// moment.
+func (c handoutCmd) Run(d *Deck) error {
+	if err := os.MkdirAll(c.Dir, 0o755); err != nil {
+		return fmt.Errorf("handout: %w", err)
 	}
 	thumbs := thumbNames(len(d.Slides))
 	for i, s := range d.Slides {
-		g := stillFrame(d, i, s.steps()-1, o.at, o.width, o.height)
-		err := writePNG(g, filepath.Join(o.handout, thumbs[i]))
+		g := c.still(d, i, s.steps()-1)
+		err := writePNG(g, filepath.Join(c.Dir, thumbs[i]))
 		g.release()
 		if err != nil {
-			return fmt.Errorf("-handout: %w", err)
+			return fmt.Errorf("handout: %w", err)
 		}
 	}
 	md := []byte(handoutMarkdown(d, thumbs))
-	if err := os.WriteFile(filepath.Join(o.handout, "handout.md"), md, 0o644); err != nil {
-		return fmt.Errorf("-handout: %w", err)
+	if err := os.WriteFile(filepath.Join(c.Dir, "handout.md"), md, 0o644); err != nil {
+		return fmt.Errorf("handout: %w", err)
 	}
 	return nil
 }

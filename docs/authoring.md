@@ -80,7 +80,7 @@ Write a slide, then look at it the way an audience will: every build, at
 every size.
 
 ```sh
-go run . -review review
+go run . review review
 ```
 
 That checks every build of every slide, settled, at 240×67, 320×90 and
@@ -99,7 +99,7 @@ intermediate build stands out. Look at the images, not just the list.
 
 | Severity | Means | Do |
 | --- | --- | --- |
-| error | content is lost: clipped, dropped, off the canvas, a panic | fix it; `-review` exits 1 |
+| error | content is lost: clipped, dropped, off the canvas, a panic | fix it; `review` exits 1 |
 | warning | it shows, but badly: text too small, two things on top of each other | fix it, or `Allow` it on the slide if it's meant |
 
 A slide that means to have an issue says so with
@@ -117,6 +117,6 @@ func TestReview(t *testing.T) { decktest.Review(t, talk()) }
 
 `Slide.Notes` are what you'll say; the presenter view shows them.
 `Slide.Sources` are what you cite, kept on the slide with what cites
-them. `go run . -handout handout` writes `handout/handout.md`:
+them. `go run . handout handout` writes `handout/handout.md`:
 every slide's thumbnail, notes and sources, then every source once with the
 slides that cite it. Rehearse from it, or give it to the audience.

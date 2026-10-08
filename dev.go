@@ -15,7 +15,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
-// devState implements -dev: it rebuilds the deck's main package on save of any
+// devState implements --dev: it rebuilds the deck's main package on save of any
 // watched Go source (every same-module package it imports, so talk and engine
 // edits both reload). A good build replaces the process on the same slide; a
 // failed one shows the compiler output over the deck while the old version
@@ -110,11 +110,11 @@ func (d *devState) built(msg buildDoneMsg) bool {
 // restartArgs is the command line that reopens the rebuilt deck at slide and
 // step (1-based).
 func (d *devState) restartArgs(slide, step, fps int) []string {
-	return []string{d.bin, "-dev", "-slide", strconv.Itoa(slide), "-step", strconv.Itoa(step), "-fps", strconv.Itoa(fps)}
+	return []string{d.bin, "--dev", "--slide", strconv.Itoa(slide), "--step", strconv.Itoa(step), "--fps", strconv.Itoa(fps)}
 }
 
 func execRestart(args []string, socket string) error {
-	args = append(args, "-socket", socket)
+	args = append(args, "--socket", socket)
 	return syscall.Exec(args[0], args, os.Environ())
 }
 

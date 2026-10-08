@@ -8,8 +8,8 @@ invariants, the golden tests, and a recipe for each kind of addition.
 | `deck.go`, `slide.go`, `ctx.go` | `Deck`, `Slide` with its `Source` citations, and `Ctx` with its layout in screen fractions |
 | `layout.go` | `Rect`: boxes cut from the canvas for layout |
 | `scale.go` | `Scale`: data values mapped onto pixels with round ticks and labels, for hand-drawn axes; shares its tick rounding with the charts' |
-| `cli.go` | `Main`: the command line (live, dev, presenter, list, review, handout, snapshot, sheet, video) |
-| `handout.go` | `-handout`: a Markdown handout with each slide's thumbnail, notes and sources, and every source once |
+| `cli.go` | `Main`: the command line, parsed by kong, one command struct per mode with its flags, checks and `Run` (live, present, list, review, handout, snapshot, sheet, video) |
+| `handout.go` | the `handout` command: a Markdown handout with each slide's thumbnail, notes and sources, and every source once |
 | `theme.go`, `color.go` | `Theme`; `RGB`, `Hex`, `Mix` |
 | `draw.go` | stock components: `Panel`, `Arrow`, `Label`, `PageNumber`, `ProgressBar`, `Chip`, `CycleDiagram`, `BulletList`… |
 | `code.go` | the `Code` component: chroma lexing (cached per source and language), the token-to-color palette (`SyntaxColors`), focus ranges per step, diffs |
@@ -25,7 +25,7 @@ invariants, the golden tests, and a recipe for each kind of addition.
 | `layer.go`, `animate.go` | `Composite`: draw a group on a layer and fade, move, scale and clip it; the element animations (`FadeIn`, `FlyIn`, `Pop`, `WipeOut`, `Shake`, `AppearAt`...) built on it |
 | `scene.go`, `grid.go`, `pool.go` | combine the pixel canvas and character layer into terminal cells; reused frame buffers |
 | `render.go` | a slide's frame: the scene `View` draws on, then placed elements and the overlay, panics caught |
-| `review.go`, `reviewlog.go`, `reviewreport.go`, `reviewimage.go` | `Deck.Review`: every build checked at three sizes while it draws, with what components report (`Ctx.Fits`, text off the canvas or too small) and which element inked each pixel (overlaps); the `-review` report as text, Markdown and annotated images |
+| `review.go`, `reviewlog.go`, `reviewreport.go`, `reviewimage.go` | `Deck.Review`: every build checked at three sizes while it draws, with what components report (`Ctx.Fits`, text off the canvas or too small) and which element inked each pixel (overlaps); the `review` command's report as text, Markdown and annotated images |
 | `transition.go`, `transfx.go`, `morph.go`, `direction.go` | slide transitions: each mixes two scenes, for the terminal and video alike. `transition.go` has the kinds and directions and the ones that move or sweep frames (push, cover, uncover, split, wipe, dissolve); `transfx.go` the ones that rework pixels (fades, iris, zoom, pixelate, glitch); the morph moves placed elements |
 | `model.go`, `keys.go`, `termout.go`, `dev.go` | the app: navigation, the key table, writing frames, dev reload |
 | `presenter.go`, `link.go`, `preview.go` | the presenter view, the socket link to the deck, slide previews |

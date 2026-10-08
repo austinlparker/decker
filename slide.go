@@ -3,11 +3,11 @@ package decker
 import "cmp"
 
 // Slide is one slide in the deck. View draws a frame and is called once per
-// frame (-fps) with a fresh Ctx, so anything computed from Ctx.T or Ctx.StepT
+// frame (--fps) with a fresh Ctx, so anything computed from Ctx.T or Ctx.StepT
 // animates. View must be a pure function of Ctx: no time.Now or math/rand
-// (use Hash01 for noise), so -snapshot and golden tests can replay any frame.
+// (use Hash01 for noise), so snapshots and golden tests can replay any frame.
 type Slide struct {
-	// Title is shown in the footer, the window title and -list.
+	// Title is shown in the footer, the window title and the list command.
 	Title string
 
 	// Steps is the number of build states: Ctx.Step runs from 0 to Steps-1.
@@ -18,12 +18,12 @@ type Slide struct {
 	// Notes are speaker notes, shown in the presenter view and with the n key.
 	Notes string
 
-	// Sources are the works this slide cites. -handout lists them under the
+	// Sources are the works this slide cites. The handout lists them under the
 	// slide, and gathers every source once at the end.
 	Sources []Source
 
 	// Hold is how many seconds each build step stays on screen in a video.
-	// Zero uses the -hold flag.
+	// Zero uses the video command's --hold.
 	Hold float64
 
 	// Transition is how this slide enters, and for how long
@@ -34,8 +34,8 @@ type Slide struct {
 
 	// Section names the chapter this slide belongs to. A slide with no
 	// Section inherits the nearest one before it, so only the first slide of
-	// a chapter needs to set it. Ctx.Section is the resolved name, and -list
-	// and the presenter view show it.
+	// a chapter needs to set it. Ctx.Section is the resolved name, and the list
+	// command and the presenter view show it.
 	Section string
 
 	// Allow lists review issue codes this slide means to have, which

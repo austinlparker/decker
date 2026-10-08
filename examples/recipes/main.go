@@ -9,7 +9,7 @@
 // degrade on purpose when it doesn't fit; then draw, revealing over the
 // slide's builds. Run the review to see it hold at every size:
 //
-//	go run ./examples/recipes -review review
+//	go run ./examples/recipes review review
 package main
 
 import "github.com/austinlparker/decker"

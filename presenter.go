@@ -3,7 +3,6 @@ package decker
 import (
 	"context"
 	"fmt"
-	"math"
 	"os"
 	"strings"
 	"sync"
@@ -14,23 +13,20 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
-// runPresenter runs the presenter view (-presenter) until the user quits:
-// notes, previews and a timer in a window of its own, linked to the deck over
-// socket. Its keys drive the deck, so a clicker aimed here runs the show.
-func runPresenter(d *Deck, o options) error {
-	if o.presentationFontSize <= 0 || math.IsNaN(o.presentationFontSize) || math.IsInf(o.presentationFontSize, 0) {
-		return fmt.Errorf("-presentation-font-size: want a positive, finite size in points")
-	}
-	images, err := imagePreviews(o.previews)
+// Run runs the presenter view until the user quits: notes, previews and a
+// timer in a window of its own, linked to the deck over the socket. Its keys
+// drive the deck, so a clicker aimed here runs the show.
+func (c presentCmd) Run(d *Deck) error {
+	images, err := imagePreviews(c.Previews)
 	if err != nil {
 		return err
 	}
-	window, err := newPresentationWindow(o.socket, o.presentationFontSize)
+	window, err := newPresentationWindow(c.Socket, c.PresentationFontSize, c.args())
 	if err != nil {
 		return err
 	}
-	p := newPresenter(d, o.socket, o.length)
-	p.st.Slide, p.st.Step = max(o.slide-1, 0), max(o.step-1, 0)
+	p := newPresenter(d, c.Socket, c.Length)
+	p.st.Slide, p.st.Step = max(c.Slide-1, 0), max(c.Step-1, 0)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	window.ctx = ctx

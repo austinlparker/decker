@@ -8,7 +8,7 @@ not an API to call.
 
 ```sh
 go run ./examples/recipes                    # present it
-go run ./examples/recipes -review review     # check every build at three sizes
+go run ./examples/recipes review review      # check every build at three sizes
 ```
 
 | File | Recipe |
@@ -43,5 +43,5 @@ says how it applies them:
    to your deck.
 2. Change the data and the knobs listed in its header comment. Swap
    `heading` for your title template.
-3. Run `go run . -review review` and read `review/index.md` and the sheets,
+3. Run `go run . review review` and read `review/index.md` and the sheets,
    until it reports no issues at 240x67, 320x90 and 682x171.

@@ -90,7 +90,7 @@
 //   - [Issue]: a problem [Deck.Review] finds in a build: Code lines clipped,
 //     Table rows dropped, text off the canvas or too small to read. Stock
 //     components report what they can't fit; a slide's own drawing reports
-//     through [Ctx.Fits]. The -review flag prints them.
+//     through [Ctx.Fits]. The review command prints them.
 //
 // Shapes beyond the basics ([Pixels.Polygon], [Pixels.Ellipse],
 // [Pixels.Polyline], [Pixels.Bezier], [Pixels.DashedLine]) are in shapes.go.

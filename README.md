@@ -30,7 +30,7 @@ Built on [Bubble Tea](https://github.com/charmbracelet/bubbletea),
 ## What you can make
 
 These clips come from the [showcase deck](examples/showcase/main.go),
-recorded with `-video`.
+recorded with `video`.
 
 Block-letter titles and animated text:
 
@@ -136,26 +136,26 @@ go run ./examples/hello
 These commands run from your talk's directory:
 
 ```sh
-go run . -dev                         # rebuild on save; keep your slide and step
-go run . -presenter -length 45m        # notes, timer and previews; p opens the deck
-go run . -list                        # titles, step counts and sections
-go run . -review review               # every build at three sizes: what's clipped or unreadable
-go run . -handout handout             # handout.md: thumbnails, notes and sources
-go run . -snapshot -step 2 -w 160 -h 45 -png frame.png
-go run . -sheet sheet.png             # all slides at their final step
-go run . -video talk.mp4 -fps 30       # silent video; needs ffmpeg
+go run . --dev                        # rebuild on save; keep your slide and step
+go run . present --length 45m         # notes, timer and previews; p opens the deck
+go run . list                         # titles, step counts and sections
+go run . review review                # every build at three sizes: what's clipped or unreadable
+go run . handout handout              # handout.md: thumbnails, notes and sources
+go run . snapshot --step 2 -w 160 -h 45 --png frame.png
+go run . sheet sheet.png              # all slides at their final step
+go run . video talk.mp4 --fps 30      # silent video; needs ffmpeg
 ```
 
-In Ghostty 1.3+ on macOS, start `-presenter` and press `p` to open the deck
+In Ghostty 1.3+ on macOS, start `present` and press `p` to open the deck
 in a separate window at 4pt. Change that size with
-`-presentation-font-size 5`. The presenter keeps its normal font size;
+`--presentation-font-size 5`. The presenter keeps its normal font size;
 move the deck window to your projector and navigate from the presenter.
 Full-resolution image previews are automatic in Ghostty and kitty;
-`-previews cells` selects half-block previews instead.
+`--previews cells` selects half-block previews instead.
 
-You can also start the deck and `-presenter` manually in separate terminals.
+You can also start the deck and `present` manually in separate terminals.
 They connect using the deck's name and reconnect after a dev rebuild.
-See the [CLI reference](docs/cli.md) for every flag,
+See the [CLI reference](docs/cli.md) for every command and flag,
 default, export behavior and socket options.
 
 | Key | Action |

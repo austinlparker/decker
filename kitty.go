@@ -16,7 +16,7 @@ import (
 )
 
 // imagePreviews reports whether to show previews as images, for the
-// -previews flag: "image", "cells", or "auto" (images in Ghostty or kitty,
+// --previews flag: "image", "cells", or "auto" (images in Ghostty or kitty,
 // unless inside tmux or zellij, which don't pass the images through).
 func imagePreviews(mode string) (bool, error) {
 	switch mode {
@@ -26,7 +26,7 @@ func imagePreviews(mode string) (bool, error) {
 		return false, nil
 	case "auto":
 	default:
-		return false, fmt.Errorf("-previews: want auto, image, or cells")
+		return false, fmt.Errorf("--previews: want auto, image, or cells")
 	}
 	if os.Getenv("TMUX") != "" || os.Getenv("ZELLIJ") != "" {
 		return false, nil

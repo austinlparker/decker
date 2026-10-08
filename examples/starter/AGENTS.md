@@ -38,11 +38,11 @@ once; this file is the short version.
 ## Check every change
 
 ```sh
-go run . -review review      # every build at 240x67, 320x90 and 682x171
+go run . review review       # every build at 240x67, 320x90 and 682x171
 go test ./...                # decktest.Slides and decktest.Review
 ```
 
-- **Fix every error and warning** `-review` prints. It names the slide,
+- **Fix every error and warning** the review prints. It names the slide,
   build, size and element, and how much is wrong.
 - **Look at the images,** not just the list: `review/index.md` links an
   annotated frame for each build with an issue, and `review/sheet-*.png`
@@ -50,5 +50,5 @@ go test ./...                # decktest.Slides and decktest.Review
   one is broken.
 - **If an issue is intended,** list its code in the slide's `Allow` and say
   why in a comment.
-- **Before you're done:** `go run . -handout handout` writes the notes and
+- **Before you're done:** `go run . handout handout` writes the notes and
   sources with a thumbnail per slide, to rehearse from.

@@ -2,7 +2,6 @@ package decker
 
 import (
 	"errors"
-	"flag"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -14,23 +13,20 @@ import (
 	tea "charm.land/bubbletea/v2"
 )
 
+// The deck window p opens runs the way the presenter's deck flags say, and
+// nothing else from the presenter's command line comes with it.
 func TestPresentationArgs(t *testing.T) {
-	fs := flag.NewFlagSet("talk", flag.ContinueOnError)
-	for _, name := range []string{"presenter", "dev", "snapshot", "list"} {
-		fs.Bool(name, false, "")
-	}
-	for _, name := range []string{"length", "presentation-font-size", "previews", "socket", "slide", "step", "sheet", "video", "png", "review", "handout", "fps", "theme"} {
-		fs.String(name, "", "")
-	}
-	err := fs.Parse([]string{"-presenter", "-dev", "-snapshot", "-list", "-length=45m", "-presentation-font-size=4.5",
-		"-previews=image", "-socket=relative.sock", "-slide=3", "-step=2", "-sheet=out.png", "-video=out.mp4", "-png=frame.png",
-		"-review=review", "-handout=handout", "-fps=30", "-theme=a theme's name", "talk-data.json"})
+	_, ctx, err := parseArgs(testDeck(), []string{"present", "--dev", "--fps=30", "--length=45m",
+		"--presentation-font-size=4.5", "--previews=image", "--socket=relative.sock", "--slide=3", "--step=2"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"-dev=true", "-fps=30", "-theme=a theme's name", "talk-data.json"}
-	if got := presentationArgs(fs); !reflect.DeepEqual(got, want) {
+	c := ctx.Selected().Target.Interface().(presentCmd)
+	if got, want := c.args(), []string{"--fps=30", "--dev"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("launch arguments = %q, want %q", got, want)
+	}
+	if c.Socket != "relative.sock" || c.Slide != 3 || c.Step != 2 || c.Length != 45*time.Minute {
+		t.Fatalf("parsed %+v", c)
 	}
 }
 
@@ -50,7 +46,7 @@ func TestPresentationCommandQuoting(t *testing.T) {
 		t.Fatalf("Ghostty shell wrapper: %v\n%s", err, out)
 	}
 	got := strings.Split(strings.TrimSuffix(string(out), "\x00"), "\x00")
-	want := append([]string{"-socket=" + w.socket, "-slide=7", "-step=3"}, w.args...)
+	want := append([]string{"--socket=" + w.socket, "--slide=7", "--step=3"}, w.args...)
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("shell received %q, want %q", got, want)
 	}

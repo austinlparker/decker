@@ -18,17 +18,17 @@ The runnable [hello example](../examples/hello/main.go) is mirrored in the
 README. Its preview is generated from the repository root with:
 
 ```sh
-go run ./examples/hello -snapshot -step 2 -w 240 -h 67 -png docs/assets/hello.png
+go run ./examples/hello snapshot --step 2 -w 240 -h 67 --png docs/assets/hello.png
 ```
 
 Two more examples are for talk authors. The [starter](../examples/starter) is a
 talk to copy, with an `AGENTS.md` for its repository. The
 [recipes](../examples/recipes) are visuals built from primitives, starting
 with a trace waterfall, to copy and change.
-Both review clean with `go run ./examples/starter -review review`.
+Both review clean with `go run ./examples/starter review review`.
 
 The README's example clips come from the [showcase example](../examples/showcase/main.go).
-Each clip is a range of its slides, exported with `-video` and converted to
+Each clip is a range of its slides, exported with `video` and converted to
 a GIF (needs ffmpeg with libx264):
 
 ```sh

@@ -11,7 +11,7 @@ rather than the engine? Read `docs/authoring.md` and start from
 
 - **Frame purity.** A frame depends only on its `Ctx`. No `time.Now`, no
   `math/rand`, no globals that change between frames; use `Hash01` for noise.
-  Anything stateful breaks replay, `-snapshot`, video and the goldens.
+  Anything stateful breaks replay, snapshots, video and the goldens.
 - **The engine owns the scene.** A slide's `View(c Ctx, sc *Scene)` only
   draws; `drawSlide` makes the scene and runs `View`, and `finish` draws the
   elements it placed and `Theme.Overlay`, once; both catch panics (drawn into
@@ -63,7 +63,7 @@ go test -short ./...                # skips the slow golden tests
 go vet ./...
 gofmt -l .                          # must print nothing
 go test -run '^$' -bench Live       # the engine's share of a live frame
-go run ./examples/showcase -review /tmp/review  # what a review reports, on a real deck
+go run ./examples/showcase review /tmp/review   # what a review reports, on a real deck
 UPDATE_GOLDEN=1 go test ./...       # re-record goldens: only for intended output changes
 ```
 
@@ -131,11 +131,14 @@ the help-box text (empty to hide it). Handle the action name in the `switch` in
 `presenter.handleKey` instead. Update the guide Keys table. The help box
 is generated from `bindings`.
 
-**Add a CLI flag or mode** (`cli.go`). Add a field to `options`, register it in
-`parseFlags` with `flag.*Var` (the usage string starts "with -mode:" if it only
-applies to one). For a mode, add a `case` to the `switch` in `run`, ordered
-before the cases it should win over, and write `runXxx(d *Deck, o options)
-error`. Rendering without a terminal should go through `stillFrame` or
-`renderSlideGrid`/`Deck.Render` (cells), or `renderSlide` (pixels), not a live
-model. Update "Running a deck" in
-`docs/guide.md` and `docs/cli.md`.
+**Add a CLI flag or command** (`cli.go`). The command line is parsed by
+kong. A command is a field of `cli` tagged `cmd:""` with a `help:` line; its
+type holds its flags, tagged with `default:`, `help:`, `enum:` for a fixed set
+or `arg:""` for a positional, and has `Run(d *Deck) error`, plus
+`Validate() error` for checks the tags can't say. Commands share flags by
+embedding a group (`position`, `deckFlags`, `frameFlags`). Put a flag on the
+commands it applies to and no others, so kong rejects it elsewhere. Rendering
+without a terminal should go through `frameFlags.still` or
+`renderSlideGrid`/`Deck.Render` (cells), or `renderSlide` (pixels), not a
+live model. Add cases to `TestCommandLine` and `TestCommandLineRejects`, and
+update "Running a deck" in `docs/guide.md` and `docs/cli.md`.

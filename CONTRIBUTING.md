@@ -62,7 +62,7 @@ workflow uses the API diff to choose the next version.
 Keep the [README](README.md), [guide](docs/guide.md), [CLI reference](docs/cli.md)
 and Go comments aligned with the implementation. The README's complete first
 program is [examples/hello/main.go](examples/hello/main.go); update both copies
-together, then run the example with `-list` and a PNG snapshot. Keep badge
+together, then run the example with `list` and a PNG snapshot. Keep badge
 claims tied to checked-in configuration or an actual service.
 
 See [releasing](docs/releasing.md) for the automation and versioning rules.

@@ -66,7 +66,7 @@ type linkServer struct {
 func listenLink(path string, onCmd func(linkCmd)) (*linkServer, error) {
 	if c, err := net.DialTimeout("unix", path, 200*time.Millisecond); err == nil {
 		c.Close()
-		return nil, fmt.Errorf("another deck is already running on %s: quit it, or pass a different -socket", path)
+		return nil, fmt.Errorf("another deck is already running on %s: quit it, or pass a different --socket", path)
 	}
 	os.Remove(path)
 	ln, err := net.Listen("unix", path)
