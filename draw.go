@@ -324,7 +324,7 @@ func PlaceholderBox(c Ctx, p *Pixels, x, y, w, h float64, what string) {
 	edge(x, y+h, x, y)
 	s := c.SmallText(c.Theme.Body)
 	Text{Font: c.Theme.Body, Size: s, Align: Center, Color: c.Theme.Warn, MaxW: w - c.Unit(0.06)}.
-		Draw(p, "PLACEHOLDER\n"+what, x+w/2, y+h/2-float64(s)*DefaultLeading)
+		drawCentered(p, "PLACEHOLDER\n"+what, x+w/2, y+h/2)
 }
 
 // IllustrativeTag labels a chart with made-up data to replace before the talk;

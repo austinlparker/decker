@@ -96,10 +96,16 @@ func (t Text) midTop(f *Font, size int, top, bot, cy float64) float64 {
 }
 
 // drawCentered draws s with the block centered vertically on cy (x as for
-// Draw): one line by its ink, as DrawMid does, and more by their line boxes.
+// Draw): one line by its ink, as DrawMid does, and more by their line boxes,
+// counted as Draw lays them out, wrapped to MaxW if it is set.
 func (t Text) drawCentered(p *Pixels, s string, x, cy float64) {
-	if n := strings.Count(s, "\n") + 1; n > 1 {
-		t.Draw(p, s, x, cy-linesHeight(n, t.Size, leadingOr(t.Leading))/2)
+	f, size := t.resolved()
+	n := strings.Count(s, "\n") + 1
+	if t.MaxW > 0 {
+		n = len(f.wrapped(s, size, t.MaxW))
+	}
+	if n > 1 {
+		t.Draw(p, s, x, cy-linesHeight(n, size, leadingOr(t.Leading))/2)
 	} else {
 		t.DrawMid(p, s, x, cy)
 	}
