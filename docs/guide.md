@@ -53,10 +53,6 @@ faces are converted from licensed outline fonts to pixel blocks:
 | `"Decker Stencil"` | Black Ops One | Angular stencil lettering with true lowercase |
 | `"Decker Slab"` | Alfa Slab One | Heavy slab serifs with true lowercase |
 
-The older `FigFont`, `LoadFigFont`, `ParseFigFont`, `StockFigFont` and
-`StockFigFontNames` names remain available as deprecated compatibility
-aliases. Use the `FigletFont` spellings in new code.
-
 Load fonts once while building the deck, then capture them in slide
 functions and pass them through `Block.Font` or `FitBlock`:
 

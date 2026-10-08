@@ -20,13 +20,7 @@ import (
 // grandfatheredShims predate TestNoCompatShims. The list only shrinks:
 // delete an entry together with its shim, and add one only with the
 // maintainer's say-so in the PR that adds the shim.
-var grandfatheredShims = []string{
-	"decker.FigFont",
-	"decker.LoadFigFont",
-	"decker.ParseFigFont",
-	"decker.StockFigFont",
-	"decker.StockFigFontNames",
-}
+var grandfatheredShims = []string{}
 
 // shimPackages are the packages whose exported API talks import, by import
 // path, with their directories.
