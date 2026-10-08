@@ -27,6 +27,27 @@ Built on [Bubble Tea](https://github.com/charmbracelet/bubbletea),
 
 ![The hello example at its second build step: Hello, decker above Your slides are Go code.](docs/assets/hello.png)
 
+## What you can make
+
+These clips are exported from the [showcase example](examples/showcase/main.go)
+with decker's own `-video` mode. The same frames play live in the terminal.
+
+**Type and letter effects:** block-letter titles, rich text, and per-letter
+animations such as decode, wave, type-on and rain.
+
+![A block-letter DECKER title decrypting in, a sentence rising word by word, and animated letter effects.](docs/assets/showcase-type.gif)
+
+**Charts and numbers:** stats that count up, and line and donut charts that
+build in on their step.
+
+![Three stat cards counting up, then a line chart drawing on and a donut chart sweeping in.](docs/assets/showcase-data.gif)
+
+**Code, diagrams and magic move:** syntax-highlighted code with a focus that
+walks between lines, connectors that draw on, and elements that glide to new
+positions on the next slide.
+
+![Highlighted Go code with a moving focus bar, a three-box diagram drawing on, and the boxes morphing into a column.](docs/assets/showcase-diagrams.gif)
+
 ## Requirements
 
 - **Go 1.27.0 or later**, as specified in [go.mod](go.mod).

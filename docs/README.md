@@ -20,6 +20,14 @@ README. Its preview is generated from the repository root with:
 go run ./examples/hello -snapshot -step 2 -w 240 -h 67 -png docs/assets/hello.png
 ```
 
+The README's example clips come from the [showcase example](../examples/showcase/main.go).
+Each clip is a range of its slides, exported with `-video` and converted to
+a GIF (needs ffmpeg with libx264):
+
+```sh
+sh examples/showcase/record.sh
+```
+
 The [Decker icon](assets/decker.svg) is an accessible SVG with a transparent
 background; its filled front slide keeps the terminal prompt legible on
 light and dark pages. Edit the vector shapes to change its size or palette.
