@@ -211,7 +211,7 @@ func (p presenter) handleKey(k string) (tea.Model, tea.Cmd) {
 		return p, nil
 	}
 	switch {
-	case k == "q" || k == "ctrl+c":
+	case keyActs[k].act == "quit":
 		if p.images != nil {
 			return p, tea.Sequence(tea.Raw(p.images.clear()), tea.Quit)
 		}
