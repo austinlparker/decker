@@ -160,6 +160,13 @@ func moveChars(from, to *Scene, where func(x, y int, old bool) (int, int, bool))
 	}
 }
 
+// keepChars is moveChars for a transition that leaves every cell where it
+// is: show says whether the cell at (x, y) of the old frame, or of the new
+// one, shows.
+func keepChars(from, to *Scene, show func(x, y int, old bool) bool) {
+	moveChars(from, to, func(x, y int, old bool) (int, int, bool) { return x, y, show(x, y, old) })
+}
+
 // Put draws a styled, possibly multi-line block at (x, y). Every cell is
 // opaque, so spaces overwrite what was beneath.
 func (s *Scene) Put(x, y int, block string) { s.put(x, y, block, false) }

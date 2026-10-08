@@ -7,9 +7,7 @@ package decker
 // whose elements were drawn already (a frame captured mid-transition) just
 // cross-fades.
 func morph(from, to *Scene, p float64, _ Direction, t *Theme) {
-	e := EaseInOutCubic(p)
-	blend(from.Px, to.Px, e)
-	moveChars(from, to, func(x, y int, old bool) (int, int, bool) { return x, y, old == (e < 0.5) })
+	e := fadeFrames(from, to, p)
 
 	var olds []placed
 	if !from.finished {
