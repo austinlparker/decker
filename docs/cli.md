@@ -12,6 +12,8 @@ go run . -dev
 go run . -presenter -length 45m
 go run . -presenter -presentation-font-size 5 -previews image
 go run . -list
+go run . -list -json
+go run . -handout handout -w 160 -h 45
 go run . -snapshot -slide 1 -step 2 -t 1.5 -w 240 -h 67 -png frame.png
 go run . -snapshot -slide 4 -step 2 -w 320 -h 90 -png frame.png -bounds
 go run . -review review -sizes 240x67,682x171
@@ -26,14 +28,15 @@ go run . -video talk.mp4 -slide 1 -until 3 -size 1280x720 -fps 30 -hold 4
 | No mode flag | Present interactively in the terminal |
 | `-dev` | Present and rebuild on Go source/module changes; preserve slide and step after a successful build |
 | `-presenter` | Show notes, timer and previews; `p` opens the deck in a new Ghostty window on macOS |
-| `-list` | Print slide titles, build counts and sections, then exit |
+| `-list` | Print slide titles, build counts and sections, then exit; with `-json`, the outline as JSON |
 | `-review DIR` | Check every build of every slide at several sizes for clipped, dropped, off-canvas or unreadable content; print the issues, write `DIR/index.md` and `DIR/report.json`, and exit non-zero on errors |
+| `-handout DIR` | Write `DIR/handout.md` and a PNG thumbnail of every slide at its final step |
 | `-snapshot` | Render the selected slide and step as ANSI text to stdout, or PNG with `-png` |
 | `-sheet FILE` | Write a four-column PNG contact sheet of all slides at their final step |
 | `-video FILE` | Export animation and transitions as a silent H.264 video |
 
 Choose one output mode. If flags are combined, precedence is video,
-presenter, list, review, sheet, snapshot, then live presentation. `-dev` only applies
+presenter, list, review, handout, sheet, snapshot, then live presentation. `-dev` only applies
 to live presentation, including a deck opened with `p` from the presenter.
 
 ## Flags and defaults
@@ -43,11 +46,12 @@ to live presentation, including a deck opened with `p` from the presenter.
 | `-slide N` | `1` | Live, presenter launch, snapshot, review, video: starting slide, **1-based** |
 | `-step N` | `1` | Live, presenter launch, snapshot: starting build step, **1-based** |
 | `-fps N` | `60` | Live, video: frames per second; clamped to at least 1 |
-| `-t SECONDS` | `1000` (`decker.Settled`) | Snapshot, sheet: time since slide and selected step began |
-| `-w N` | `120` | Snapshot, sheet: width in terminal **cells** |
-| `-h N` | `36` | Snapshot, sheet: height in terminal **cells**; use `-help` to print usage; `-h` requires a height value |
+| `-t SECONDS` | `1000` (`decker.Settled`) | Snapshot, sheet, handout: time since slide and selected step began |
+| `-w N` | `120` | Snapshot, sheet, handout: width in terminal **cells** |
+| `-h N` | `36` | Snapshot, sheet, handout: height in terminal **cells**; use `-help` to print usage; `-h` requires a height value |
 | `-png FILE` | empty | With `-snapshot`: write PNG instead of ANSI text |
 | `-shrink N` | `4` | Sheet: downsample each rendered frame by this factor |
+| `-json` | `false` | With `-list`: print a JSON array instead of columns |
 | `-socket PATH` | `os.TempDir()/DECK_NAME.sock` | Live, presenter: socket used to connect the two windows |
 | `-length DURATION` | `30m` | Presenter: target talk length; Go duration syntax, e.g. `45m` |
 | `-presentation-font-size PT` | `4` | Presenter: positive, finite font size in points for the Ghostty window opened with `p` |
@@ -60,7 +64,7 @@ to live presentation, including a deck opened with `p` from the presenter.
 | `-frames MODE` | `issues` | Review: annotated frame images to write: `issues` (builds with issues), `all`, or `none` |
 | `-bounds` | `false` | Snapshot with `-png`: outline what the slide drew and box its review issues, as review images do |
 
-`-sheet`, `-video` and `-png` take filenames. Width/height must be positive;
+`-sheet`, `-video` and `-png` take filenames; `-handout` takes a directory. Width/height must be positive;
 use even video dimensions for the `yuv420p` H.264 encoder. Register a talk's
 own flags before calling `Main`, and avoid these reserved names.
 
@@ -74,7 +78,7 @@ build state.
 A snapshot defaults to the **first** step, even at settled time. Pass the
 last step explicitly to see the whole slide. Its `Ctx.T` and `Ctx.StepT`
 both receive `-t`; it renders one slide without an inter-slide transition.
-A contact sheet selects the final step automatically.
+A contact sheet and a handout select the final step automatically.
 
 ## Presenter and dev mode
 
@@ -134,6 +138,43 @@ Video needs `ffmpeg` on `PATH` with the `libx264` encoder. `-slide` and
 step. The first step gets transition time in addition to its hold time.
 Video has no audio. PNG, sheet and video output replace an existing file.
 
+`-handout DIR` creates `DIR` if needed and writes `handout.md` and one
+thumbnail per slide, named `01.png`, `02.png`… (padded to the slide count's
+digits, at least two). Each thumbnail is the slide's final build, rendered
+like `-snapshot -png` at `-w`×`-h` and `-t`. The Markdown has the deck's
+name as its heading, the slide and build counts, then for each slide a
+`## N. Title` heading, its section and build count in italics, the
+thumbnail, its notes as written and a list of its `Slide.Sources`, linked
+when they have a URL. A closing `## Sources` section lists every source once,
+merged by URL (by label without one), with the slides that cite it; a deck
+with no sources has no such section. The output depends only on the deck and
+the flags. Existing files of the same names are replaced; others in `DIR`
+are left alone.
+
+`-list -json` prints one object per slide:
+
+```json
+[
+  {
+    "slide": 1,
+    "title": "Logs",
+    "steps": 2,
+    "section": "Part one",
+    "notes": "say the thing",
+    "sources": [
+      {
+        "label": "OpenTelemetry Logs Data Model, v1.40",
+        "url": "https://opentelemetry.io/docs/specs/otel/logs/data-model/"
+      }
+    ]
+  }
+]
+```
+
+`slide` is 1-based, like `-slide`; `steps` is at least 1; `section` is the
+resolved section; `sources` is `[]` for a slide with none, and `url` is left
+out when a source has none.
+
 Source of truth: [`cli.go`](../cli.go), [`present_window.go`](../present_window.go),
-[`kitty.go`](../kitty.go), [`png.go`](../png.go),
+[`kitty.go`](../kitty.go), [`handout.go`](../handout.go), [`png.go`](../png.go),
 [`video.go`](../video.go) and [`dev.go`](../dev.go).

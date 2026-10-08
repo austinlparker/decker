@@ -105,7 +105,7 @@ func annotate(f *reviewedFrame, title string) *image.RGBA {
 	return pixelsImage(p)
 }
 
-// issueCounts summarizes issues by severity: "1 error, 2 warnings".
+// issueCounts summarizes issues by severity: "1 error and 2 warnings".
 func issueCounts(issues []Issue) string {
 	var n [3]int
 	for _, is := range issues {
@@ -113,14 +113,17 @@ func issueCounts(issues []Issue) string {
 	}
 	var parts []string
 	for _, c := range []struct {
-		sev       Severity
-		one, many string
-	}{{SeverityError, "error", "errors"}, {SeverityWarning, "warning", "warnings"}, {SeverityInfo, "note", "notes"}} {
+		sev  Severity
+		noun string
+	}{{SeverityError, "error"}, {SeverityWarning, "warning"}, {SeverityInfo, "note"}} {
 		if n[c.sev] > 0 {
-			parts = append(parts, plural(n[c.sev], c.one, c.many))
+			parts = append(parts, plural(n[c.sev], c.noun))
 		}
 	}
-	return strings.Join(parts, ", ")
+	if len(parts) < 2 {
+		return strings.Join(parts, "")
+	}
+	return strings.Join(parts[:len(parts)-1], ", ") + " and " + parts[len(parts)-1]
 }
 
 // worst is the most severe of issues, or -1 for none.

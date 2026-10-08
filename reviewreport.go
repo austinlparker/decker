@@ -71,7 +71,7 @@ func reviewDeck(d *Deck, sizes [][2]int, slides []int, dir, frames string) (revi
 				found = append(found, is)
 			}
 		}
-		caption := fmt.Sprintf("%s  ·  %s  ·  %s", r.deck, sizeName(sz), plural(len(tiles[sz]), "build", "builds"))
+		caption := fmt.Sprintf("%s  ·  %s  ·  %s", r.deck, sizeName(sz), plural(len(tiles[sz]), "build"))
 		if c := issueCounts(found); c != "" {
 			caption += "  ·  " + c
 		}
@@ -107,33 +107,13 @@ func (r reviewRun) sizeList() string {
 	return strings.Join(names, ", ")
 }
 
-func plural(n int, one, many string) string {
-	if n == 1 {
-		return fmt.Sprintf("%d %s", n, one)
-	}
-	return fmt.Sprintf("%d %s", n, many)
-}
-
 // summary is the run in one line.
 func (r reviewRun) summary() string {
-	e, w, i := r.count()
-	checked := fmt.Sprintf("%s of %s at %s", plural(r.builds, "build", "builds"), plural(len(r.slides), "slide", "slides"), r.sizeList())
-	var found []string
-	for _, n := range []struct {
-		n         int
-		one, many string
-	}{{e, "error", "errors"}, {w, "warning", "warnings"}, {i, "note", "notes"}} {
-		if n.n > 0 {
-			found = append(found, plural(n.n, n.one, n.many))
-		}
+	checked := fmt.Sprintf("%s of %s at %s", plural(r.builds, "build"), plural(len(r.slides), "slide"), r.sizeList())
+	if found := issueCounts(r.issues); found != "" {
+		return found + " in " + checked + "."
 	}
-	switch len(found) {
-	case 0:
-		return "No issues in " + checked + "."
-	case 1:
-		return found[0] + " in " + checked + "."
-	}
-	return strings.Join(found[:len(found)-1], ", ") + " and " + found[len(found)-1] + " in " + checked + "."
+	return "No issues in " + checked + "."
 }
 
 // issueGroup is one issue found the same at several sizes.

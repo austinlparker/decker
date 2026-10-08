@@ -17,10 +17,10 @@ type Deck struct {
 }
 
 // Render draws slide i (0-based) as a styled string of exactly c.W×c.H cells,
-// as -snapshot prints it. A nil c.Theme uses the deck's, and c.Index, c.Count
-// and c.Section are set from i and the deck; a panic renders as its error.
+// as -snapshot prints it. c is positioned at i with At; a panic renders as
+// its error.
 func (d *Deck) Render(i int, c Ctx) string {
-	g := renderSlideGrid(d.Slides[i], d.withTheme(i, c))
+	g := renderSlideGrid(d.Slides[i], d.At(i, c))
 	defer g.release()
 	return g.String()
 }
@@ -33,12 +33,16 @@ func (d *Deck) Section(i int) string { return sectionAt(d.Slides, i) }
 func (d *Deck) Steps(i int) int { return d.Slides[i].steps() }
 
 // Draw renders slide i into cells without encoding them: the live deck's
-// per-frame work, for benchmarks. Like Render it sets c's position from i.
+// per-frame work, for benchmarks. Like Render it positions c with At.
 func (d *Deck) Draw(i int, c Ctx) {
-	renderSlideGrid(d.Slides[i], d.withTheme(i, c)).release()
+	renderSlideGrid(d.Slides[i], d.At(i, c)).release()
 }
 
-func (d *Deck) withTheme(i int, c Ctx) Ctx {
+// At returns c positioned at slide i (0-based), as the engine gives it to
+// that slide's View: Index, Count, Section and Sources set from the deck,
+// and the deck's Theme if c has none. Tests that call a View themselves
+// start from it.
+func (d *Deck) At(i int, c Ctx) Ctx {
 	if c.Theme == nil {
 		c.Theme = d.Theme
 	}

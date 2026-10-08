@@ -31,8 +31,7 @@ func Slides(t *testing.T, d decker.Deck) {
 		for _, size := range [][2]int{{80, 24}, {120, 36}, {200, 50}} {
 			for step := 0; step < d.Steps(i); step++ {
 				for _, at := range []float64{0, 0.3, 1.5, decker.Settled} {
-					view(t, s, decker.Ctx{W: size[0], H: size[1], T: at, Step: step, StepT: at, Theme: d.Theme,
-						Index: i, Count: len(d.Slides), Section: d.Section(i)})
+					view(t, s, d.At(i, decker.Ctx{W: size[0], H: size[1], T: at, Step: step, StepT: at}))
 				}
 			}
 		}
@@ -194,8 +193,7 @@ func Frames(b *testing.B, d decker.Deck) {
 	for _, size := range [][2]int{{240, 67}, {320, 90}, {682, 171}} {
 		for i := range d.Slides {
 			b.Run(fmt.Sprintf("%dx%d/%d", size[0], size[1], i+1), func(b *testing.B) {
-				c := decker.Ctx{W: size[0], H: size[1], T: 1.3, Step: d.Steps(i) - 1, StepT: 1.3,
-					Index: i, Count: len(d.Slides), Section: d.Section(i)}
+				c := d.At(i, decker.Ctx{W: size[0], H: size[1], T: 1.3, Step: d.Steps(i) - 1, StepT: 1.3})
 				for b.Loop() {
 					c.T += 1.0 / 60
 					c.StepT += 1.0 / 60

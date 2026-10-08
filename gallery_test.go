@@ -201,6 +201,7 @@ func gallery() Deck {
 		slideTableRows(),
 		slideTableCols(),
 		slideBlockCatalog(),
+		slideSources(),
 	}}
 }
 
@@ -1728,5 +1729,32 @@ func slideTableCols() Slide {
 				Align:  []Align{Left, Center, Right},
 				Rules:  true, Highlight: 3, Reveal: TableRevealCols,
 			}.Draw(c, p, NewRect(c.X(0.1), top+c.Y(0.05), c.X(0.8), c.Y(0.5)))
+		}}
+}
+
+// slideSources draws a citation footer from c.Sources(), the slide's own
+// Slide.Sources, as a Theme.Overlay would: labels only, linked ones in the
+// accent color, since URLs are too long for a slide and belong in the
+// handout.
+func slideSources() Slide {
+	return Slide{Title: "Sources", Notes: "Slide.Sources and Ctx.Sources", Transition: TransitionDefault,
+		Sources: []Source{
+			{Label: "OpenTelemetry Logs Data Model, v1.40", URL: "https://opentelemetry.io/docs/specs/otel/logs/data-model/"},
+			{Label: "The Go Programming Language, ch. 7"},
+		},
+		View: func(c Ctx, sc *Scene) {
+			p, th := sc.Px, c.Theme
+			top := heading(c, p, "Sources")
+			size, text := th.Body.Fit("A log record has a timestamp, a severity, a body and attributes. [1]", c.X(0.9), c.Y(0.4), c.Size(0.09), 0)
+			Text{Font: th.Body, Size: size, Color: th.Text}.Draw(p, text, c.X(0.03), top+c.Y(0.04))
+			y := c.Y(0.7)
+			for i, s := range c.Sources() {
+				cite := Text{Font: th.Body, Size: c.SmallText(th.Body), Color: th.Muted, MaxW: c.X(0.94)}
+				if s.URL != "" {
+					cite.Color = th.Accent2
+				}
+				_, h := cite.Draw(p, fmt.Sprintf("[%d] %s", i+1, s.Label), c.X(0.03), y)
+				y += h
+			}
 		}}
 }
