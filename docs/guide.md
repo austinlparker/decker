@@ -465,7 +465,7 @@ Everything here is in package `decker`.
 | Block letters | `f, lines, scale := FitBlock(s, maxW, maxH, maxLines, gap, fonts...)` picks a font and scale for a pixel box; `Block{Font, Scale, Color, To, Shadow, Drop, Align, Glow, FX}.Draw(p, s, x, y)`; `BlockEffect`s for `Block.FX`: `BlockDecrypt`, `BlockRain`, `BlockBeam`, `BlockSlide`, `BlockType`, `BlockGlitch`, `BlockFade`, combined with `BlockChain` |
 | Diagrams | `Panel`, `Arrow`, `CycleDiagram` (numbered ring with a legend), `BulletList`, `SpeechBubble`; `Timeline{Items, FirstStep, Vertical}.Draw(c, p, rect)` (milestones on a line, one per step) and `Process{Steps, FirstStep}.Draw(c, p, rect)` (a row of chevrons, one per step) |
 | Joining boxes | `Connector{From, To Rect, Route, Head, Tail, Width, Color, Dashed, Label, Prog}.Draw(c, p)`: a line, an elbow (`RouteElbow`) or a curve (`RouteCurved`) between two rects, leaving and arriving at the sides that face each other (`FromSide`/`ToSide` to force them), with `HeadArrow`/`HeadDot` ends flush on the edge; `Prog` draws it on, so `Ease(c.Since(step), 0.6)` animates it |
-| Code | `Code{Source, Lang, LineNumbers, Title, Focus, FirstStep, Diff, Size}.Draw(c, p, rect)`: syntax-highlighted (chroma) in `Theme.Mono` on a plate, sized to fit the rect; `Focus` is one `LineRange{From, To}` per step from `FirstStep`, dimming the other lines behind a highlight bar that glides between ranges; `Diff` reads a unified diff. Colors from `Theme.Syntax`, or derived from the theme |
+| Code | `Code{Source, Lang, LineNumbers, Title, Focus, FirstStep, Diff, Size}.Draw(c, p, rect)`: syntax-highlighted (chroma) in `Theme.Mono` on a plate, sized to fit the rect; `Focus` is one `LineRange{From, To}` per step from `FirstStep`, dimming the other lines behind a highlight bar that glides between ranges; `Diff` reads a unified diff. Colors from `Theme.Syntax`, or derived from the theme. When the source doesn't fit at the smallest readable size, `Overflow` says what happens: `CodeClip` (the default) clips, `CodeShrink` shrinks below the readable size, `CodeScroll` keeps the size and scrolls to each `Focus` range in turn. `Excerpt: LineRange{40, 60}` shows part of a file with its real line numbers. `Measure(c, rect)` returns the fitted size, plate and lines in view before drawing |
 | Charts | `BarChart{Labels, Values or Series, Max, Horizontal, ShowValues, Step}`, `LineChart{Labels, Series, Names, Min, Max, Points, Step}`, `DonutChart{Labels, Values, Thickness, Center, Step}`, each with `.Draw(c, p, rect)`: they grow in on their step, take colors from `Theme.Series` (`t.SeriesColor(i)`; default Accent, Accent2, Good, Warn, Muted) and survive empty, zero, negative and NaN data. `Sparkline(c, p, rect, values, col, prog)` is a tiny inline line |
 | A counting number | `Stat{Value, Prefix, Suffix, Decimals, Label, Step, Duration}.Draw(c, p, rect)`: counts up from 0 on its step, at a steady width |
 | Tables | `Table{Header, Rows, Weights, Align, Zebra, Rules, FirstStep, Reveal, Highlight, Walk}.Draw(c, p, rect)`: one text size for every cell, ragged rows, reveal by row or column over steps (`TableRevealRows`, `TableRevealCols`), and a highlight that can `Walk` down the rows |
@@ -577,6 +577,7 @@ the numbers:
 | `step-unchanged` | warning | a build looks the same as the one before it, settled and while it enters: `Steps` is one too many, or a `c.Reached` names the wrong step |
 | `morph-unmatched` | warning | a slide enters with `TransitionMorph` but shares no `Place` key with the slide before, so it cross-fades |
 | `code-title-hidden`, `code-title-cut` | warning, note | a `Code` block's title tab has no room, or was shortened |
+| `code-unseen` | note | a `CodeScroll` block has lines that no `Focus` range brings into view |
 | `never-settles` | note | a tenth of the frame or more keeps changing after the slide settles, which the terminal must redraw every frame |
 
 `-sizes 240x67,682x171` changes the sizes, `-slide` and `-until` limit the
@@ -614,7 +615,13 @@ if !c.Fits("waterfall", r, lay.W, lay.H) {
 
 `Code.Measure(c, rect)` returns how a code block fits before it draws:
 the size its text is set at, the plate, the lines and columns that show
-(`Shown`, `ShownCols`), and the plate it would need (`NeedW`, `NeedH`).
+(`Shown`, `ShownCols`), the first line in view, and the plate it would need
+(`NeedW`, `NeedH`). A block too long for its rect has three ways out, all
+of which the review checks: a bigger rect, `Overflow: CodeShrink` (smaller
+text, a warning below the readable size), or `Overflow: CodeScroll` with a
+`Focus` range per build, which keeps the text readable and walks through
+the file (an error if a range is taller than the view). `Excerpt` shows
+part of the file with its real line numbers, to split it across slides.
 
 [Bubble Tea]: https://github.com/charmbracelet/bubbletea
 [Lip Gloss]: https://github.com/charmbracelet/lipgloss

@@ -1,6 +1,8 @@
 package decker
 
 import (
+	"fmt"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -107,21 +109,21 @@ func TestUnknownLanguage(t *testing.T) {
 func TestCodeFit(t *testing.T) {
 	c := codeCtx(0, 1)
 	src := "short\n" + strings.Repeat("x", 30) + "\nlast"
-	k := Code{Source: src}
 	lx := lexCode(src, "", false)
+	plainCols := lx.maxCols
 	f := testTheme.Mono
 	lo, hi := c.SmallText(f), c.Size(0.1)
 
 	const w, h = 4000, 4000
-	if got := k.fitCode(f, lx, w, h, lo, hi); got != hi {
+	if got := fitCode(f, plainCols, len(lx.lines), w, h, lo, hi); got != hi {
 		t.Errorf("huge rect fits %d, want the cap %d", got, hi)
 	}
-	if got := k.fitCode(f, lx, 1, 1, lo, hi); got != lo {
+	if got := fitCode(f, plainCols, len(lx.lines), 1, 1, lo, hi); got != lo {
 		t.Errorf("tiny rect fits %d, want the floor %d", got, lo)
 	}
 	// The answer is the largest size that fits: it fits, and one more doesn't.
 	cw := 30*f.Measure("0", 14) + 1
-	size := k.fitCode(f, lx, cw, h, 6, 60)
+	size := fitCode(f, plainCols, len(lx.lines), cw, h, 6, 60)
 	if float64(30)*f.Measure("0", size) > cw || float64(30)*f.Measure("0", size+1) <= cw {
 		t.Errorf("fit chose %d for width %.1f", size, cw)
 	}
@@ -129,13 +131,13 @@ func TestCodeFit(t *testing.T) {
 		t.Errorf("fit chose %d, want about 14", size)
 	}
 	// Line count limits too: 3 lines at the leading.
-	size = k.fitCode(f, lx, w, 3*20*codeLeading, 6, 60)
+	size = fitCode(f, plainCols, len(lx.lines), w, 3*20*codeLeading, 6, 60)
 	if size != 20 {
 		t.Errorf("height-limited fit chose %d, want 20", size)
 	}
 	// Line numbers take columns.
-	nums := Code{Source: src, LineNumbers: true}
-	if a, b := k.fitCode(f, lx, cw, h, 6, 60), nums.fitCode(f, lx, cw, h, 6, 60); b >= a {
+	_, _, numCols := codeGutter(len(lx.lines), true, false)
+	if a, b := fitCode(f, plainCols, len(lx.lines), cw, h, 6, 60), fitCode(f, numCols+lx.maxCols, len(lx.lines), cw, h, 6, 60); b >= a {
 		t.Errorf("line numbers did not shrink the fit: %d vs %d", b, a)
 	}
 }
@@ -169,7 +171,7 @@ func TestFocusSteps(t *testing.T) {
 		4: {cur: [2]int{6, 10}, curOK: true},
 		5: {cur: [2]int{6, 10}, curOK: true, prev: [2]int{6, 10}, prevOK: true}, // past the end keeps the last
 	} {
-		f := k.focusAt(codeCtx(step, 100), n)
+		f := k.focusAt(codeCtx(step, 100), 0, n)
 		got := want{f.cur, f.prev, f.curOK, f.prevOK}
 		if !f.curOK {
 			got.cur = [2]int{}
@@ -181,14 +183,14 @@ func TestFocusSteps(t *testing.T) {
 			t.Errorf("step %d: %+v, want %+v", step, got, w)
 		}
 	}
-	if f := (Code{}).focusAt(codeCtx(3, 1), n); f.curOK || f.prevOK || f.weight(5) != 1 {
+	if f := (Code{}).focusAt(codeCtx(3, 1), 0, n); f.curOK || f.prevOK || f.weight(5) != 1 {
 		t.Errorf("no Focus must leave every line normal: %+v", f)
 	}
 }
 
 func TestFocusEasing(t *testing.T) {
 	k := Code{Focus: []LineRange{{1, 2}, {5, 6}}, FirstStep: 1}
-	at := func(step int, stepT float64) focusState { return k.focusAt(codeCtx(step, stepT), 8) }
+	at := func(step int, stepT float64) focusState { return k.focusAt(codeCtx(step, stepT), 0, 8) }
 
 	// Entering the first range: line 0 stays lit, line 5 dims as e grows.
 	if w := at(1, 0).weight(5); w != 1 {
@@ -216,7 +218,7 @@ func TestFocusEasing(t *testing.T) {
 		t.Errorf("bar visible before FirstStep: alpha %v", a)
 	}
 	// Settled steps (entering a slide past the step) show the end state.
-	if f := k.focusAt(Ctx{Step: 2, StepT: Settled, Theme: testTheme}, 8); f.weight(4) != 1 || f.weight(0) != 0 {
+	if f := k.focusAt(Ctx{Step: 2, StepT: Settled, Theme: testTheme}, 0, 8); f.weight(4) != 1 || f.weight(0) != 0 {
 		t.Errorf("settled focus not at its end state: %+v", f)
 	}
 }
@@ -340,5 +342,102 @@ func BenchmarkCode(b *testing.B) {
 	b.ReportAllocs()
 	for range b.N {
 		k.Draw(c, p, r)
+	}
+}
+
+// fortyLines is a source too long for any rect a slide gives it.
+var fortyLines = func() string {
+	var b strings.Builder
+	for i := 1; i <= 40; i++ {
+		fmt.Fprintf(&b, "x := %d // line %d\n", i, i)
+	}
+	return b.String()
+}()
+
+func TestCodeShrink(t *testing.T) {
+	c := Ctx{W: 682, H: 171, T: Settled, StepT: Settled, Theme: testTheme}
+	r := c.Rect(0.1, 0.02, 0.5, 0.96)
+	clip := Code{Source: fortyLines, Lang: "go"}.Measure(c, r)
+	shrink := Code{Source: fortyLines, Lang: "go", Overflow: CodeShrink}.Measure(c, r)
+	if clip.Fits() || !shrink.Fits() || shrink.Size >= clip.Size || shrink.Shown != 40 {
+		t.Errorf("clip %+v\nshrink %+v", clip, shrink)
+	}
+	d := &Deck{Name: "shrink", Theme: testTheme, Slides: []Slide{{View: func(c Ctx, sc *Scene) {
+		Code{Source: fortyLines, Lang: "go", Overflow: CodeShrink}.Draw(c, sc.Px, c.Rect(0.1, 0.02, 0.5, 0.96))
+	}}}}
+	if got := codes(d.Review(ReviewOptions{Sizes: [][2]int{{682, 171}}}))["1.1"]; !slices.Equal(got, []string{"text-small"}) {
+		t.Errorf("review codes %v, want [text-small]", got)
+	}
+}
+
+func TestCodeScroll(t *testing.T) {
+	k := Code{Source: fortyLines, Lang: "go", Overflow: CodeScroll, LineNumbers: true,
+		Focus: []LineRange{{1, 3}, {20, 23}, {38, 40}}}
+	at := func(step int) CodeLayout {
+		c := Ctx{W: 320, H: 90, T: Settled, Step: step, StepT: Settled, Theme: testTheme}
+		return k.Measure(c, c.Rect(0.1, 0.1, 0.8, 0.6))
+	}
+	first, mid, last := at(0), at(1), at(2)
+	if first.Size != (Ctx{W: 320, H: 90, Theme: testTheme}).SmallText(testTheme.Mono) || first.Shown >= 40 || first.First != 1 {
+		t.Errorf("first focus: %+v", first)
+	}
+	if mid.First > 20 || mid.First+mid.Shown-1 < 23 {
+		t.Errorf("lines 20-23 not in view: first %d, %d shown", mid.First, mid.Shown)
+	}
+	if last.First+last.Shown-1 != 40 {
+		t.Errorf("last focus doesn't scroll to the end: first %d, %d shown", last.First, last.Shown)
+	}
+	// Mid-glide frames draw, and stay inside the plate.
+	c := Ctx{W: 320, H: 90, T: Settled, Step: 1, StepT: 0.15, Theme: testTheme}
+	p := NewPixels(c.W, 2*c.H, testTheme.Background)
+	w, h := k.Draw(c, p, c.Rect(0.1, 0.1, 0.8, 0.6))
+	r := c.Rect(0.1, 0.1, 0.8, 0.6)
+	for y := range p.H {
+		for x := range p.W {
+			in := float64(x) >= r.X-1 && float64(x) <= r.X+w+1 && float64(y) >= r.Y-1 && float64(y) <= r.Y+h+1
+			if !in && p.At(x, y) != testTheme.Background {
+				t.Fatalf("scrolled code drew outside its plate at %d,%d", x, y)
+			}
+		}
+	}
+
+	review := func(k Code) []string {
+		d := &Deck{Name: "scroll", Theme: testTheme, Slides: []Slide{{Steps: 3, View: func(c Ctx, sc *Scene) {
+			k.Draw(c, sc.Px, c.Rect(0.1, 0.1, 0.8, 0.6))
+		}}}}
+		var out []string
+		for _, is := range d.Review(ReviewOptions{Sizes: [][2]int{{320, 90}}}) {
+			out = append(out, fmt.Sprintf("%d %s %s", is.Step+1, is.Code, is.Msg))
+		}
+		return out
+	}
+	got := review(k)
+	if len(got) != 1 || !strings.HasPrefix(got[0], "1 code-unseen Code (go, 40 lines): lines ") {
+		t.Errorf("scroll review: %q", got)
+	}
+	k.Focus = []LineRange{{1, 40}}
+	if got := review(k); len(got) == 0 || !strings.Contains(got[0], "code-clipped") || !strings.Contains(got[0], "focus on lines 1–40 is 40 lines") {
+		t.Errorf("tall focus review: %q", got)
+	}
+	k.Focus = nil
+	if got := review(k); len(got) == 0 || !strings.Contains(got[0], "CodeScroll follows Focus, and there is none") {
+		t.Errorf("no focus review: %q", got)
+	}
+}
+
+func TestCodeExcerpt(t *testing.T) {
+	c := Ctx{W: 320, H: 90, T: Settled, Step: 1, StepT: Settled, Theme: testTheme}
+	k := Code{Source: fortyLines, Lang: "go", LineNumbers: true, Excerpt: LineRange{10, 15},
+		Focus: []LineRange{{12, 13}}, FirstStep: 1}
+	l := k.Measure(c, c.Frame())
+	if l.Lines != 6 || l.First != 10 || !l.Fits() {
+		t.Errorf("excerpt layout: %+v", l)
+	}
+	g := k.geom(c, c.Frame())
+	if g.foc.cur != [2]int{2, 4} || !g.foc.curOK {
+		t.Errorf("focus in the excerpt: %+v", g.foc)
+	}
+	if _, _, col := codeGutter(15, true, false); g.codeCol != col {
+		t.Errorf("gutter for lines up to 15: %d, want %d", g.codeCol, col)
 	}
 }
