@@ -365,3 +365,29 @@ func TestSnapshotBounds(t *testing.T) {
 		t.Error("-bounds without -png: no error")
 	}
 }
+
+// TestReviewTouchingLines checks two blocks of text whose lines run into
+// each other are an overlap even though they share few inked pixels.
+func TestReviewTouchingLines(t *testing.T) {
+	d := &Deck{Name: "lines", Theme: testTheme, Slides: []Slide{{View: func(c Ctx, sc *Scene) {
+		tx := Text{Font: c.Theme.Body, Size: c.Size(0.08), Color: c.Theme.Text}
+		_, h := tx.Draw(sc.Px, "a subtitle to copy and adapt", c.X(0.1), c.Y(0.2))
+		tx.Draw(sc.Px, "Copy a recipe into your talk", c.X(0.1), c.Y(0.2)+h*0.6)
+	}}}}
+	if got := codes(d.Review(ReviewOptions{Sizes: [][2]int{{240, 67}}}))["1.1"]; !slices.Equal(got, []string{"overlap"}) {
+		t.Errorf("codes %v, want [overlap]", got)
+	}
+}
+
+func TestReviewNoFrames(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "new")
+	if _, err := reviewDeck(problemDeck(), [][2]int{{240, 67}}, []int{1}, dir, "none"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "sheet-240x67.png")); err != nil {
+		t.Error(err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "frames")); err == nil {
+		t.Error("-frames none wrote a frames directory")
+	}
+}

@@ -45,6 +45,7 @@ type reviewElem struct {
 	name string
 	r    Rect
 	ink  int // pixels it inked
+	size int // for Text or Rich drawn on its own, its size in pixels; their boxes are their lines
 }
 
 // newReviewLog returns a log for a canvas of w×h pixels.
@@ -174,6 +175,7 @@ func (l *reviewLog) flush() {
 	pairs := slices.SortedFunc(maps.Keys(l.overlaps), func(a, b [2]int32) int {
 		return cmp.Or(cmp.Compare(a[0], b[0]), cmp.Compare(a[1], b[1]))
 	})
+	found := map[[2]int32]bool{}
 	for _, k := range pairs {
 		n, a, b := l.overlaps[k], l.elems[k[0]-1], l.elems[k[1]-1]
 		// The same text drawn twice is a shadow or an outline. A sliver is
@@ -181,7 +183,24 @@ func (l *reviewLog) flush() {
 		if a.name == b.name || n < 4 || n*20 < min(a.ink, b.ink) {
 			continue
 		}
+		found[k] = true
 		l.add(SeverityWarning, "overlap", a.r.Intersect(b.r), a.name+" and "+b.name+" overlap")
+	}
+	// Two blocks of text whose lines run into each other share few inked
+	// pixels, descenders on capitals, so their line boxes say it instead:
+	// sharing a third of a line's height, over at least a letter's width.
+	for i, a := range l.elems {
+		for j := i + 1; j < len(l.elems); j++ {
+			b := l.elems[j]
+			k := [2]int32{int32(i + 1), int32(j + 1)}
+			if a.size == 0 || b.size == 0 || a.name == b.name || found[k] {
+				continue
+			}
+			least := float64(min(a.size, b.size))
+			if in := a.r.Intersect(b.r); in.H >= least/3 && in.W >= least {
+				l.add(SeverityWarning, "overlap", in, a.name+" and "+b.name+" overlap")
+			}
+		}
 	}
 	l.overlaps = nil
 }
@@ -226,6 +245,7 @@ func checkInk(p *Pixels, cov []coverage, f *Font, size int, name string, box Rec
 	id := l.scopeID
 	if id == 0 && !l.overlay {
 		id = l.element(name, box)
+		l.elems[id-1].size = size
 	}
 	// How far ink reaches past each edge: left, top, right, bottom.
 	var past [4]int

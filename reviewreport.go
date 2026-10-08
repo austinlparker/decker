@@ -41,8 +41,12 @@ func reviewDeck(d *Deck, sizes [][2]int, slides []int, dir, frames string) (revi
 			err = savePNG(img, filepath.Join(dir, name))
 		}
 	}
-	if dir != "" && frames != "none" {
-		if err := os.MkdirAll(filepath.Join(dir, "frames"), 0o755); err != nil {
+	if dir != "" {
+		sub := dir
+		if frames != "none" {
+			sub = filepath.Join(dir, "frames")
+		}
+		if err := os.MkdirAll(sub, 0o755); err != nil {
 			return r, err
 		}
 	}

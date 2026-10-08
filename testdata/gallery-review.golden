@@ -1,8 +1,10 @@
 # What Deck.Review finds in the gallery. Regenerate with UPDATE_GOLDEN=1 go test -run TestGalleryReview.
 1.1 Text fields 240x67 error text-offcanvas: Text "A longer paragraph that has…" runs 14px past the bottom edge
 1.1 Text fields 240x67 warning overlap: Text "A longer paragraph that has…" and Text "Per glyph" overlap
+1.1 Text fields 240x67 warning overlap: Text "Centered and wrapped inside…" and Text "Mid gjpqy" overlap
 1.1 Text fields 320x90 error text-offcanvas: Text "A longer paragraph that has…" runs 18px past the bottom edge
 1.1 Text fields 320x90 warning overlap: Text "A longer paragraph that has…" and Text "Per glyph" overlap
+1.1 Text fields 320x90 warning overlap: Text "Centered and wrapped inside…" and Text "Mid gjpqy" overlap
 1.1 Text fields 682x171 error text-offcanvas: Text "A longer paragraph that has…" runs 36px past the bottom edge
 1.1 Text fields 682x171 warning overlap: Text "A longer paragraph that has…" and Text "Per glyph" overlap
 2.1 Font metrics 240x67 error text-offcanvas: Text "24px" runs 25px past the right edge
@@ -83,6 +85,8 @@
 10.1 Components 320x90 warning overlap: Text "PLACEHOLDER…" and Text "ILLUSTRATIVE DATA" overlap
 10.1 Components 682x171 warning text-small: Panel: Text "a label that…" is 18px; the smallest readable size here is 23px
 10.1 Components 682x171 warning overlap: Text "left label" and Text "centered" overlap
+10.1 Components 682x171 warning overlap: Text "PLACEHOLDER…" and Text "ILLUSTRATIVE DATA" overlap
+10.1 Components 682x171 warning overlap: Text "PLACEHOLDER…" and Text "ILLUSTRATIVE DATA" overlap
 11.1 Cycle 682x171 warning text-offcanvas: Text "loop=false th=0.00 act=-1" runs 3px past the bottom edge
 11.2 Cycle 682x171 warning text-offcanvas: Text "loop=false th=0.00 act=-1" runs 3px past the bottom edge
 11.3 Cycle 682x171 warning text-offcanvas: Text "loop=false th=0.00 act=-1" runs 3px past the bottom edge
@@ -133,7 +137,9 @@
 36.3 Element animations 240x67 warning text-small: Panel: Text "Combine,…" is 8px; the smallest readable size here is 9px
 36.3 Element animations 320x90 warning text-small: Panel: Text "Combine,…" is 11px; the smallest readable size here is 12px
 38.1 Rich text 240x67 error text-offcanvas: Rich "centered on its ink with gj…" runs 5px past the bottom edge
+38.1 Rich text 240x67 warning overlap: Rich "Mark under strike both and …" and Rich "Fit finds the largest size …" overlap
 38.1 Rich text 320x90 error text-offcanvas: Rich "centered on its ink with gj…" runs 5px past the bottom edge
+38.1 Rich text 320x90 warning overlap: Rich "Mark under strike both and …" and Rich "Fit finds the largest size …" overlap
 38.1 Rich text 682x171 error text-offcanvas: Rich "centered on its ink with gj…" runs 12px past the bottom edge
 39.1 Code 240x67 error code-clipped: Code "greet.go": 8 of 16 lines visible (needs 204px tall, has 115px); 23 of 64 columns visible (needs 353px wide, has 132px) at 9px, the smallest readable size
 39.1 Code 320x90 error code-clipped: Code "greet.go": 8 of 16 lines visible (needs 272px tall, has 154px); 23 of 64 columns visible (needs 470px wide, has 176px) at 12px, the smallest readable size

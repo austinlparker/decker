@@ -457,7 +457,7 @@ Everything here is in package `decker`.
 | Layout | `Rect` (or `NewRect(x, y, w, h)` in pixels): start from `c.Frame()` or `c.Rect(fx, fy, fw, fh)`, then `Inset`, `CutTop`/`CutBottom`/`CutLeft`/`CutRight`, `Rows`/`Cols` (by weight), `Grid`, `Sub` (fractions of the rect) and `Anchor` (a box of a given size inside it); `LerpRect` animates between two. Compare placed boxes with `Intersect` (the shared box, or the zero `Rect`), `Union` (the box covering both; empty rects add nothing, so gather bounds from `Rect{}`), `Contains`, `Overlaps` (shared area, not just a touching edge) and `Empty` |
 | Transitions | `Slide.Transition`: `TransitionPush` (default), `Cover`, `Uncover`, `Wipe`, `Split`, `Fade`, `FadeThrough`, `Dissolve`, `Iris`, `Zoom`, `Pixelate`, `Glitch`, `Morph`, `None`. `.Over(secs)` sets the time; `.From(DirLeft / DirRight / DirUp / DirDown)` sets the side of Push, Cover, Uncover and Wipe (and the axis of Split); going back plays from the opposite side. Vertical moves go in whole cell rows |
 | Magic move | `sc.Place(key, rect, draw)` on both slides, `Transition: TransitionMorph` on the second; see [Magic move](#magic-move) |
-| Big type | `Text{Font, Size, Color, To (gradient), Glow, Shine, FX, MaxW}.Draw(p, s, x, y)` with `Align`; returns width and height. `DrawMid` centers a line's ink on a y |
+| Big type | `Text{Font, Size, Color, To (gradient), Glow, Shine, FX, MaxW}.Draw(p, s, x, y)` with `Align`; returns width and height. `DrawMid` centers a line's ink on a y, which suits one label in a box; a row of labels (a legend, column heads) should `Draw` at one top so they share a baseline |
 | Mixed styles in a line | `Rich{Font, Size, Color, Glow, FX, MaxW}.Draw(p, spans, x, y)` with `[]Span{Text, Font, Color, Underline, Strike, Mark}`: bold a word, color a keyword, highlight, inline code, one baseline, wrapping across spans; ``ParseSpans("*bold* _muted_ `code` {accent:word}", theme)`` builds spans from light markup (see [Rich text](#rich-text)); `rich.Fit(spans, w, h, maxSize)` sizes them to a box |
 | Sizing text to a box | `font.Fit(...)`, `FitAll(...)` for several lines at one size; `Text{...}.Measure(s)` and `rich.Measure(spans)` return the size `Draw` would, without drawing, to size a plate or center a block first |
 | Checking what fits | `c.Fits(what, rect, w, h)` reports a block that doesn't fit its rect to the review; `c.Report(severity, code, rect, msg)` any other problem; `c.Reviewing()` guards costly checks; `Code.Measure(c, rect)` says what a code block shows before drawing it. See [Reviewing a deck](#reviewing-a-deck) |
@@ -573,7 +573,7 @@ the numbers:
 | `impure` | error | the slide draws differently the second time with the same `Ctx`: it keeps state between frames or reads the clock |
 | `text-small` | warning | text below the smallest readable size (`c.SmallText`); a component's text counts once for the component |
 | `table-cell-cut` | warning | `Table` cells shortened with "..." |
-| `overlap` | warning | two elements (blocks of text, stock components, placed elements) ink the same pixels |
+| `overlap` | warning | two elements (blocks of text, stock components, placed elements) ink the same pixels, or two blocks of text have lines running into each other |
 | `overlay-collision` | warning | `Theme.Overlay` draws over something the slide drew |
 | `step-unchanged` | warning | a build looks the same as the one before it, settled and while it enters: `Steps` is one too many, or a `c.Reached` names the wrong step |
 | `morph-unmatched` | warning | a slide enters with `TransitionMorph` but shares no `Place` key with the slide before, so it cross-fades |
@@ -616,7 +616,9 @@ c.Fits("waterfall", r, lay.W, lay.H) // the layout drawn: the review hears if ev
 ```
 
 Call `c.Fits` on the layout you draw, not on one you only try: a fallback
-that works is the slide doing its job, not an error.
+that works is the slide doing its job, not an error. To leave a trace of
+what a fallback gave up, report it as a note:
+`c.Report(decker.SeverityInfo, "waterfall-labels", r, "3 duration labels left out")`.
 
 `Code.Measure(c, rect)` returns how a code block fits before it draws:
 the size its text is set at, the plate, the lines and columns that show
