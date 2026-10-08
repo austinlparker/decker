@@ -1,6 +1,6 @@
 # Decker guide
 
-[README](../README.md) · [CLI reference](cli.md) · [API reference](https://pkg.go.dev/github.com/austinlparker/decker)
+[README](../README.md) · [Authoring a talk](authoring.md) · [CLI reference](cli.md) · [API reference](https://pkg.go.dev/github.com/austinlparker/decker)
 
 ## How it draws big type in a terminal
 
@@ -609,10 +609,14 @@ nothing while presenting.
 
 ```go
 lay := layoutWaterfall(spans, r) // your own layout: pure, from the rect
-if !c.Fits("waterfall", r, lay.W, lay.H) {
+if lay.W > r.W || lay.H > r.H {
 	lay = layoutWaterfall(spans[:8], r) // drop the tail rather than clip it
 }
+c.Fits("waterfall", r, lay.W, lay.H) // the layout drawn: the review hears if even this doesn't fit
 ```
+
+Call `c.Fits` on the layout you draw, not on one you only try: a fallback
+that works is the slide doing its job, not an error.
 
 `Code.Measure(c, rect)` returns how a code block fits before it draws:
 the size its text is set at, the plate, the lines and columns that show

@@ -180,6 +180,7 @@ presenter-only timer controls.
 | Build a theme and your own slide templates | [Anatomy of a deck](docs/guide.md#anatomy-of-a-deck) |
 | Find text, charts, shapes, code blocks and diagrams | [Toolbox](docs/guide.md#toolbox) and [API reference](https://pkg.go.dev/github.com/austinlparker/decker) |
 | Animate builds and move elements between slides | [Element animations](docs/guide.md#element-animations) and [magic move](docs/guide.md#magic-move) |
+| Write a talk, or have an agent write one: what to build, what not to, and the review loop | [Authoring a talk](docs/authoring.md) and the [starter](examples/starter) |
 | Find clipped code, dropped rows and text off the screen | [Reviewing a deck](docs/guide.md#reviewing-a-deck) |
 | Test your talk and pin its rendered output | [Deck tests](docs/guide.md#tests) |
 | Resolve setup, presenter or export problems | [Troubleshooting](docs/troubleshooting.md) |

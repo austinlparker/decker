@@ -4,6 +4,7 @@ Start with the [project README](../README.md) and its complete first talk.
 
 | Document | Purpose |
 | --- | --- |
+| [Authoring a talk](authoring.md) | For whoever writes the slides, person or agent: what to build yourself, what not to, and the review loop; start from the [starter](../examples/starter) |
 | [Guide](guide.md) | Rendering, fonts, presentation, slide authoring, toolbox and deck tests |
 | [CLI reference](cli.md) | All modes, flags, defaults, indexing and export behavior |
 | [Troubleshooting](troubleshooting.md) | Common symptoms and fixes |

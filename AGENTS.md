@@ -3,7 +3,9 @@
 The Go library `github.com/austinlparker/decker`: a terminal slide-deck engine.
 A talk is a separate `main` package, usually in another repo, that builds a
 `Deck` and calls `Main`. Read `doc.go` for the model, `README.md` for the
-quick start, and `docs/architecture.md` for the file map.
+quick start, and `docs/architecture.md` for the file map. Writing a talk
+rather than the engine? Read `docs/authoring.md` and start from
+`examples/starter`, whose `AGENTS.md` goes into the talk's repo.
 
 ## Invariants
 

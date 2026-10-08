@@ -299,9 +299,15 @@ func (c Ctx) Report(sev Severity, code string, r Rect, msg string) {
 // error naming what, with both sizes: custom drawing reports what it can't
 // fit the way stock components do.
 //
-//	if !c.Fits("waterfall", r, layout.W, layout.H) {
-//		// drop the duration labels, say
+// Call it on the layout a slide draws, not on one it only tries: a slide
+// that falls back to a smaller layout compares sizes itself, then checks the
+// one it keeps.
+//
+//	lay := layoutWaterfall(spans, r)
+//	if lay.W > r.W || lay.H > r.H {
+//		lay = layoutWaterfall(spans[:8], r) // the tail, rather than clipping
 //	}
+//	c.Fits("waterfall", r, lay.W, lay.H)
 func (c Ctx) Fits(what string, r Rect, w, h float64) bool {
 	ok := w <= r.W+0.5 && h <= r.H+0.5
 	if !ok && c.review != nil {
