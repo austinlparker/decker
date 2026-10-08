@@ -280,3 +280,77 @@ func TestReviewTouchingLines(t *testing.T) {
 		t.Errorf("codes %v, want [overlap]", got)
 	}
 }
+
+// TestReviewFindings pins the fixes for the first code review of the review
+// itself, one case each.
+func TestReviewFindings(t *testing.T) {
+	at := func(d *Deck) map[string][]string { return codes(issuesAt(d, [2]int{320, 90})) }
+	body := func(c Ctx, sc *Scene) {
+		Text{Font: c.Theme.Body, Size: c.SmallText(c.Theme.Body), Color: c.Theme.Text}.Draw(sc.Px, "body text", c.X(.2), c.Y(.2))
+	}
+
+	t.Run("overlay Code over slide text", func(t *testing.T) {
+		th := *testTheme
+		th.Overlay = func(c Ctx, p *Pixels) { Code{Source: "x := 1"}.Draw(c, p, c.Rect(.1, .1, .6, .6)) }
+		d := &Deck{Name: "o", Theme: &th, Slides: []Slide{{View: body}}}
+		d.Review() // panicked in flush, outside the render's recover
+	})
+
+	t.Run("two untitled one-line Code blocks on top of each other", func(t *testing.T) {
+		d := &Deck{Name: "c", Theme: testTheme, Slides: []Slide{{View: func(c Ctx, sc *Scene) {
+			Code{Source: "first := 1"}.Draw(c, sc.Px, c.Rect(.1, .1, .5, .3))
+			Code{Source: "second := 2"}.Draw(c, sc.Px, c.Rect(.1, .1, .5, .3))
+		}}}}
+		if got := at(d)["1.1"]; !slices.Contains(got, "overlap") {
+			t.Errorf("codes %v, want an overlap", got)
+		}
+	})
+
+	t.Run("text beside a short line of a multi-line block", func(t *testing.T) {
+		d := &Deck{Name: "m", Theme: testTheme, Slides: []Slide{{View: func(c Ctx, sc *Scene) {
+			tx := Text{Font: c.Theme.Body, Size: 16, Color: c.Theme.Text}
+			tx.Draw(sc.Px, "a long headline for the first row\nx", 10, 10)
+			tx.Draw(sc.Px, "other text", 100, 10+16*DefaultLeading)
+		}}}}
+		if got := at(d)["1.1"]; slices.Contains(got, "overlap") {
+			t.Errorf("codes %v, want no overlap", got)
+		}
+	})
+
+	t.Run("Code hanging off the canvas", func(t *testing.T) {
+		d := &Deck{Name: "e", Theme: testTheme, Slides: []Slide{{View: func(c Ctx, sc *Scene) {
+			Code{Source: "hello world"}.Draw(c, sc.Px, c.Rect(.95, .2, .6, .6))
+		}}}}
+		if got := at(d)["1.1"]; !slices.Equal(got, []string{"text-offcanvas"}) {
+			t.Errorf("codes %v, want [text-offcanvas]", got)
+		}
+	})
+
+	t.Run("table not revealed yet", func(t *testing.T) {
+		rows := make([][]string, 4)
+		for i := range rows {
+			rows[i] = []string{fmt.Sprint("row ", i)}
+		}
+		d := &Deck{Name: "t", Theme: testTheme, Slides: []Slide{{Steps: 2, View: func(c Ctx, sc *Scene) {
+			r := c.Rect(.1, .1, .8, .1)
+			if c.Step == 1 {
+				r = c.Rect(.1, .1, .8, .8)
+			}
+			Table{Header: []string{"Name"}, Rows: rows, FirstStep: 1}.Draw(c, sc.Px, r)
+		}}}}
+		if got := at(d); len(got) != 0 {
+			t.Errorf("codes %v, want none", got)
+		}
+	})
+
+	t.Run("placed shapes covering each other", func(t *testing.T) {
+		d := &Deck{Name: "p", Theme: testTheme, Slides: []Slide{{View: func(c Ctx, sc *Scene) {
+			for i, col := range []RGB{c.Theme.Accent, c.Theme.Good} {
+				sc.Place(fmt.Sprint("box", i), c.Rect(.2, .2, .3, .3), func(p *Pixels, r Rect) { p.Rect(r.X, r.Y, r.W, r.H, col, 1) })
+			}
+		}}}}
+		if got := at(d)["1.1"]; !slices.Equal(got, []string{"overlap"}) {
+			t.Errorf("codes %v, want [overlap]", got)
+		}
+	})
+}

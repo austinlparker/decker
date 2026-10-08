@@ -79,6 +79,7 @@ func (b Block) Draw(p *Pixels, s string, x, y float64) (w, h float64) {
 		id := l.scopeID
 		if id == 0 && !l.overlay {
 			id = l.element(name, Rect{left, y, w, h})
+			l.elems[id-1].text = s
 		}
 		var past [4]int
 		for _, c := range placed {

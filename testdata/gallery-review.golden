@@ -126,6 +126,15 @@
 19.4 Builds 240x67 error text-offcanvas: Text "step 3  since0 99.00  since…" runs 86px past the right edge
 19.4 Builds 320x90 error text-offcanvas: Text "step 3  since0 99.00  since…" runs 116px past the right edge
 19.4 Builds 682x171 error text-offcanvas: Text "step 3  since0 99.00  since…" runs 154px past the right edge
+21.1 Morph A 240x67 warning overlap: Place "box" and Place "before" overlap
+21.1 Morph A 320x90 warning overlap: Place "box" and Place "before" overlap
+21.1 Morph A 682x171 warning overlap: Place "box" and Place "before" overlap
+22.1 Morph B 240x67 warning overlap: Place "box" and Place "after" overlap
+22.1 Morph B 240x67 warning overlap: Place "box" and Place "" overlap
+22.1 Morph B 320x90 warning overlap: Place "box" and Place "after" overlap
+22.1 Morph B 320x90 warning overlap: Place "box" and Place "" overlap
+22.1 Morph B 682x171 warning overlap: Place "box" and Place "after" overlap
+22.1 Morph B 682x171 warning overlap: Place "box" and Place "" overlap
 36.1 Element animations 240x67 warning text-small: Panel: 2 texts at 8px, such as Text "ZoomIn,…"; the smallest readable size here is 9px
 36.1 Element animations 320x90 warning text-small: Panel: 2 texts at 11px, such as Text "ZoomIn,…"; the smallest readable size here is 12px
 36.2 Element animations 240x67 warning text-small: Panel: 2 texts at 8px, such as Text "ZoomIn,…"; the smallest readable size here is 9px

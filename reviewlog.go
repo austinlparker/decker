@@ -46,7 +46,13 @@ type reviewElem struct {
 	name string
 	r    Rect
 	ink  int // pixels it inked
-	size int // for Text or Rich drawn on its own, its size in pixels; their boxes are their lines
+
+	// For a block of text drawn on its own: the whole text, which tells a
+	// shadow or an outline (the same text drawn again) from other text, and
+	// for Text and Rich its size and the box of each line as aligned.
+	text  string
+	size  int
+	lines []Rect
 }
 
 // newReviewLog returns a log for a canvas of w×h pixels.
@@ -72,9 +78,10 @@ func (l *reviewLog) element(name string, r Rect) int32 {
 }
 
 // inkAt records that element id inked pixel (x, y), counting an overlap
-// with whatever element inked it before.
+// with whatever element inked it before. Id 0 is no element: the overlay's
+// drawing, which owns no pixels.
 func (l *reviewLog) inkAt(id int32, x, y int) {
-	if x < 0 || y < 0 || x >= l.w || y >= l.h {
+	if id == 0 || x < 0 || y < 0 || x >= l.w || y >= l.h {
 		return
 	}
 	i := y*l.w + x
@@ -163,9 +170,8 @@ func (l *reviewLog) flush() {
 	found := map[[2]int32]bool{}
 	for _, k := range pairs {
 		n, a, b := l.overlaps[k], l.elems[k[0]-1], l.elems[k[1]-1]
-		// The same text drawn twice is a shadow or an outline. A sliver is
-		// antialiasing where two things meet.
-		if a.name == b.name || n < 4 || n*20 < min(a.ink, b.ink) {
+		// A sliver is antialiasing where two things meet.
+		if repeated(a, b) || n < 4 || n*20 < min(a.ink, b.ink) {
 			continue
 		}
 		found[k] = true
@@ -173,21 +179,37 @@ func (l *reviewLog) flush() {
 	}
 	// Two blocks of text whose lines run into each other share few inked
 	// pixels, descenders on capitals, so their line boxes say it instead:
-	// sharing a third of a line's height, over at least a letter's width.
+	// two lines sharing a third of a line's height, over a letter's width.
 	for i, a := range l.elems {
 		for j := i + 1; j < len(l.elems); j++ {
 			b := l.elems[j]
-			k := [2]int32{int32(i + 1), int32(j + 1)}
-			if a.size == 0 || b.size == 0 || a.name == b.name || found[k] {
+			if a.size == 0 || b.size == 0 || repeated(a, b) || found[[2]int32{int32(i + 1), int32(j + 1)}] {
 				continue
 			}
-			least := float64(min(a.size, b.size))
-			if in := intersectRect(a.r, b.r); in.H >= least/3 && in.W >= least {
+			if in, ok := linesMeet(a, b); ok {
 				l.add(SeverityWarning, "overlap", in, a.name+" and "+b.name+" overlap")
 			}
 		}
 	}
 	l.overlaps = nil
+}
+
+// repeated reports whether a and b are the same text drawn twice, a shadow
+// or an outline, rather than two things in each other's way.
+func repeated(a, b reviewElem) bool { return a.text != "" && a.text == b.text }
+
+// linesMeet returns where a line of a meets a line of b, if any pair shares
+// a third of the smaller line's height over at least its size in width.
+func linesMeet(a, b reviewElem) (Rect, bool) {
+	least := float64(min(a.size, b.size))
+	for _, la := range a.lines {
+		for _, lb := range b.lines {
+			if in := intersectRect(la, lb); in.H >= least/3 && in.W >= least {
+				return in, true
+			}
+		}
+	}
+	return Rect{}, false
 }
 
 // unionRect is the smallest rect holding a and b.
@@ -233,8 +255,8 @@ func quoteText(kind, s string) string {
 // checkInk reports text whose ink runs off the canvas or is drawn too small
 // to read, for Text and Rich under review, and records its ink for overlaps.
 // cov is the block's coverage, in canvas coordinates; size is the drawn size
-// in pixels.
-func checkInk(p *Pixels, cov []coverage, f *Font, size int, name string, box Rect) {
+// in pixels, and lines the box of each line as drawn.
+func checkInk(p *Pixels, cov []coverage, f *Font, size int, text, name string, box Rect, lines []Rect) {
 	l := p.review
 	if least := f.Drawn(max(int(MinText*float64(p.H)), 6)); size < least {
 		l.noteSmall(name, size, least, box)
@@ -242,7 +264,8 @@ func checkInk(p *Pixels, cov []coverage, f *Font, size int, name string, box Rec
 	id := l.scopeID
 	if id == 0 && !l.overlay {
 		id = l.element(name, box)
-		l.elems[id-1].size = size
+		e := &l.elems[id-1]
+		e.text, e.size, e.lines = text, size, lines
 	}
 	// How far ink reaches past each edge: left, top, right, bottom.
 	var past [4]int

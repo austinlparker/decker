@@ -41,11 +41,38 @@ func (s *Scene) finish() {
 				continue
 			}
 			done := s.ctx.within("Place "+strconv.Quote(e.key), e.r)
-			e.draw(s.Px, e.r)
+			s.drawOwned(e)
 			done()
 		}
 		s.overlay()
 	})
+}
+
+// drawOwned draws a placed element under review and records the pixels it
+// changed as its own, so a placed element built from shapes, which report
+// no ink of their own, still overlaps what it covers. Like a morph, it looks
+// a tenth of the canvas's height around the element's rect.
+func (s *Scene) drawOwned(e placed) {
+	l, p := s.Px.review, s.Px
+	m := float64(p.H) / 10
+	x0, y0, x1, y1 := p.Box(e.r.X-m, e.r.Y-m, e.r.Right()+m, e.r.Bottom()+m)
+	if x0 > x1 || y0 > y1 {
+		e.draw(p, e.r)
+		return
+	}
+	w := x1 - x0 + 1
+	before := make([]RGB, w*(y1-y0+1))
+	for y := y0; y <= y1; y++ {
+		copy(before[(y-y0)*w:(y-y0+1)*w], p.Pix[y*p.W+x0:y*p.W+x1+1])
+	}
+	e.draw(p, e.r)
+	for y := y0; y <= y1; y++ {
+		for x := x0; x <= x1; x++ {
+			if p.Pix[y*p.W+x] != before[(y-y0)*w+x-x0] {
+				l.inkAt(l.scopeID, x, y)
+			}
+		}
+	}
 }
 
 func (s *Scene) overlay() {

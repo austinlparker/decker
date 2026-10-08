@@ -127,7 +127,11 @@ func (t Text) Draw(p *Pixels, s string, x, y float64) (w, h float64) {
 	}
 	t.paint(p, cov, blockX, w)
 	if p.review != nil {
-		checkInk(p, []coverage{cov}, f, size, quoteText("Text", s), Rect{blockX, y, w, h})
+		boxes := make([]Rect, len(lines))
+		for i := range lines {
+			boxes[i] = Rect{x + t.Align.shift(widths[i]), y + float64(i)*lineH, widths[i], lineH}
+		}
+		checkInk(p, []coverage{cov}, f, size, s, quoteText("Text", s), Rect{blockX, y, w, h}, boxes)
 	}
 	return w, h
 }

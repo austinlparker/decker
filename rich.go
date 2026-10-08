@@ -347,7 +347,11 @@ func (r Rich) Draw(p *Pixels, spans []Span, x, y float64) (w, h float64) {
 		for _, sp := range spans {
 			text.WriteString(sp.Text)
 		}
-		checkInk(p, covs, f, size, quoteText("Rich", text.String()), Rect{blockX, y, w, h})
+		boxes := make([]Rect, len(l.lines))
+		for i := range l.lines {
+			boxes[i] = Rect{x + r.Align.shift(l.widths[i]), y + float64(i)*lineH, l.widths[i], lineH}
+		}
+		checkInk(p, covs, f, size, text.String(), quoteText("Rich", text.String()), Rect{blockX, y, w, h}, boxes)
 	}
 	return w, h
 }

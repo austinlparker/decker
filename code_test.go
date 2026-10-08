@@ -445,3 +445,17 @@ func TestCodeExcerpt(t *testing.T) {
 		t.Errorf("gutter for lines up to 15: %d, want %d", g.codeCol, col)
 	}
 }
+
+// TestCodeScrollHoldsThroughEmptyFocus checks an empty Focus range, and the
+// steps past the end of Focus, keep the view where the last range left it.
+func TestCodeScrollHoldsThroughEmptyFocus(t *testing.T) {
+	k := Code{Source: fortyLines, Lang: "go", Overflow: CodeScroll, Focus: []LineRange{{20, 23}, {}}}
+	var offs []float64
+	for step := range 3 {
+		c := Ctx{W: 320, H: 90, T: Settled, Step: step, StepT: Settled, Theme: testTheme}
+		offs = append(offs, k.geom(c, c.Rect(0.1, 0.1, 0.8, 0.6)).off)
+	}
+	if offs[0] == 0 || offs[1] != offs[0] || offs[2] != offs[0] {
+		t.Errorf("settled offsets %v, want the first held", offs)
+	}
+}

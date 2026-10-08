@@ -68,8 +68,10 @@ type tableLayout struct {
 	padX, padY float64
 	h          float64 // bottom of the last row
 
-	// For review: rows left out because they don't fit, and cells cut short.
-	dropped, cut int
+	// For review: how many rows the table has, header included (those past
+	// rowY were left out), and the cells cut short, by row and column.
+	rows int
+	cut  [][2]int
 }
 
 type tableKey struct {
@@ -229,7 +231,7 @@ func (t Table) fit(c Ctx, r Rect) *tableLayout {
 		for j := range cells {
 			clipped := clipLines(font(row), cells[j], size, inner(j), limit)
 			if !slices.Equal(clipped, cells[j]) {
-				l.cut++
+				l.cut = append(l.cut, [2]int{row, j})
 			}
 			cells[j] = clipped
 		}
@@ -238,7 +240,7 @@ func (t Table) fit(c Ctx, r Rect) *tableLayout {
 		y += rh
 	}
 	l.h = y
-	l.dropped = len(lines) - len(l.lines)
+	l.rows = len(lines)
 	return l
 }
 
@@ -250,16 +252,37 @@ func (t Table) name() string {
 	return fmt.Sprintf("Table (%d rows)", len(t.Rows))
 }
 
-// report records the rows a review finds left out and the cells cut short.
+// report records the rows left out and the cells cut short among those this
+// build reveals: a row or a column still to come is not lost yet.
 func (t Table) report(c Ctx, r Rect, l *tableLayout) {
-	name := t.name()
-	if l.dropped > 0 {
-		c.review.add(SeverityError, "table-rows-dropped", r,
-			fmt.Sprintf("%s: %d of %d rows don't fit in %.0fpx at %dpx text", name, min(l.dropped, len(t.Rows)), len(t.Rows), r.H, l.size))
+	off := 0 // layout rows before the first body row
+	if l.header {
+		off = 1
 	}
-	if l.cut > 0 {
+	shown := func(row, col int) bool { return t.since(c, row-off, col) >= 0 }
+	revealed, dropped := 0, 0
+	for row := off; row < l.rows; row++ {
+		if shown(row, 0) {
+			revealed++
+			if row >= len(l.rowY) {
+				dropped++
+			}
+		}
+	}
+	cut := 0
+	for _, rc := range l.cut {
+		if shown(rc[0], rc[1]) {
+			cut++
+		}
+	}
+	name := t.name()
+	if dropped > 0 {
+		c.review.add(SeverityError, "table-rows-dropped", r,
+			fmt.Sprintf("%s: %d of %d rows don't fit in %.0fpx at %dpx text", name, dropped, revealed, r.H, l.size))
+	}
+	if cut > 0 {
 		c.review.add(SeverityWarning, "table-cell-cut", r,
-			fmt.Sprintf("%s: %d cells cut short at %dpx text", name, l.cut, l.size))
+			fmt.Sprintf("%s: %d cells cut short at %dpx text", name, cut, l.size))
 	}
 }
 

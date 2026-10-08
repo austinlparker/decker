@@ -488,16 +488,32 @@ func (k Code) geom(c Ctx, r Rect) codeGeom {
 	g.foc = k.focusAt(c, g.first, len(g.lines))
 	g.scroll = k.Overflow == CodeScroll && g.Shown < g.Lines && g.Shown > 0
 	if g.scroll {
-		g.off = g.scrollOffset()
+		i := c.Step - k.FirstStep
+		prev, prevOK := k.held(i-1, g.first, g.Lines)
+		cur, curOK := k.held(i, g.first, g.Lines)
+		g.off = g.scrollOffset(prev, prevOK, cur, curOK)
 	}
 	return g
 }
 
+// held is the span, among the n lines shown from source line first+1, of the
+// last Focus range at or before index i that selects any lines: where
+// CodeScroll stays through an empty range and once the steps run past the
+// end of Focus. ok is false before the first such range.
+func (k Code) held(i, first, n int) (s [2]int, ok bool) {
+	for i = min(i, len(k.Focus)-1); i >= 0; i-- {
+		r := k.Focus[i]
+		if from, to, ok := (LineRange{r.From - first, r.To - first}).span(n); ok {
+			return [2]int{from, to}, true
+		}
+	}
+	return s, false
+}
+
 // scrollOffset is how many lines CodeScroll has scrolled past: enough to
-// center the focus range in view, gliding from the last range's place as
-// the highlight does. With no range in focus it stays where the last one
-// left it, and starts at the top.
-func (g codeGeom) scrollOffset() float64 {
+// center the held focus range in view, gliding from the range held before
+// it as the highlight does, and the top before any.
+func (g codeGeom) scrollOffset(prev [2]int, prevOK bool, cur [2]int, curOK bool) float64 {
 	place := func(s [2]int) float64 {
 		n := s[1] - s[0]
 		at := s[0]
@@ -506,13 +522,13 @@ func (g codeGeom) scrollOffset() float64 {
 		}
 		return float64(min(max(at, 0), g.Lines-g.Shown))
 	}
-	from, to := 0.0, 0.0
-	if g.foc.prevOK {
-		from = place(g.foc.prev)
+	from := 0.0
+	if prevOK {
+		from = place(prev)
 	}
-	to = from
-	if g.foc.curOK {
-		to = place(g.foc.cur)
+	to := from
+	if curOK {
+		to = place(cur)
 	}
 	return Lerp(from, to, g.foc.e)
 }
@@ -528,6 +544,7 @@ func (k Code) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 	g := k.geom(c, r)
 	if c.review != nil {
 		k.report(c, r, g)
+		k.reportCanvas(p, r, g)
 		defer c.within(k.name(g.Lines), Rect{r.X, r.Y, g.W, g.H})()
 		c.review.inkRect(c.review.scopeID, Rect{r.X, r.Y, g.W, g.H})
 	}
@@ -669,6 +686,18 @@ func (k Code) report(c Ctx, r Rect, g codeGeom) {
 		}
 		c.review.add(SeverityError, "code-clipped", plate, name+": "+strings.Join(parts, "; ")+" "+at)
 	}
+}
+
+// reportCanvas reports the code's text running past the canvas edges, where
+// drawMono cuts it off: a rect can fit its code and still hang off the slide.
+func (k Code) reportCanvas(p *Pixels, r Rect, g codeGeom) {
+	left, top := r.X+g.pad, r.Y+g.Head
+	right, bottom := left+float64(g.ShownCols)*g.adv, top+float64(g.Shown)*g.lineH
+	past := [4]int{
+		int(math.Ceil(-left)), int(math.Ceil(-top)),
+		int(math.Ceil(right)) - p.W, int(math.Ceil(bottom)) - p.H,
+	}
+	reportPast(p, past, g.Size, k.name(g.Lines), Rect{r.X, r.Y, g.W, g.H})
 }
 
 // color returns the palette color for role, or plain for no role.
