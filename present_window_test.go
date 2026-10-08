@@ -34,8 +34,8 @@ func TestPresentationArgs(t *testing.T) {
 	}
 }
 
-// Execute the generated command through a real shell: paths, flag values and
-// positional arguments must survive quoting without executing their contents.
+// Ghostty's macOS surface API wraps the command in "exec -l" itself. Paths,
+// flag values and positional arguments must survive that wrapper unchanged.
 func TestPresentationCommandQuoting(t *testing.T) {
 	dir := t.TempDir()
 	marker := filepath.Join(dir, "unexpected")
@@ -45,9 +45,9 @@ func TestPresentationCommandQuoting(t *testing.T) {
 	}
 	w := presentationWindow{executable: executable, socket: filepath.Join(dir, "a socket's name"),
 		args: []string{"-theme=$(touch " + marker + ");`touch " + marker + "` ' quoted \n text", "file with spaces"}}
-	out, err := exec.Command("sh", "-c", w.command(7, 3)).Output()
+	out, err := exec.Command("bash", "--noprofile", "--norc", "-c", "exec -l "+w.command(7, 3)).CombinedOutput()
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Ghostty shell wrapper: %v\n%s", err, out)
 	}
 	got := strings.Split(strings.TrimSuffix(string(out), "\x00"), "\x00")
 	want := append([]string{"-socket=" + w.socket, "-slide=7", "-step=3"}, w.args...)
@@ -56,6 +56,14 @@ func TestPresentationCommandQuoting(t *testing.T) {
 	}
 	if _, err := os.Stat(marker); !os.IsNotExist(err) {
 		t.Fatalf("argument contents executed: %v", err)
+	}
+}
+
+func TestPresentationSurfaceCommand(t *testing.T) {
+	// Unlike the command config option, the surface API treats "shell:" as
+	// literal command text. Pass the quoted command argv through unchanged.
+	if !strings.Contains(presentationWindowScript, "set command of cfg to item 1 of argv\n") {
+		t.Fatal("surface command must receive argv directly, without config prefixes")
 	}
 }
 

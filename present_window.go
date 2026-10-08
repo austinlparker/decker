@@ -65,7 +65,7 @@ func (w *presentationWindow) command(slide, step int) string {
 	for i := range args {
 		args[i] = shellQuote(args[i])
 	}
-	return "exec " + strings.Join(args, " ")
+	return strings.Join(args, " ")
 }
 
 func shellQuote(s string) string { return "'" + strings.ReplaceAll(s, "'", "'\"'\"'") + "'" }
@@ -95,7 +95,8 @@ func (w *presentationWindow) open(slide, step int) error {
 }
 
 // Values travel as argv, never as AppleScript source. The deck command is
-// shell-quoted separately because Ghostty executes it through a shell.
+// shell-quoted separately because Ghostty executes it through a shell. The
+// surface API supplies its own exec wrapper and does not parse config prefixes.
 const presentationWindowScript = `on run argv
     tell application "Ghostty"
         set previousID to item 4 of argv
@@ -112,7 +113,7 @@ const presentationWindowScript = `on run argv
         set cfg to new surface configuration
         set font size of cfg to (item 3 of argv) as real
         set initial working directory of cfg to item 2 of argv
-        set command of cfg to ("shell:" & (item 1 of argv))
+        set command of cfg to item 1 of argv
         set environment variables of cfg to {"PATH=" & (item 5 of argv)}
         set wait after command of cfg to false
         set win to new window with configuration cfg
