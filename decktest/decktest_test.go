@@ -1,6 +1,9 @@
 package decktest
 
 import (
+	"errors"
+	"os"
+	"os/exec"
 	"strings"
 	"testing"
 
@@ -13,27 +16,63 @@ var theme = &decker.Theme{
 	Mono:    decker.StockFont("JetBrainsMono-ExtraBold"),
 }
 
-// TestDrawFrameCatchesEveryPart checks Slides sees a panic wherever the
-// engine would draw it: in View, in a placed element, or in the overlay.
-func TestDrawFrameCatchesEveryPart(t *testing.T) {
-	boom := func() { panic("boom") }
-	overlay := *theme
-	overlay.Overlay = func(decker.Ctx, *decker.Pixels) { boom() }
-	for _, tc := range []struct {
-		part  string
-		theme *decker.Theme
-		view  func(decker.Ctx, *decker.Scene)
-	}{
-		{"", theme, func(decker.Ctx, *decker.Scene) {}},
-		{"View", theme, func(decker.Ctx, *decker.Scene) { boom() }},
-		{"a placed element", theme, func(c decker.Ctx, sc *decker.Scene) {
+// boomDeck is a one-slide deck that panics in part ("View", "a placed
+// element" or "Theme.Overlay"), or nowhere for "".
+func boomDeck(part string) decker.Deck {
+	boom := func() { panic(errBoom) }
+	th := *theme
+	s := decker.Slide{Title: "Boom", View: func(decker.Ctx, *decker.Scene) {}}
+	switch part {
+	case "View":
+		s.View = func(decker.Ctx, *decker.Scene) { boom() }
+	case "a placed element":
+		s.View = func(c decker.Ctx, sc *decker.Scene) {
 			sc.Place("k", c.Frame(), func(*decker.Pixels, decker.Rect) { boom() })
-		}},
-		{"Theme.Overlay", &overlay, func(decker.Ctx, *decker.Scene) {}},
-	} {
-		part, r := drawFrame(decker.Slide{View: tc.view}, decker.Ctx{W: 40, H: 12, Theme: tc.theme})
-		if part != tc.part || (tc.part != "") != (r != nil) {
-			t.Errorf("%q: got part %q, recovered %v", tc.part, part, r)
+		}
+	case "Theme.Overlay":
+		th.Overlay = func(decker.Ctx, *decker.Pixels) { boom() }
+	}
+	return decker.Deck{Name: "boom", Theme: &th, Slides: []decker.Slide{s}}
+}
+
+var errBoom = errors.New("boom")
+
+var parts = []string{"View", "a placed element", "Theme.Overlay"}
+
+// TestDrawReportsEveryPart checks Deck.Draw, which Slides fails on, returns
+// a panic wherever the engine catches one: in View, in a placed element, or
+// in the overlay.
+func TestDrawReportsEveryPart(t *testing.T) {
+	d := boomDeck("")
+	if err := d.Draw(0, decker.Ctx{W: 40, H: 12}); err != nil {
+		t.Errorf("no panic: got %v", err)
+	}
+	Slides(t, d)
+	for _, part := range parts {
+		d := boomDeck(part)
+		err := d.Draw(0, decker.Ctx{W: 40, H: 12})
+		if want := `slide 1 "Boom": ` + part + " panicked: boom"; err == nil || err.Error() != want {
+			t.Errorf("%s: got %v, want %s", part, err, want)
+		}
+		if !errors.Is(err, errBoom) {
+			t.Errorf("%s: %v does not wrap the panic's error", part, err)
+		}
+	}
+}
+
+// TestSlidesFailsOnEveryPart runs Slides on a deck that panics in each part,
+// in a child test process, and checks it fails naming the part.
+func TestSlidesFailsOnEveryPart(t *testing.T) {
+	if part := os.Getenv("DECKTEST_BOOM"); part != "" {
+		Slides(t, boomDeck(part))
+		return
+	}
+	for _, part := range parts {
+		cmd := exec.Command(os.Args[0], "-test.run=^TestSlidesFailsOnEveryPart$")
+		cmd.Env = append(os.Environ(), "DECKTEST_BOOM="+part)
+		out, err := cmd.CombinedOutput()
+		if err == nil || !strings.Contains(string(out), part+" panicked: boom (at 80x24, build 1, t=0)") {
+			t.Errorf("%s: Slides passed or said something else: %v\n%s", part, err, out)
 		}
 	}
 }

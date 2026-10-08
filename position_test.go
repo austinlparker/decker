@@ -71,10 +71,10 @@ func TestCtxPosition(t *testing.T) {
 	d.Draw(2, Ctx{W: 20, H: 5})
 	check("Draw", 2)
 
-	frameFlags{Width: 20, Height: 5, Time: 1}.still(d, 4, 0).release()
-	check("frameFlags.still", 4)
+	d.still(4, 0, 1, 20, 5).release()
+	check("still", 4)
 
-	renderPreview(d.Slides, previewKey{slide: 1, pw: 20, ph: 6, dw: 240, dh: 67}, d.Theme)
+	renderPreview(d, previewKey{slide: 1, pw: 20, ph: 6, dw: 240, dh: 67})
 	check("renderPreview", 1)
 }
 

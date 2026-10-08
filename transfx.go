@@ -21,10 +21,20 @@ func blend(from, to *Pixels, e float64) {
 
 // crossfade fades the pixels from one frame to the other; characters can't
 // fade, so they switch half-way.
-func crossfade(from, to *Scene, p float64, _ Direction, _ *Theme) {
-	e := EaseInOutCubic(p)
+func crossfade(from, to *Scene, p float64, _ Direction, _ *Theme) { fadeFrames(from, to, p) }
+
+// fadeFrames is crossfade, returning the eased progress it mixed at.
+func fadeFrames(from, to *Scene, p float64) (e float64) {
+	e = EaseInOutCubic(p)
 	blend(from.Px, to.Px, e)
-	moveChars(from, to, func(x, y int, old bool) (int, int, bool) { return x, y, old == (e < 0.5) })
+	halfway(from, to, e)
+	return e
+}
+
+// halfway shows the old frame's characters until the eased progress e
+// reaches one half, then the new frame's: characters can't fade.
+func halfway(from, to *Scene, e float64) {
+	keepChars(from, to, func(_, _ int, old bool) bool { return old == (e < 0.5) })
 }
 
 // fadeThrough fades the old frame to the theme's background and the new one
@@ -46,7 +56,7 @@ func fadeThrough(from, to *Scene, p float64, _ Direction, t *Theme) {
 	} else {
 		showNew = true
 	}
-	moveChars(from, to, func(x, y int, old bool) (int, int, bool) { return x, y, old && showOld || !old && showNew })
+	keepChars(from, to, func(_, _ int, old bool) bool { return old && showOld || !old && showNew })
 }
 
 // iris reveals the new frame inside a circle that grows from the center
@@ -76,9 +86,9 @@ func iris(from, to *Scene, p float64, _ Direction, _ *Theme) {
 			}
 		}
 	}
-	moveChars(from, to, func(x, y int, old bool) (int, int, bool) {
+	keepChars(from, to, func(x, y int, old bool) bool {
 		dx, dy := float64(x)+0.5-cx, float64(2*y+1)-cy
-		return x, y, old != (r > 0 && dx*dx+dy*dy < r*r)
+		return old != (r > 0 && dx*dx+dy*dy < r*r)
 	})
 }
 
@@ -99,7 +109,7 @@ func zoom(from, to *Scene, p float64, _ Direction, _ *Theme) {
 	} else if e < 1 {
 		zoomPixels(from.Px, to.Px, e)
 	}
-	moveChars(from, to, func(x, y int, old bool) (int, int, bool) { return x, y, old == (e < 0.5) })
+	halfway(from, to, e)
 }
 
 // zoomTaps are where each column of a zoomed frame samples the source: the
@@ -219,7 +229,7 @@ func pixelate(from, to *Scene, p float64, _ Direction, _ *Theme) {
 	case m <= 0:
 		copy(to.Px.Pix, from.Px.Pix)
 	}
-	moveChars(from, to, func(x, y int, old bool) (int, int, bool) { return x, y, old && p < 0.2 || !old && p > 0.8 })
+	keepChars(from, to, func(_, _ int, old bool) bool { return old && p < 0.2 || !old && p > 0.8 })
 }
 
 // blockAverage is the mean color of the pixels in [x0,x1)×[y0,y1).

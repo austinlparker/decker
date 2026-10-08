@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"text/tabwriter"
 )
@@ -27,14 +26,10 @@ type reviewRun struct {
 // goes an annotated frame for each build with issues and, per size, a
 // contact sheet of every build.
 func reviewDeck(d *Deck, sizes [][2]int, dir string) (reviewRun, error) {
-	r := reviewRun{deck: d.Name, sizes: sizes, slides: len(d.Slides), frames: map[[2]int][]string{}}
-	for i := range d.Slides {
-		r.builds += d.Steps(i)
-	}
+	r := reviewRun{deck: d.Name, sizes: sizes, slides: len(d.Slides), builds: d.builds(), frames: map[[2]int][]string{}}
 	if err := os.MkdirAll(filepath.Join(dir, "frames"), 0o755); err != nil {
 		return r, err
 	}
-	digits := max(2, len(strconv.Itoa(len(d.Slides))))
 	tiles := map[[2]int][]sheetTile{}
 	var err error
 	save := func(img image.Image, name string) {
@@ -48,7 +43,7 @@ func reviewDeck(d *Deck, sizes [][2]int, dir string) (reviewRun, error) {
 		size := [2]int{f.w, f.h}
 		tiles[size] = append(tiles[size], tile(f, title))
 		if len(f.issues) > 0 {
-			name := fmt.Sprintf("frames/%0*d-%d-%s.png", digits, f.slide+1, f.step+1, sizeName(size))
+			name := fmt.Sprintf("frames/%s-%d-%s.png", slideNumber(f.slide+1, len(d.Slides)), f.step+1, sizeName(size))
 			save(annotate(f, title), name)
 			k := [2]int{f.slide, f.step}
 			r.frames[k] = append(r.frames[k], name)

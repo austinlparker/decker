@@ -96,7 +96,8 @@ func (d *Deck) review(sizes [][2]int, each func(*reviewedFrame)) {
 func (d *Deck) reviewFrame(i, step int, sz [2]int) *reviewedFrame {
 	s := d.Slides[i]
 	log := newReviewLog(sz[0], 2*sz[1])
-	c := Ctx{W: sz[0], H: sz[1], T: Settled, Step: step, StepT: Settled, Theme: d.Theme, review: log}.at(d.Slides, i)
+	c := d.withTheme(i, stillCtx(sz[0], sz[1], step, Settled))
+	c.review = log
 	f := &reviewedFrame{slide: i, step: step, w: sz[0], h: sz[1], sc: renderSlide(s, c)}
 	log.flush()
 	f.elems = log.elems

@@ -21,6 +21,7 @@ func drawSlide(s Slide, c Ctx) *Scene {
 	sc := NewScene(c.W, c.H, c.Theme)
 	sc.slide, sc.ctx, sc.title = true, c, s.Title
 	sc.Px.review = c.review
+	sc.drawing = "View"
 	if s.View != nil {
 		sc.safely(func() { s.View(c, sc) })
 	}
@@ -35,6 +36,7 @@ func (s *Scene) finish() {
 	}
 	s.finished = true
 	s.safely(func() {
+		s.drawing = "a placed element"
 		for _, e := range s.placed {
 			if s.ctx.review == nil {
 				e.draw(s.Px, e.r)
@@ -60,15 +62,12 @@ func (s *Scene) drawOwned(e placed) {
 		e.draw(p, e.r)
 		return
 	}
-	w := x1 - x0 + 1
-	before := make([]RGB, w*(y1-y0+1))
-	for y := y0; y <= y1; y++ {
-		copy(before[(y-y0)*w:(y-y0+1)*w], p.Pix[y*p.W+x0:y*p.W+x1+1])
-	}
+	before := snapshot(p, x0, y0, x1, y1)
+	defer layers.put(before)
 	e.draw(p, e.r)
 	for y := y0; y <= y1; y++ {
 		for x := x0; x <= x1; x++ {
-			if p.Pix[y*p.W+x] != before[(y-y0)*w+x-x0] {
+			if i := y*p.W + x; p.Pix[i] != before.Pix[i] {
 				l.inkAt(l.scopeID, x, y)
 			}
 		}
@@ -81,13 +80,14 @@ func (s *Scene) overlay() {
 			l.overlay = true
 			defer func() { l.overlay = false }()
 		}
+		s.drawing = "Theme.Overlay"
 		s.ctx.Theme.Overlay(s.ctx, s.Px)
 	}
 }
 
 // safely runs f, which draws on s; if f panics, a slide's scene shows the
-// panic instead of whatever was drawn. Off-screen scenes let it through to
-// the View that made them.
+// panic instead of whatever was drawn, and keeps it for err. Off-screen
+// scenes let it through to the View that made them.
 func (s *Scene) safely(f func()) {
 	if !s.slide {
 		f()
@@ -103,7 +103,7 @@ func (s *Scene) safely(f func()) {
 
 func (s *Scene) showPanic(r any) {
 	s.clear(s.ctx.Theme)
-	s.finished = true
+	s.finished, s.fault = true, r
 	c := s.ctx
 	if l := s.Px.review; l != nil {
 		l.overlay, l.scope = false, ""
@@ -114,10 +114,21 @@ func (s *Scene) showPanic(r any) {
 		Draw(s.Px, fmt.Sprintf("slide %q panicked:\n\n%v", s.title, r), c.X(0.05), c.Y(0.05))
 }
 
+// err is the panic the scene showed as an error naming slide i (0-based)
+// and the part of it that panicked, or nil if nothing did. A panic value
+// that is an error is wrapped.
+func (s *Scene) err(i int) error {
+	switch r := s.fault.(type) {
+	case nil:
+		return nil
+	case error:
+		return fmt.Errorf("slide %d %q: %s panicked: %w", i+1, s.title, s.drawing, r)
+	default:
+		return fmt.Errorf("slide %d %q: %s panicked: %v", i+1, s.title, s.drawing, r)
+	}
+}
+
 // renderSlideGrid is renderSlide as cells; the caller releases the grid.
 func renderSlideGrid(s Slide, c Ctx) *grid {
-	sc := renderSlide(s, c)
-	g := sc.toGrid()
-	sc.Release()
-	return g
+	return renderSlide(s, c).flatten()
 }

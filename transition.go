@@ -344,7 +344,7 @@ func dissolve(from, to *Scene, p float64, _ Direction, _ *Theme) {
 			}
 		}
 	}
-	moveChars(from, to, func(x, y int, fromOld bool) (int, int, bool) { return x, y, old(x, y) == fromOld })
+	keepChars(from, to, func(x, y int, fromOld bool) bool { return old(x, y) == fromOld })
 }
 
 // wipe sweeps an edge across in the theme's accent, fading to the background
@@ -387,14 +387,14 @@ func wipe(from, to *Scene, p float64, side Direction, t *Theme) {
 			}
 		}
 	}
-	moveChars(from, to, func(x, y int, old bool) (int, int, bool) {
+	keepChars(from, to, func(x, y int, old bool) bool {
 		d0, d1 := behind(x), behind(x)
 		if !horiz {
 			d0, d1 = behind(2*y), behind(2*y+1)
 		}
 		if old {
-			return x, y, max(d0, d1) < 0
+			return max(d0, d1) < 0
 		}
-		return x, y, min(d0, d1) >= band
+		return min(d0, d1) >= band
 	})
 }

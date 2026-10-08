@@ -315,10 +315,7 @@ func (m model) frame() *grid {
 		return blankGrid(m.w, m.h, m.blank.color())
 	}
 	bodyH, panels := m.layout()
-	sc := m.body(bodyH)
-	sc.finish()
-	body := sc.toGrid()
-	sc.Release()
+	body := m.body(bodyH).flatten()
 	if m.showHelp {
 		hb := m.helpBox()
 		w, h := lipgloss.Size(hb)
@@ -386,7 +383,7 @@ func (m model) panels() string {
 	if m.showNotes {
 		notes := m.cur().Notes
 		if notes == "" {
-			notes = "(no notes for this slide)"
+			notes = noNotes
 		}
 		out = append(out, panel("notes", notes, m.theme.Accent2, max(m.h/4, 3)))
 	}
@@ -397,13 +394,13 @@ func (m model) chrome() string {
 	n := len(m.slides)
 	var right []string
 	if m.count != "" {
-		right = append(right, m.st.accent2.Render("go to "+m.count+"…"))
+		right = append(right, m.st.jumping(m.count))
 	}
 	if m.dev != nil {
 		right = append(right, m.dev.status(m.st))
 	}
 	if s := m.cur().steps(); s > 1 {
-		right = append(right, m.st.accent.Render(strings.Repeat("●", m.step+1))+m.st.faint.Render(strings.Repeat("○", s-m.step-1)))
+		right = append(right, m.st.meter("●", "○", m.step+1, s))
 	}
 	if m.cur().Notes != "" {
 		right = append(right, m.st.faint.Render("✎"))
@@ -412,7 +409,7 @@ func (m model) chrome() string {
 	r := " " + strings.Join(right, "  ")
 	barW := max(m.w-lipgloss.Width(r), 0)
 	filled := barW * (m.idx + 1) / n
-	return m.st.accent.Render(strings.Repeat("▁", filled)) + m.st.faint.Render(strings.Repeat("▁", barW-filled)) + r
+	return m.st.meter("▁", "▁", filled, barW) + r
 }
 
 func (m model) helpBox() string {

@@ -136,11 +136,6 @@ func (f frameFlags) check() error {
 	return nil
 }
 
-// still renders slide idx at step, at the frame's size and moment.
-func (f frameFlags) still(d *Deck, idx, step int) *grid {
-	return renderSlideGrid(d.Slides[idx], Ctx{W: f.Width, H: f.Height, T: f.Time, Step: step, StepT: f.Time, Theme: d.Theme}.at(d.Slides, idx))
-}
-
 type liveCmd struct {
 	position
 	deckFlags
@@ -222,10 +217,10 @@ func (listCmd) Run(d *Deck) error {
 func listSlides(d *Deck) {
 	for i, s := range d.Slides {
 		sec := ""
-		if name := sectionAt(d.Slides, i); name != "" {
+		if name := d.Section(i); name != "" {
 			sec = "  [" + name + "]"
 		}
-		fmt.Printf("%3d  %s (%s)%s\n", i+1, s.Title, plural(s.steps(), "step"), sec)
+		fmt.Printf("%3d  %s (%s)%s\n", i+1, s.Title, plural(d.Steps(i), "step"), sec)
 	}
 }
 
@@ -264,7 +259,7 @@ func (c snapshotCmd) Run(d *Deck) error {
 	if n := d.Slides[c.Slide-1].steps(); c.Step < 1 || c.Step > n {
 		return fmt.Errorf("--step %d: slide %d has builds 1 to %d", c.Step, c.Slide, n)
 	}
-	g := c.still(d, c.Slide-1, c.Step-1)
+	g := d.still(c.Slide-1, c.Step-1, c.Time, c.Width, c.Height)
 	if c.PNG != "" {
 		return writePNG(g, c.PNG)
 	}
@@ -287,8 +282,8 @@ func (c sheetCmd) Validate() error {
 
 func (c sheetCmd) Run(d *Deck) error {
 	var frames []*grid
-	for i, s := range d.Slides {
-		frames = append(frames, c.still(d, i, s.steps()-1))
+	for i := range d.Slides {
+		frames = append(frames, d.still(i, d.Steps(i)-1, c.Time, c.Width, c.Height))
 	}
 	return writeSheet(frames, c.Shrink, c.File)
 }

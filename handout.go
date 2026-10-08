@@ -25,7 +25,7 @@ func (c handoutCmd) Run(d *Deck) error {
 	}
 	thumbs := thumbNames(len(d.Slides))
 	for i, s := range d.Slides {
-		g := c.still(d, i, s.steps()-1)
+		g := d.still(i, s.steps()-1, c.Time, c.Width, c.Height)
 		err := writePNG(g, filepath.Join(c.Dir, thumbs[i]))
 		g.release()
 		if err != nil {
@@ -39,15 +39,20 @@ func (c handoutCmd) Run(d *Deck) error {
 	return nil
 }
 
-// thumbNames names n thumbnails 01.png, 02.png and on, padded to the same
-// width so they sort in slide order.
+// thumbNames names n thumbnails 01.png, 02.png and on.
 func thumbNames(n int) []string {
-	digits := max(len(strconv.Itoa(n)), 2)
 	names := make([]string, n)
 	for i := range names {
-		names[i] = fmt.Sprintf("%0*d.png", digits, i+1)
+		names[i] = slideNumber(i+1, n) + ".png"
 	}
 	return names
+}
+
+// slideNumber is the 1-based slide number n of a deck of last slides, for a
+// file name: padded with zeros to the width of last, and to at least two
+// digits, so the files sort in slide order.
+func slideNumber(n, last int) string {
+	return fmt.Sprintf("%0*d", max(len(strconv.Itoa(last)), 2), n)
 }
 
 // handoutMarkdown is handout.md, with thumbs[i] as slide i's image: the deck,
@@ -55,11 +60,7 @@ func thumbNames(n int) []string {
 // the slides that cite it.
 func handoutMarkdown(d *Deck, thumbs []string) string {
 	var b strings.Builder
-	builds := 0
-	for _, s := range d.Slides {
-		builds += s.steps()
-	}
-	fmt.Fprintf(&b, "# %s\n\n%s, %s.\n", mdText(d.Name), plural(len(d.Slides), "slide"), plural(builds, "build"))
+	fmt.Fprintf(&b, "# %s\n\n%s, %s.\n", mdText(d.Name), plural(len(d.Slides), "slide"), plural(d.builds(), "build"))
 
 	// One entry per source, in order of first citation. A URL identifies a
 	// source, whatever each slide calls it; without one, its label does.
