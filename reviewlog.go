@@ -31,8 +31,8 @@ type reviewLog struct {
 	small []smallText
 
 	// owner says which element last inked each pixel of the canvas (w×h):
-	// 0 for none, else an index+1 into elems. Overlaps between elements, and
-	// the overlay drawing over one, are found from it.
+	// 0 for none, else an index+1 into elems. Overlaps between elements are
+	// found from it.
 	w, h     int
 	owner    []int32
 	elems    []reviewElem
@@ -40,7 +40,8 @@ type reviewLog struct {
 }
 
 // reviewElem is something a frame drew: a stock component, a block of text
-// drawn on its own, or a placed element. Review images outline them.
+// drawn on its own, or a placed element. Overlaps are between elements, and
+// review images outline them.
 type reviewElem struct {
 	name string
 	r    Rect
@@ -126,28 +127,12 @@ func (l *reviewLog) noteSmall(name string, size, least int, box Rect) {
 		if s := &l.small[i]; s.owner == owner && s.overlay == l.overlay {
 			s.n++
 			s.lo, s.hi = min(s.lo, size), max(s.hi, size)
-			s.box = s.box.Union(box)
+			s.box = unionRect(s.box, box)
 			return
 		}
 	}
 	l.small = append(l.small, smallText{owner: owner, n: 1, lo: size, hi: size, least: least, box: box,
 		overlay: l.overlay, scoped: scoped, firstOfMany: name})
-}
-
-// overlayDrew compares the canvas before the theme's overlay drew with
-// after, and reports each element the overlay drew over.
-func (l *reviewLog) overlayDrew(before, after []RGB) {
-	over := map[int32]int{}
-	for i := range l.owner {
-		if after[i] != before[i] && l.owner[i] != 0 {
-			over[l.owner[i]]++
-		}
-	}
-	for _, id := range slices.Sorted(maps.Keys(over)) {
-		if e := l.elems[id-1]; over[id] >= 4 {
-			l.add(SeverityWarning, "overlay-collision", e.r, "Theme.Overlay draws over "+e.name)
-		}
-	}
 }
 
 // flush turns what was gathered while the frame drew (small text, overlaps)
@@ -184,7 +169,7 @@ func (l *reviewLog) flush() {
 			continue
 		}
 		found[k] = true
-		l.add(SeverityWarning, "overlap", a.r.Intersect(b.r), a.name+" and "+b.name+" overlap")
+		l.add(SeverityWarning, "overlap", intersectRect(a.r, b.r), a.name+" and "+b.name+" overlap")
 	}
 	// Two blocks of text whose lines run into each other share few inked
 	// pixels, descenders on capitals, so their line boxes say it instead:
@@ -197,12 +182,24 @@ func (l *reviewLog) flush() {
 				continue
 			}
 			least := float64(min(a.size, b.size))
-			if in := a.r.Intersect(b.r); in.H >= least/3 && in.W >= least {
+			if in := intersectRect(a.r, b.r); in.H >= least/3 && in.W >= least {
 				l.add(SeverityWarning, "overlap", in, a.name+" and "+b.name+" overlap")
 			}
 		}
 	}
 	l.overlaps = nil
+}
+
+// unionRect is the smallest rect holding a and b.
+func unionRect(a, b Rect) Rect {
+	x0, y0 := min(a.X, b.X), min(a.Y, b.Y)
+	return Rect{x0, y0, max(a.Right(), b.Right()) - x0, max(a.Bottom(), b.Bottom()) - y0}
+}
+
+// intersectRect is where a and b meet, with no width or height if they don't.
+func intersectRect(a, b Rect) Rect {
+	x0, y0 := max(a.X, b.X), max(a.Y, b.Y)
+	return Rect{x0, y0, max(min(a.Right(), b.Right())-x0, 0), max(min(a.Bottom(), b.Bottom())-y0, 0)}
 }
 
 // add records an issue, once: an element drawn twice in a frame (a moved

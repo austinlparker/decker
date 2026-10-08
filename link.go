@@ -22,9 +22,6 @@ type linkState struct {
 	// Blank is "black" or "white" while the deck's screen is blanked, else
 	// empty (and left out, so an unblanked state is the same JSON as before).
 	Blank string `json:"blank,omitempty"`
-	// Sources are the current slide's, left out when it has none, so such a
-	// slide's state is the same JSON as before sources existed.
-	Sources []Source `json:"sources,omitempty"`
 }
 
 // linkOutline is one slide in the deck's running order. It comes from the

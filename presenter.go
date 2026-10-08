@@ -363,25 +363,14 @@ func (p presenter) mainView() string {
 	}
 
 	notes := p.st.Notes
-	if len(p.st.Sources) > 0 {
-		// The sources' own blank line separates them; a trailing newline
-		// would add a second.
-		notes = strings.TrimRight(notes, "\n")
-	}
 	if notes == "" {
 		notes = p.sty.faint.Render("(no notes for this slide)")
 	}
 	lines := strings.Split(lipgloss.NewStyle().Width(inner).Foreground(p.theme.Text.Color()).Render(notes), "\n")
-	sources := p.sourceLines(inner)
-	sourceNeed := 0
-	if len(sources) > 0 {
-		sourceNeed = 2 + len(sources) // a blank line, then the SOURCES label
+	if avail := rest - 1; len(lines) > avail { // the NOTES label takes a line
+		lines = append(lines[:max(avail-1, 0)], p.sty.faint.Render("…"))
 	}
-	noteRoom, sourceRoom := share(rest, 1+len(lines), sourceNeed) // the NOTES label takes a line
-	noteBlock := p.sty.accent2.Render("NOTES") + "\n" + strings.Join(p.clip(lines, noteRoom-1), "\n")
-	if len(sources) > 0 {
-		noteBlock += "\n\n" + p.sty.accent2.Render("SOURCES") + "\n" + strings.Join(p.clip(sources, sourceRoom-2), "\n")
-	}
+	noteBlock := p.sty.accent2.Render("NOTES") + "\n" + strings.Join(lines, "\n")
 
 	launchStatus := ""
 	if p.launching {
@@ -397,46 +386,6 @@ func (p presenter) mainView() string {
 	top := indent(strings.Join(parts, "\n"), strings.Repeat(" ", presMargin))
 	gap := max(p.h-lipgloss.Height(top)-footerLines, 0)
 	return top + strings.Repeat("\n", gap) + "\n" + p.footer()
-}
-
-// sourceLines are the current slide's sources, one line each, cut to w.
-func (p presenter) sourceLines(w int) []string {
-	var out []string
-	for _, s := range p.st.Sources {
-		line := p.sty.text.Render(strings.ReplaceAll(s.name(), "\n", " "))
-		if s.Label != "" && s.URL != "" {
-			line += p.sty.muted.Render(" — " + s.URL)
-		}
-		out = append(out, truncate(line, w))
-	}
-	return out
-}
-
-// share splits n lines between two blocks that want a and b. Both get what
-// they want if it fits; otherwise each keeps at least half, or all it wants
-// if that's less, so long notes can't push the sources off the screen or the
-// other way round.
-func share(n, a, b int) (int, int) {
-	n = max(n, 0)
-	switch half := (n + 1) / 2; {
-	case a+b <= n:
-		return a, b
-	case a <= half:
-		return a, n - a
-	case b <= n-half:
-		return n - b, b
-	default:
-		return half, n - half
-	}
-}
-
-// clip cuts lines to n, the last one an ellipsis; a block with no room at
-// all still shows the ellipsis.
-func (p presenter) clip(lines []string, n int) []string {
-	if len(lines) <= n {
-		return lines
-	}
-	return append(lines[:max(n-1, 0)], p.sty.faint.Render("…"))
 }
 
 // footerLines is the footer's height: a rule, the timer line, and keys.

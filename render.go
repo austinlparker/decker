@@ -2,7 +2,6 @@ package decker
 
 import (
 	"fmt"
-	"slices"
 	"strconv"
 )
 
@@ -52,12 +51,8 @@ func (s *Scene) finish() {
 func (s *Scene) overlay() {
 	if s.slide && s.ctx.Theme.Overlay != nil {
 		if l := s.Px.review; l != nil {
-			before := slices.Clone(s.Px.Pix)
 			l.overlay = true
-			defer func() {
-				l.overlay = false
-				l.overlayDrew(before, s.Px.Pix)
-			}()
+			defer func() { l.overlay = false }()
 		}
 		s.ctx.Theme.Overlay(s.ctx, s.Px)
 	}

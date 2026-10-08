@@ -95,10 +95,7 @@
 12.1 Cycle ring 682x171 warning text-offcanvas: Text "loop=false th=0.00 act=-1" runs 3px past the bottom edge
 12.2 Cycle ring 682x171 warning text-offcanvas: Text "loop=false th=0.00 act=-1" runs 3px past the bottom edge
 12.3 Cycle ring 682x171 warning text-offcanvas: Text "loop=true th=4.08 act=2" runs 3px past the bottom edge
-12.4 Cycle ring 240x67 warning step-unchanged: build 4 looks the same as build 3, settled and while it enters: check Steps and the step numbers given to c.Reached and c.Since
-12.4 Cycle ring 320x90 warning step-unchanged: build 4 looks the same as build 3, settled and while it enters: check Steps and the step numbers given to c.Reached and c.Since
 12.4 Cycle ring 682x171 warning text-offcanvas: Text "loop=true th=4.08 act=2" runs 3px past the bottom edge
-12.4 Cycle ring 682x171 warning step-unchanged: build 4 looks the same as build 3, settled and while it enters: check Steps and the step numbers given to c.Reached and c.Since
 13.1 Bullets 240x67 error overflow: BulletList needs 101×107px, has 101×67px
 13.1 Bullets 320x90 error overflow: BulletList needs 134×156px, has 134×90px
 13.1 Bullets 682x171 error overflow: BulletList needs 286×248px, has 286×171px
@@ -129,7 +126,6 @@
 19.4 Builds 240x67 error text-offcanvas: Text "step 3  since0 99.00  since…" runs 86px past the right edge
 19.4 Builds 320x90 error text-offcanvas: Text "step 3  since0 99.00  since…" runs 116px past the right edge
 19.4 Builds 682x171 error text-offcanvas: Text "step 3  since0 99.00  since…" runs 154px past the right edge
-24.1 Position 240x67 warning overlay-collision: Theme.Overlay draws over Text "24 / 54"
 36.1 Element animations 240x67 warning text-small: Panel: 2 texts at 8px, such as Text "ZoomIn,…"; the smallest readable size here is 9px
 36.1 Element animations 320x90 warning text-small: Panel: 2 texts at 11px, such as Text "ZoomIn,…"; the smallest readable size here is 12px
 36.2 Element animations 240x67 warning text-small: Panel: 2 texts at 8px, such as Text "ZoomIn,…"; the smallest readable size here is 9px
@@ -162,15 +158,12 @@
 42.1 Bar and line charts 240x67 warning text-small: BarChart: 6 texts at 7–8px, such as Text "12"; the smallest readable size here is 9px
 42.1 Bar and line charts 320x90 warning text-small: BarChart: 6 texts at 9–11px, such as Text "12"; the smallest readable size here is 12px
 42.1 Bar and line charts 682x171 warning text-small: BarChart: 2 texts at 20–22px, such as Text "-4"; the smallest readable size here is 23px
-42.2 Bar and line charts 240x67 warning overlay-collision: Theme.Overlay draws over LineChart
 42.2 Bar and line charts 240x67 warning text-small: BarChart: 6 texts at 7–8px, such as Text "12"; the smallest readable size here is 9px
-42.2 Bar and line charts 320x90 warning overlay-collision: Theme.Overlay draws over LineChart
 42.2 Bar and line charts 320x90 warning text-small: BarChart: 6 texts at 9–11px, such as Text "12"; the smallest readable size here is 12px
 42.2 Bar and line charts 682x171 warning text-small: BarChart: 2 texts at 20–22px, such as Text "-4"; the smallest readable size here is 23px
 43.1 Chart options 240x67 warning text-small: BarChart: 4 texts at 6px, such as Text "Search"; the smallest readable size here is 9px
 43.1 Chart options 320x90 warning text-small: BarChart: 4 texts at 9px, such as Text "Search"; the smallest readable size here is 12px
 43.1 Chart options 682x171 warning text-small: BarChart: 4 texts at 20px, such as Text "Search"; the smallest readable size here is 23px
-43.2 Chart options 240x67 warning overlay-collision: Theme.Overlay draws over LineChart
 43.2 Chart options 240x67 warning text-small: BarChart: 4 texts at 6px, such as Text "Search"; the smallest readable size here is 9px
 43.2 Chart options 320x90 warning text-small: BarChart: 4 texts at 9px, such as Text "Search"; the smallest readable size here is 12px
 43.2 Chart options 320x90 warning text-small: LineChart: 5 texts at 10px, such as Text "Jan"; the smallest readable size here is 12px
@@ -244,20 +237,15 @@
 48.1 Table 682x171 warning table-cell-cut: Table "Engine": 4 cells cut short at 23px text
 48.1 Table 682x171 error table-rows-dropped: Table "n": 36 of 40 rows don't fit in 171px at 23px text
 48.1 Table 682x171 warning table-cell-cut: Table "n": 5 cells cut short at 23px text
-50.4 Table columns 240x67 warning step-unchanged: build 4 looks the same as build 3, settled and while it enters: check Steps and the step numbers given to c.Reached and c.Since
-50.4 Table columns 320x90 warning step-unchanged: build 4 looks the same as build 3, settled and while it enters: check Steps and the step numbers given to c.Reached and c.Since
-50.4 Table columns 682x171 warning step-unchanged: build 4 looks the same as build 3, settled and while it enters: check Steps and the step numbers given to c.Reached and c.Since
-54.1 Code overflow 240x67 info code-unseen: Code (go, 30 lines): lines 10–11, 21 never scroll into view
-54.1 Code overflow 240x67 warning text-small: Code (go, 8 lines) is set at 6px to fit; the smallest readable size here is 9px
-54.1 Code overflow 240x67 error code-clipped: Code (go, 8 lines): 6 of 8 lines visible (needs 67px tall, has 55px) at 6px
-54.1 Code overflow 320x90 warning text-small: Code (go, 8 lines) is set at 6px to fit; the smallest readable size here is 12px
-54.1 Code overflow 682x171 info code-unseen: Code (go, 30 lines): lines 10–11, 21 never scroll into view
-54.1 Code overflow 682x171 warning text-small: Code (go, 8 lines) is set at 12px to fit; the smallest readable size here is 23px
-54.2 Code overflow 240x67 warning text-small: Code (go, 8 lines) is set at 6px to fit; the smallest readable size here is 9px
-54.2 Code overflow 240x67 error code-clipped: Code (go, 8 lines): 6 of 8 lines visible (needs 67px tall, has 55px) at 6px
-54.2 Code overflow 320x90 warning text-small: Code (go, 8 lines) is set at 6px to fit; the smallest readable size here is 12px
-54.2 Code overflow 682x171 warning text-small: Code (go, 8 lines) is set at 12px to fit; the smallest readable size here is 23px
-54.3 Code overflow 240x67 warning text-small: Code (go, 8 lines) is set at 6px to fit; the smallest readable size here is 9px
-54.3 Code overflow 240x67 error code-clipped: Code (go, 8 lines): 6 of 8 lines visible (needs 67px tall, has 55px) at 6px
-54.3 Code overflow 320x90 warning text-small: Code (go, 8 lines) is set at 6px to fit; the smallest readable size here is 12px
-54.3 Code overflow 682x171 warning text-small: Code (go, 8 lines) is set at 12px to fit; the smallest readable size here is 23px
+53.1 Code overflow 240x67 warning text-small: Code (go, 8 lines) is set at 6px to fit; the smallest readable size here is 9px
+53.1 Code overflow 240x67 error code-clipped: Code (go, 8 lines): 6 of 8 lines visible (needs 67px tall, has 55px) at 6px
+53.1 Code overflow 320x90 warning text-small: Code (go, 8 lines) is set at 6px to fit; the smallest readable size here is 12px
+53.1 Code overflow 682x171 warning text-small: Code (go, 8 lines) is set at 12px to fit; the smallest readable size here is 23px
+53.2 Code overflow 240x67 warning text-small: Code (go, 8 lines) is set at 6px to fit; the smallest readable size here is 9px
+53.2 Code overflow 240x67 error code-clipped: Code (go, 8 lines): 6 of 8 lines visible (needs 67px tall, has 55px) at 6px
+53.2 Code overflow 320x90 warning text-small: Code (go, 8 lines) is set at 6px to fit; the smallest readable size here is 12px
+53.2 Code overflow 682x171 warning text-small: Code (go, 8 lines) is set at 12px to fit; the smallest readable size here is 23px
+53.3 Code overflow 240x67 warning text-small: Code (go, 8 lines) is set at 6px to fit; the smallest readable size here is 9px
+53.3 Code overflow 240x67 error code-clipped: Code (go, 8 lines): 6 of 8 lines visible (needs 67px tall, has 55px) at 6px
+53.3 Code overflow 320x90 warning text-small: Code (go, 8 lines) is set at 6px to fit; the smallest readable size here is 12px
+53.3 Code overflow 682x171 warning text-small: Code (go, 8 lines) is set at 12px to fit; the smallest readable size here is 23px

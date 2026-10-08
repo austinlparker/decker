@@ -141,3 +141,20 @@ func TestThumbNames(t *testing.T) {
 		}
 	}
 }
+
+const otelURL = "https://opentelemetry.io/docs/specs/otel/logs/data-model/"
+
+// citedDeck has a slide with no sources, one with two, and one citing the
+// same two again: the first by its URL under another label, the second by
+// its label alone.
+func citedDeck() *Deck {
+	return &Deck{Name: "cited", Theme: testTheme, Slides: []Slide{
+		{Title: "Opening", Section: "Intro",
+			Sources: []Source{{Label: "Go (language)", URL: "https://en.wikipedia.org/wiki/Go_(programming_language)"}}},
+		{Title: "Logs *and* traces", Steps: 2, Notes: "Say why logs matter.\n\nThen the model.\n",
+			Sources: []Source{{Label: "OpenTelemetry Logs Data Model, v1.40", URL: otelURL}, {Label: "A book, ch. 3"}}},
+		{Title: "Again", Section: "Detail",
+			Sources: []Source{{Label: "OTel logs", URL: otelURL}, {Label: "A book, ch. 3"}}},
+		{Title: "Plain"},
+	}}
+}

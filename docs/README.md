@@ -23,8 +23,8 @@ go run ./examples/hello -snapshot -step 2 -w 240 -h 67 -png docs/assets/hello.pn
 
 Two more examples are for talk authors. The [starter](../examples/starter) is a
 talk to copy, with an `AGENTS.md` for its repository. The
-[recipes](../examples/recipes) are visuals built from primitives (a trace
-waterfall, an architecture diagram, a request flow) to copy and change.
+[recipes](../examples/recipes) are visuals built from primitives, starting
+with a trace waterfall, to copy and change.
 Both review clean with `go run ./examples/starter -review review`.
 
 The README's example clips come from the [showcase example](../examples/showcase/main.go).

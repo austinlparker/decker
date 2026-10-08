@@ -43,7 +43,7 @@ func TestGalleryReview(t *testing.T) {
 	d := gallery()
 	var b strings.Builder
 	b.WriteString("# What Deck.Review finds in the gallery. Regenerate with UPDATE_GOLDEN=1 go test -run TestGalleryReview.\n")
-	for _, is := range d.Review(ReviewOptions{}) {
+	for _, is := range d.Review() {
 		b.WriteString(is.String() + "\n")
 	}
 	const path = "testdata/gallery-review.golden"
@@ -201,7 +201,6 @@ func gallery() Deck {
 		slideTableRows(),
 		slideTableCols(),
 		slideBlockCatalog(),
-		slideSources(),
 		slideScales(),
 		slideCodeOverflow(),
 	}}
@@ -1734,37 +1733,9 @@ func slideTableCols() Slide {
 		}}
 }
 
-// slideSources draws a citation footer from c.Sources(), the slide's own
-// Slide.Sources, as a Theme.Overlay would: labels only, linked ones in the
-// accent color, since URLs are too long for a slide and belong in the
-// handout.
-func slideSources() Slide {
-	return Slide{Title: "Sources", Notes: "Slide.Sources and Ctx.Sources", Transition: TransitionDefault,
-		Sources: []Source{
-			{Label: "OpenTelemetry Logs Data Model, v1.40", URL: "https://opentelemetry.io/docs/specs/otel/logs/data-model/"},
-			{Label: "The Go Programming Language, ch. 7"},
-		},
-		View: func(c Ctx, sc *Scene) {
-			p, th := sc.Px, c.Theme
-			top := heading(c, p, "Sources")
-			size, text := th.Body.Fit("A log record has a timestamp, a severity, a body and attributes. [1]", c.X(0.9), c.Y(0.4), c.Size(0.09), 0)
-			Text{Font: th.Body, Size: size, Color: th.Text}.Draw(p, text, c.X(0.03), top+c.Y(0.04))
-			y := c.Y(0.7)
-			for i, s := range c.Sources() {
-				cite := Text{Font: th.Body, Size: c.SmallText(th.Body), Color: th.Muted, MaxW: c.X(0.94)}
-				if s.URL != "" {
-					cite.Color = th.Accent2
-				}
-				_, h := cite.Draw(p, fmt.Sprintf("[%d] %s", i+1, s.Label), c.X(0.03), y)
-				y += h
-			}
-		}}
-}
-
 // slideScales exercises the primitives for purpose-built visuals: a trace
-// waterfall on a seconds axis from a Scale, a plate sized to wrapped text by
-// Text.Measure, and two boxes compared with Intersect, Union, Overlaps and
-// Contains as one glides into the other.
+// waterfall on a seconds axis from a Scale, and a plate sized to wrapped
+// text by Text.Measure.
 func slideScales() Slide {
 	spans := []struct {
 		name       string
@@ -1778,7 +1749,6 @@ func slideScales() Slide {
 	return Slide{Title: "Scales and measures", Transition: TransitionPush,
 		View: func(c Ctx, sc *Scene) {
 			p, th := sc.Px, c.Theme
-			outline := func(r Rect, col RGB) { p.RoundRect(r.X, r.Y, r.W, r.H, 1, 1, col, 1) }
 			top := heading(c, p, "Scales and measures")
 			gap := c.Unit(0.02)
 			page := NewRect(c.X(0.03), top+gap, c.X(0.94), c.Y(0.97)-top-gap)
@@ -1822,31 +1792,6 @@ func slideScales() Slide {
 			p.RoundRect(plate.X, plate.Y, plate.W, plate.H, pad, 0, th.Panel, 1)
 			p.RoundRect(plate.X, plate.Y, plate.W, plate.H, pad, 1, th.Accent, 1)
 			note.Draw(p, caption, plate.X+pad, plate.Y+pad)
-
-			// Two boxes: b glides in from overhanging the area (Contains
-			// warns) to overlapping a, their union framed, their overlap
-			// filled, and Overlaps writing the caption.
-			_, boxes := right.CutTop(plate.H + gap)
-			status, boxes := boxes.CutBottom(tickH + gap/2)
-			a := boxes.Sub(0.05, 0.05, 0.5, 0.6)
-			b := boxes.Sub(Lerp(0.8, 0.3, Ease(c.T-0.3, 1.2)), 0.35, 0.38, 0.6)
-			u := a.Union(b)
-			outline(u.Inset(-2, -2), th.Faint)
-			if i := a.Intersect(b); a.Overlaps(b) {
-				p.Rect(i.X, i.Y, i.W, i.H, th.Good, 0.6)
-			}
-			outline(a, th.Accent2)
-			bc := th.Accent
-			if !boxes.Contains(b) {
-				bc = th.Warn
-			}
-			outline(b, bc)
-			msg := "apart"
-			if a.Overlaps(b) {
-				msg = "overlap"
-			}
-			ticks.Align = Left
-			ticks.Draw(p, msg, status.X, status.Y+gap/2)
 		}}
 }
 

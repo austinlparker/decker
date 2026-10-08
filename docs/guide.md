@@ -128,7 +128,6 @@ go run . -presenter          # the presenter view, in a second window
 go run . -presenter -presentation-font-size 5 # p opens the deck at 5pt in Ghostty
 go run . -list               # slide titles, step counts and sections
 go run . -review review      # check every build at three sizes for clipped or lost content
-go run . -list -json         # the same outline as JSON, with notes and sources
 go run . -handout handout    # handout/handout.md: thumbnails, notes and sources
 go run . -snapshot -slide 6 -step 4 -t 2.5 -w 240 -h 67 -png frame.png
 go run . -sheet sheet.png -w 682 -h 171 -shrink 8
@@ -151,15 +150,14 @@ every slide at its last step, four across.
 `-review DIR` checks every build of every slide, settled, at 240×67, 320×90
 and 682×171, and lists what is lost or hard to read: Code lines clipped,
 Table rows dropped, text off the canvas or below the readable size, a
-panic. It writes `DIR/index.md` and `DIR/report.json`, and exits non-zero
-when it finds an error. See [Reviewing a deck](#reviewing-a-deck).
+panic. It writes `DIR/index.md` with pictures of what it found, and exits
+non-zero when it finds an error. See [Reviewing a deck](#reviewing-a-deck).
 
 `-handout DIR` writes a document to rehearse from or hand out: `DIR/handout.md`
 and a thumbnail of every slide (`01.png`, `02.png`…) at its last step, at
 `-w`×`-h` cells. The Markdown gives each slide its title, section, build
 count, thumbnail, notes as written and sources, then ends with every source
-once and the slides that cite it. `-list -json` prints the outline (1-based
-slide number, title, steps, section, notes and sources) for scripts.
+once and the slides that cite it.
 
 `-video` renders the whole deck with its animations and transitions. Each
 build step stays on screen for `-hold` seconds (a slide can ask for longer
@@ -234,8 +232,7 @@ The presenter view shows:
 - the slide number, title and build step, and a `BLANK` tag while the deck is
   blanked (`b`, `w`);
 - small previews of what's on screen now and what comes next;
-- the current slide's notes, with its `Sources` under them (notes and
-  sources share the room when both are long);
+- the current slide's notes;
 - a 30-minute timer, which starts when you leave slide 1 (or press `t`);
 - a pace check: how far ahead or behind an even pace you are, counting
   build steps, so a slide with four builds gets four times a section
@@ -282,7 +279,7 @@ previews. Blanking closes the notes and help.
 Only in the presenter view: `p` opens the deck in a new Ghostty window
 (macOS), `t` starts or pauses the timer, `T` resets it.
 
-Only in the deck: `n` shows the notes and sources on the projector (a
+Only in the deck: `n` shows the notes on the projector (a
 fallback if the presenter view isn't running), `?` shows help (`esc` closes it) and
 `ctrl+l` redraws the screen. In dev mode the deck also has a one-line
 footer with the build status and slide counter. The key table is [`keys.go`](../keys.go).
@@ -339,7 +336,7 @@ func mySlide() decker.Slide {
 		Notes:      "say the thing",                 // shown in the presenter view
 		Section:    "Part one",                      // chapter; later slides inherit it until one sets another
 		Transition: decker.TransitionWipe.Over(0.6), // Push (default), Dissolve, Wipe, Morph, Fade, FadeThrough, Cover, Uncover, Split, Iris, Zoom, Pixelate, Glitch, None; Over sets seconds, From a side
-		Sources: []decker.Source{ // what it cites: presenter view, -handout, c.Sources()
+		Sources: []decker.Source{ // what it cites, for -handout
 			{Label: "OpenTelemetry Logs Data Model, v1.40", URL: "https://opentelemetry.io/docs/specs/otel/logs/data-model/"},
 		},
 		View: func(c decker.Ctx, sc *decker.Scene) {
@@ -379,10 +376,6 @@ slide. The `Ctx` it receives holds everything that changes between frames:
   of slides, and its section (`Slide.Section`, inherited from the nearest
   slide before it that sets one). They exist for `Theme.Overlay`: a page
   number, a progress bar or a chapter name on every slide.
-- `c.Sources()`: the slide's `Slide.Sources`, for a citation line drawn by the
-  slide or the overlay from the same data the presenter view and `-handout`
-  show. Don't modify the slice. Like the position, it is empty in a `Ctx`
-  built by hand.
 - `c.Theme`: the talk's colors and typefaces.
 
 A frame depends only on `Ctx`, so any moment can be replayed, snapshotted, or
@@ -454,13 +447,13 @@ Everything here is in package `decker`.
 
 | Want | Use |
 | --- | --- |
-| Layout | `Rect` (or `NewRect(x, y, w, h)` in pixels): start from `c.Frame()` or `c.Rect(fx, fy, fw, fh)`, then `Inset`, `CutTop`/`CutBottom`/`CutLeft`/`CutRight`, `Rows`/`Cols` (by weight), `Grid`, `Sub` (fractions of the rect) and `Anchor` (a box of a given size inside it); `LerpRect` animates between two. Compare placed boxes with `Intersect` (the shared box, or the zero `Rect`), `Union` (the box covering both; empty rects add nothing, so gather bounds from `Rect{}`), `Contains`, `Overlaps` (shared area, not just a touching edge) and `Empty` |
+| Layout | `Rect` (or `NewRect(x, y, w, h)` in pixels): start from `c.Frame()` or `c.Rect(fx, fy, fw, fh)`, then `Inset`, `CutTop`/`CutBottom`/`CutLeft`/`CutRight`, `Rows`/`Cols` (by weight), `Grid`, `Sub` (fractions of the rect) and `Anchor` (a box of a given size inside it); `LerpRect` animates between two |
 | Transitions | `Slide.Transition`: `TransitionPush` (default), `Cover`, `Uncover`, `Wipe`, `Split`, `Fade`, `FadeThrough`, `Dissolve`, `Iris`, `Zoom`, `Pixelate`, `Glitch`, `Morph`, `None`. `.Over(secs)` sets the time; `.From(DirLeft / DirRight / DirUp / DirDown)` sets the side of Push, Cover, Uncover and Wipe (and the axis of Split); going back plays from the opposite side. Vertical moves go in whole cell rows |
 | Magic move | `sc.Place(key, rect, draw)` on both slides, `Transition: TransitionMorph` on the second; see [Magic move](#magic-move) |
 | Big type | `Text{Font, Size, Color, To (gradient), Glow, Shine, FX, MaxW}.Draw(p, s, x, y)` with `Align`; returns width and height. `DrawMid` centers a line's ink on a y, which suits one label in a box; a row of labels (a legend, column heads) should `Draw` at one top so they share a baseline |
 | Mixed styles in a line | `Rich{Font, Size, Color, Glow, FX, MaxW}.Draw(p, spans, x, y)` with `[]Span{Text, Font, Color, Underline, Strike, Mark}`: bold a word, color a keyword, highlight, inline code, one baseline, wrapping across spans; ``ParseSpans("*bold* _muted_ `code` {accent:word}", theme)`` builds spans from light markup (see [Rich text](#rich-text)); `rich.Fit(spans, w, h, maxSize)` sizes them to a box |
 | Sizing text to a box | `font.Fit(...)`, `FitAll(...)` for several lines at one size; `Text{...}.Measure(s)` and `rich.Measure(spans)` return the size `Draw` would, without drawing, to size a plate or center a block first |
-| Checking what fits | `c.Fits(what, rect, w, h)` reports a block that doesn't fit its rect to the review; `c.Report(severity, code, rect, msg)` any other problem; `c.Reviewing()` guards costly checks; `Code.Measure(c, rect)` says what a code block shows before drawing it. See [Reviewing a deck](#reviewing-a-deck) |
+| Checking what fits | `c.Fits(what, rect, w, h)` reports a block that doesn't fit its rect to the review; `Code.Measure(c, rect)` says what a code block shows before drawing it. See [Reviewing a deck](#reviewing-a-deck) |
 | Scales and axes | `NiceScale(lo, hi, maxTicks, from, to)` maps data onto pixels with round ticks, as the charts' axes do, for axes you draw yourself (a waterfall's milliseconds): `s.At(v)` places a value, `for v := range s.Ticks()` lists the ticks, `s.Label(v)` writes one with the decimals the step needs. It survives NaN, empty and constant data; set `s.Min`/`s.Max` back afterwards to keep the data's own ends |
 | Small labels | `c.SmallText(font)`: the smallest readable size; `Label`, `Chip`, `LineLabel` (text sitting on an arrow) |
 | Block letters | `f, lines, scale := FitBlock(s, maxW, maxH, maxLines, gap, fonts...)` picks a font and scale for a pixel box; `Block{Font, Scale, Color, To, Shadow, Drop, Align, Glow, FX}.Draw(p, s, x, y)`; `BlockEffect`s for `Block.FX`: `BlockDecrypt`, `BlockRain`, `BlockBeam`, `BlockSlide`, `BlockType`, `BlockGlitch`, `BlockFade`, combined with `BlockChain` |
@@ -557,9 +550,7 @@ go run . -review review
 ```
 
 It draws every build of every slide, settled, at each size, and listens
-while the frames are drawn (the frames are the ones the deck shows). It also
-compares frames: a build that looks the same as the one before it, a slide
-that draws differently when drawn again, a morph with nothing to move. Each
+while the frames are drawn (the frames are the ones the deck shows). Each
 issue has a severity, a stable code, the rect it is about and a message with
 the numbers:
 
@@ -570,42 +561,30 @@ the numbers:
 | `text-offcanvas` | error, or a warning for the tail of a letter | `Text`, `Rich` or `Block` ink runs past an edge of the canvas |
 | `overflow` | error | a block needs more room than its rect: a `Timeline`, `Process` step, `BulletList`, cycle legend, or a slide's own `c.Fits` |
 | `panic` | error | the View, a placed element or the overlay panicked |
-| `impure` | error | the slide draws differently the second time with the same `Ctx`: it keeps state between frames or reads the clock |
 | `text-small` | warning | text below the smallest readable size (`c.SmallText`); a component's text counts once for the component |
 | `table-cell-cut` | warning | `Table` cells shortened with "..." |
 | `overlap` | warning | two elements (blocks of text, stock components, placed elements) ink the same pixels, or two blocks of text have lines running into each other |
-| `overlay-collision` | warning | `Theme.Overlay` draws over something the slide drew |
-| `step-unchanged` | warning | a build looks the same as the one before it, settled and while it enters: `Steps` is one too many, or a `c.Reached` names the wrong step |
-| `morph-unmatched` | warning | a slide enters with `TransitionMorph` but shares no `Place` key with the slide before, so it cross-fades |
-| `code-title-hidden`, `code-title-cut` | warning, note | a `Code` block's title tab has no room, or was shortened |
-| `code-unseen` | note | a `CodeScroll` block has lines that no `Focus` range brings into view |
-| `never-settles` | note | a tenth of the frame or more keeps changing after the slide settles, which the terminal must redraw every frame |
 
-`-sizes 240x67,682x171` changes the sizes, `-slide` and `-until` limit the
-slides, and `-strict` fails on warnings too. The report is also written to
-`review/index.md` (by slide and build) and `review/report.json`, whose
-slides and builds are 1-based like the command line, with pictures:
+The report is also written to `review/index.md`, by slide and build, with
+pictures:
 
 - `review/frames/11-2-320x90.png` for each build with issues: the frame,
   scaled up, with a faint outline around everything it drew and a numbered
-  box around each issue, listed under it. `-frames all` writes every build,
-  `-frames none` none.
+  box around each issue, listed under it.
 - `review/sheet-320x90.png` per size: every build at a glance, each framed
-  in the color of its worst issue (red errors, amber warnings, blue notes).
-  An intermediate build that clips shows up here even when the last one is
+  in the color of its worst issue (red errors, amber warnings). An
+  intermediate build that clips shows up here even when the last one is
   fine.
 
 The images come from the pixel canvas, so `Scene.Text`, `Put` and `Sprite`
-characters are not in them. For one frame while you work on it,
-`-snapshot -png frame.png -bounds` draws the same outlines and boxes.
+characters are not in them.
 
 A slide that means to have an issue says so: `Allow: []string{"text-offcanvas"}`
 on a headline that bleeds off the edge on purpose.
 
 Drawing of your own reports the same way. `c.Fits(what, rect, w, h)` returns
 whether a `w`×`h` block fits `rect`, and when it doesn't, records an
-`overflow` error naming `what`; `c.Report` records anything else. Both do
-nothing while presenting.
+`overflow` error naming `what`. It does nothing while presenting.
 
 ```go
 lay := layoutWaterfall(spans, r) // your own layout: pure, from the rect
@@ -616,13 +595,11 @@ c.Fits("waterfall", r, lay.W, lay.H) // the layout drawn: the review hears if ev
 ```
 
 Call `c.Fits` on the layout you draw, not on one you only try: a fallback
-that works is the slide doing its job, not an error. To leave a trace of
-what a fallback gave up, report it as a note:
-`c.Report(decker.SeverityInfo, "waterfall-labels", r, "3 duration labels left out")`.
+that works is the slide doing its job, not an error.
 
 `Code.Measure(c, rect)` returns how a code block fits before it draws:
 the size its text is set at, the plate, the lines and columns that show
-(`Shown`, `ShownCols`), the first line in view, and the plate it would need
+(`Shown`, `ShownCols`), and the plate it would need
 (`NeedW`, `NeedH`). A block too long for its rect has three ways out, all
 of which the review checks: a bigger rect, `Overflow: CodeShrink` (smaller
 text, a warning below the readable size), or `Overflow: CodeScroll` with a

@@ -12,11 +12,9 @@ go run . -dev
 go run . -presenter -length 45m
 go run . -presenter -presentation-font-size 5 -previews image
 go run . -list
-go run . -list -json
 go run . -handout handout -w 160 -h 45
 go run . -snapshot -slide 1 -step 2 -t 1.5 -w 240 -h 67 -png frame.png
-go run . -snapshot -slide 4 -step 2 -w 320 -h 90 -png frame.png -bounds
-go run . -review review -sizes 240x67,682x171
+go run . -review review
 go run . -sheet sheet.png -w 682 -h 171 -shrink 8
 go run . -video talk.mp4 -slide 1 -until 3 -size 1280x720 -fps 30 -hold 4
 ```
@@ -28,8 +26,8 @@ go run . -video talk.mp4 -slide 1 -until 3 -size 1280x720 -fps 30 -hold 4
 | No mode flag | Present interactively in the terminal |
 | `-dev` | Present and rebuild on Go source/module changes; preserve slide and step after a successful build |
 | `-presenter` | Show notes, timer and previews; `p` opens the deck in a new Ghostty window on macOS |
-| `-list` | Print slide titles, build counts and sections, then exit; with `-json`, the outline as JSON |
-| `-review DIR` | Check every build of every slide at several sizes for clipped, dropped, off-canvas or unreadable content; print the issues, write `DIR/index.md` and `DIR/report.json`, and exit non-zero on errors |
+| `-list` | Print slide titles, build counts and sections, then exit |
+| `-review DIR` | Check every build of every slide at 240×67, 320×90 and 682×171 for clipped, dropped, off-canvas, unreadable or overlapping content; print the issues, write `DIR/index.md` with pictures, and exit non-zero on errors |
 | `-handout DIR` | Write `DIR/handout.md` and a PNG thumbnail of every slide at its final step |
 | `-snapshot` | Render the selected slide and step as ANSI text to stdout, or PNG with `-png` |
 | `-sheet FILE` | Write a four-column PNG contact sheet of all slides at their final step |
@@ -43,7 +41,7 @@ to live presentation, including a deck opened with `p` from the presenter.
 
 | Flag | Default | Applies to / meaning |
 | --- | --- | --- |
-| `-slide N` | `1` | Live, presenter launch, snapshot, review, video: starting slide, **1-based** |
+| `-slide N` | `1` | Live, presenter launch, snapshot, video: starting slide, **1-based** |
 | `-step N` | `1` | Live, presenter launch, snapshot: starting build step, **1-based** |
 | `-fps N` | `60` | Live, video: frames per second; clamped to at least 1 |
 | `-t SECONDS` | `1000` (`decker.Settled`) | Snapshot, sheet, handout: time since slide and selected step began |
@@ -51,18 +49,13 @@ to live presentation, including a deck opened with `p` from the presenter.
 | `-h N` | `36` | Snapshot, sheet, handout: height in terminal **cells**; use `-help` to print usage; `-h` requires a height value |
 | `-png FILE` | empty | With `-snapshot`: write PNG instead of ANSI text |
 | `-shrink N` | `4` | Sheet: downsample each rendered frame by this factor |
-| `-json` | `false` | With `-list`: print a JSON array instead of columns |
 | `-socket PATH` | `os.TempDir()/DECK_NAME.sock` | Live, presenter: socket used to connect the two windows |
 | `-length DURATION` | `30m` | Presenter: target talk length; Go duration syntax, e.g. `45m` |
 | `-presentation-font-size PT` | `4` | Presenter: positive, finite font size in points for the Ghostty window opened with `p` |
 | `-previews MODE` | `auto` | Presenter: `auto` selects images in Ghostty/kitty outside tmux/zellij; `image` forces images; `cells` forces half-block previews |
 | `-size WIDTHxHEIGHT` | `1920x1080` | Video: output dimensions in **pixels** |
 | `-hold SECONDS` | `4` | Video: time per build step, overridden by positive `Slide.Hold` |
-| `-until N` | `0` (end) | Video, review: last included slide, **1-based** |
-| `-sizes LIST` | `240x67,320x90,682x171` | Review: frame sizes in **cells**, comma-separated |
-| `-strict` | `false` | Review: exit non-zero on warnings as well as errors |
-| `-frames MODE` | `issues` | Review: annotated frame images to write: `issues` (builds with issues), `all`, or `none` |
-| `-bounds` | `false` | Snapshot with `-png`: outline what the slide drew and box its review issues, as review images do |
+| `-until N` | `0` (end) | Video: last included slide, **1-based** |
 
 `-sheet`, `-video` and `-png` take filenames; `-handout` takes a directory. Width/height must be positive;
 use even video dimensions for the `yuv420p` H.264 encoder. Register a talk's
@@ -109,22 +102,19 @@ watched Go file after changing those assets.
 
 ## Review
 
-`-review DIR` draws every build of each slide in range, settled (as it
-looks once its animations finish), at every `-sizes` size, and prints one
+`-review DIR` draws every build of every slide, settled (as it looks once
+its animations finish), at 240×67, 320×90 and 682×171 cells, and prints one
 line per issue: slide and build (1-based), title, the sizes it happens at,
 severity, code and message. Then it writes the same issues by slide and
-build to `DIR/index.md`, and as JSON to `DIR/report.json` (slides and builds
-1-based; `rect` is `[x, y, w, h]` in canvas pixels at that size). It exits
-with status 1 when it finds an error, or with `-strict` a warning. Codes a
-slide lists in `Slide.Allow` are left out. The guide's
+build to `DIR/index.md`. It exits with status 1 when it finds an error.
+Codes a slide lists in `Slide.Allow` are left out. The guide's
 [Reviewing a deck](guide.md#reviewing-a-deck) lists the codes.
 
 It also writes images, linked from `index.md`: `DIR/frames/NN-B-WxH.png`
-for each build with issues (`-frames`), the frame from its pixel canvas
-scaled up with what it drew outlined and its issues boxed, numbered and
-listed; and `DIR/sheet-WxH.png` for each size, every build framed in the
-color of its worst issue. The images omit character-layer text, as video
-does.
+for each build with issues, the frame from its pixel canvas scaled up with
+what it drew outlined and its issues boxed, numbered and listed; and
+`DIR/sheet-WxH.png` for each size, every build framed in the color of its
+worst issue. The images omit character-layer text, as video does.
 
 ## Export behavior
 
@@ -150,30 +140,6 @@ merged by URL (by label without one), with the slides that cite it; a deck
 with no sources has no such section. The output depends only on the deck and
 the flags. Existing files of the same names are replaced; others in `DIR`
 are left alone.
-
-`-list -json` prints one object per slide:
-
-```json
-[
-  {
-    "slide": 1,
-    "title": "Logs",
-    "steps": 2,
-    "section": "Part one",
-    "notes": "say the thing",
-    "sources": [
-      {
-        "label": "OpenTelemetry Logs Data Model, v1.40",
-        "url": "https://opentelemetry.io/docs/specs/otel/logs/data-model/"
-      }
-    ]
-  }
-]
-```
-
-`slide` is 1-based, like `-slide`; `steps` is at least 1; `section` is the
-resolved section; `sources` is `[]` for a slide with none, and `url` is left
-out when a source has none.
 
 Source of truth: [`cli.go`](../cli.go), [`present_window.go`](../present_window.go),
 [`kitty.go`](../kitty.go), [`handout.go`](../handout.go), [`png.go`](../png.go),

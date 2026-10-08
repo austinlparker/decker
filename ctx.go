@@ -14,7 +14,8 @@ type Ctx struct {
 	// of slides, so an overlay can draw "12 / 40" or a progress bar. Section
 	// is the slide's resolved Slide.Section: its own, or the nearest one
 	// before it, empty before the first. All three are zero in a Ctx built by
-	// hand; Deck.At fills them in from the slide index, as the engine does.
+	// hand and not passed through the engine (Deck.Render and Deck.Draw fill
+	// them in from the slide index).
 	Index, Count int
 	Section      string
 
@@ -24,29 +25,12 @@ type Ctx struct {
 	// review collects what this frame reports under Deck.Review; nil while
 	// presenting.
 	review *reviewLog
-
-	// sources is the slide's Slide.Sources, set with the position. A pointer
-	// and not the slice itself, because a slice field would make Ctx
-	// incomparable.
-	sources *[]Source
 }
 
 // at returns c positioned at slide i of slides.
 func (c Ctx) at(slides []Slide, i int) Ctx {
 	c.Index, c.Count, c.Section = i, len(slides), sectionAt(slides, i)
-	c.sources = &slides[i].Sources
 	return c
-}
-
-// Sources returns the slide's Slide.Sources, so a View or Theme.Overlay can
-// draw a citation from the same data the presenter view and the handout
-// show. Like Index, it is set only by the engine: a Ctx built by hand
-// returns nil. The slice is the slide's own; callers must not modify it.
-func (c Ctx) Sources() []Source {
-	if c.sources == nil {
-		return nil
-	}
-	return *c.sources
 }
 
 // Reached reports whether the slide is at or past step.

@@ -15,12 +15,12 @@ package main
 //     each duration label goes (inside its bar when it fits there, else
 //     after the bar, else before it) and says how much room it all needs.
 //     Nothing is drawn yet.
-//  2. Check. The slide hands that size to c.Fits. When it doesn't fit at a
-//     readable size, the slide asks for a squeezed layout instead: no
-//     legend, only the spans that fit the height (the tail is dropped), and
-//     names shortened with "…" to a narrower column. It never shrinks the
-//     text or lets it clip, and the review reports the squeeze, so you find
-//     out before the audience does.
+//  2. Check. When that size doesn't fit the rect at a readable size, the
+//     slide asks for a squeezed layout instead: no legend, only the spans
+//     that fit the height (the tail is dropped), and names shortened with
+//     "…" to a narrower column. It never shrinks the text or lets it clip.
+//     It hands the layout it keeps to c.Fits, so the review reports it if
+//     even the squeeze doesn't fit.
 //  3. Draw. drawWaterfall paints gridlines and tick labels, then each span's
 //     tree guide, name, bar and duration label, then the legend.
 //  4. Reveal. Span i appears on build i, its bar growing from its start
@@ -72,9 +72,10 @@ func waterfallSlide() decker.Slide {
 		View: func(c decker.Ctx, sc *decker.Scene) {
 			area := heading(c, sc.Px, "Trace waterfall")
 			lay := layoutWaterfall(c, area, trace, false)
-			if !c.Fits("waterfall", area, lay.needW, lay.needH) {
+			if lay.needW > area.W || lay.needH > area.H {
 				lay = layoutWaterfall(c, area, trace, true)
 			}
+			c.Fits("waterfall", area, lay.needW, lay.needH)
 			drawWaterfall(c, sc.Px, lay, len(trace))
 		}}
 }
@@ -273,8 +274,7 @@ func drawWaterfall(c decker.Ctx, p *decker.Pixels, l waterfallLayout, hilite int
 		// The duration label, once the bar has grown.
 		lab := l.labels[i]
 		if !lab.ok {
-			c.Report(decker.SeverityWarning, "label-dropped", row, "waterfall: no room for the duration of "+s.name)
-			continue
+			continue // no room inside, after or before the bar: the bar speaks for itself
 		}
 		dur := l.text
 		dur.Color = dim(th.Muted)
@@ -285,7 +285,7 @@ func drawWaterfall(c decker.Ctx, p *decker.Pixels, l waterfallLayout, hilite int
 		dur.Draw(p, lab.text, lab.x, top)
 	}
 
-	if !l.legend.Empty() {
+	if l.legend.W > 0 && l.legend.H > 0 {
 		drawLegend(c, p, l)
 	}
 }

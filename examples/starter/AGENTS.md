@@ -14,8 +14,8 @@ once; this file is the short version.
 - **Build the visual that makes the point yourself**, for this talk, from
   primitives: `Rect` cuts, `Text.Measure`, `NiceScale`, `Pixels` shapes,
   `c.Reached`/`c.Since` and easing. A canned diagram won't build up in the
-  order you'll say it. Copy from decker's `examples/recipes` (waterfall,
-  architecture, request flow) and change it.
+  order you'll say it. Copy from decker's `examples/recipes` (a trace
+  waterfall) and change it.
 - **One idea per slide.** The headline says the point. Detail goes in
   `Notes`, citations in `Sources`.
 
@@ -50,7 +50,5 @@ go test ./...                # decktest.Slides and decktest.Review
   one is broken.
 - **If an issue is intended,** list its code in the slide's `Allow` and say
   why in a comment.
-- **For one frame while you work:**
-  `go run . -snapshot -slide N -step B -w 320 -h 90 -png frame.png -bounds`.
 - **Before you're done:** `go run . -handout handout` writes the notes and
   sources with a thumbnail per slide, to rehearse from.

@@ -46,13 +46,13 @@ func TestReviewPassesACleanDeck(t *testing.T) {
 		},
 	}}}
 	Review(t, d)
-	if is := d.Review(decker.ReviewOptions{}); len(is) != 0 {
+	if is := d.Review(); len(is) != 0 {
 		t.Errorf("issues in a clean deck: %v", is)
 	}
 	d.Slides[0].View = func(c decker.Ctx, sc *decker.Scene) {
 		decker.Text{Font: c.Theme.Display, Size: c.Size(0.15)}.Draw(sc.Px, "Hello, off the edge", c.X(0.8), c.Y(0.2))
 	}
-	is := d.Review(decker.ReviewOptions{})
+	is := d.Review()
 	if len(is) != 3 || is[0].Severity != decker.SeverityError || !strings.Contains(is[0].Msg, "past the right edge") {
 		t.Errorf("off-edge deck: %v", is)
 	}

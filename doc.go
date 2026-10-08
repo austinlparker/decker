@@ -54,11 +54,9 @@
 //   - [Deck], [Slide]: the talk, and one slide with its steps, notes,
 //     [Source] citations and [Transition].
 //   - [Ctx]: what changes between frames (T, Step, StepT), the slide's position
-//     (Index, Count, Section) and its sources ([Ctx.Sources]), plus layout
-//     helpers.
+//     (Index, Count, Section), plus layout helpers.
 //   - [Rect]: a box on the canvas; layout cuts and splits rects
-//     ([Rect.CutTop], [Rect.Cols], [Rect.Grid]) and compares placed ones
-//     ([Rect.Intersect], [Rect.Union], [Rect.Contains], [Rect.Overlaps]).
+//     ([Rect.CutTop], [Rect.Cols], [Rect.Grid]).
 //   - [Scale]: data values mapped onto pixels, with round ticks from
 //     [NiceScale], for axes a slide draws itself.
 //   - [Theme]: colors, typefaces, chart series colors and an optional overlay
@@ -92,7 +90,7 @@
 //   - [Issue]: a problem [Deck.Review] finds in a build: Code lines clipped,
 //     Table rows dropped, text off the canvas or too small to read. Stock
 //     components report what they can't fit; a slide's own drawing reports
-//     through [Ctx.Fits] and [Ctx.Report]. The -review flag prints them.
+//     through [Ctx.Fits]. The -review flag prints them.
 //
 // Shapes beyond the basics ([Pixels.Polygon], [Pixels.Ellipse],
 // [Pixels.Polyline], [Pixels.Bezier], [Pixels.DashedLine]) are in shapes.go.

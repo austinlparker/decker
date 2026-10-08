@@ -33,13 +33,12 @@ primitives, so it shows exactly the point you're making and builds up in the
 order you'll say it. A generic "diagram component" can't know either.
 
 The primitives for that are layout (`Rect` cuts, `Rows`, `Cols`, `Grid`,
-`Anchor`, `Intersect`, `Union`), measurement (`Text.Measure`, `Font.Fit`,
+`Anchor`), measurement (`Text.Measure`, `Font.Fit`,
 `Code.Measure`, the sizes every component's `Draw` returns), scales
 (`NiceScale` for an axis of your own), shapes (`Pixels.Rect`, `RoundRect`,
 `Polygon`, `Bezier`, `Line`, gradients), and time (`c.Reached`, `c.Since`,
-`Ease`, `Spring`). The [recipes](../examples/recipes) are worked examples
-(a trace waterfall, an architecture diagram, a request flow) to copy and
-change, not to import.
+`Ease`, `Spring`). The [recipes](../examples/recipes) are worked examples,
+starting with a trace waterfall, to copy and change, not to import.
 
 ## How a slide is put together
 
@@ -100,14 +99,12 @@ intermediate build stands out. Look at the images, not just the list.
 
 | Severity | Means | Do |
 | --- | --- | --- |
-| error | content is lost: clipped, dropped, off the canvas, a panic, a slide that isn't frame-pure | fix it; `-review` exits 1 |
-| warning | it shows, but badly: text too small, two things on top of each other, a build that adds nothing | fix it, or `Allow` it on the slide if it's meant |
-| note | worth knowing: a scroll that skips lines, an animation that never stops | decide |
+| error | content is lost: clipped, dropped, off the canvas, a panic | fix it; `-review` exits 1 |
+| warning | it shows, but badly: text too small, two things on top of each other | fix it, or `Allow` it on the slide if it's meant |
 
 A slide that means to have an issue says so with
 `Allow: []string{"text-offcanvas"}`, which keeps the report about what's
-actually wrong. `-snapshot -png frame.png -bounds -slide 11 -step 2` draws
-the same annotations for one frame while you work on it.
+actually wrong.
 
 Put the review in the talk's tests so it keeps holding:
 
@@ -119,8 +116,7 @@ func TestReview(t *testing.T) { decktest.Review(t, talk()) }
 ## Notes, sources and the handout
 
 `Slide.Notes` are what you'll say; the presenter view shows them.
-`Slide.Sources` are what you cite, kept on the slide so the presenter
-view, an on-slide citation (`c.Sources()` in a View or `Theme.Overlay`) and
-the handout agree. `go run . -handout handout` writes `handout/handout.md`:
+`Slide.Sources` are what you cite, kept on the slide with what cites
+them. `go run . -handout handout` writes `handout/handout.md`:
 every slide's thumbnail, notes and sources, then every source once with the
 slides that cite it. Rehearse from it, or give it to the audience.

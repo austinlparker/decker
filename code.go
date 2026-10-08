@@ -131,7 +131,8 @@ const (
 	// CodeScroll keeps the readable size and shows the lines that fit,
 	// scrolled to keep the current Focus range in view and gliding with its
 	// highlight, so a long file can be walked through over builds. A review
-	// reports a focus range taller than the view as "code-clipped".
+	// reports a focus range taller than the view, or no Focus at all, as
+	// "code-clipped".
 	CodeScroll
 )
 
@@ -404,11 +405,6 @@ type CodeLayout struct {
 
 	Lines, Shown    int // lines in the source (or Excerpt); lines in view
 	Cols, ShownCols int // columns of the widest line, gutter included; columns drawn
-
-	// First is the source line, 1-based, at the top of the view: 1, the
-	// Excerpt's first line, or where CodeScroll has scrolled to (once the
-	// scroll settles).
-	First int
 }
 
 // Fits reports whether every line and column of the source shows.
@@ -494,7 +490,6 @@ func (k Code) geom(c Ctx, r Rect) codeGeom {
 	if g.scroll {
 		g.off = g.scrollOffset()
 	}
-	g.First = g.first + int(math.Round(g.off)) + 1
 	return g
 }
 
@@ -674,53 +669,6 @@ func (k Code) report(c Ctx, r Rect, g codeGeom) {
 		}
 		c.review.add(SeverityError, "code-clipped", plate, name+": "+strings.Join(parts, "; ")+" "+at)
 	}
-	if g.scroll && len(k.Focus) > 0 && c.Step == k.FirstStep {
-		if unseen := k.unseen(g); unseen != "" {
-			c.review.add(SeverityInfo, "code-unseen", plate, name+": "+unseen+" never scroll into view")
-		}
-	}
-}
-
-// unseen lists the lines CodeScroll never brings into view: before the
-// focus, at the top, and at each focus range once it settles.
-func (k Code) unseen(g codeGeom) string {
-	seen := make([]bool, g.Lines)
-	show := func(off float64) {
-		for i := int(off); i < min(int(off)+g.Shown, g.Lines); i++ {
-			seen[i] = true
-		}
-	}
-	show(0)
-	for i := range k.Focus {
-		g.foc = focusState{}
-		r := k.Focus[i]
-		from, to, ok := LineRange{r.From - g.first, r.To - g.first}.span(g.Lines)
-		g.foc.prev, g.foc.prevOK = [2]int{from, to}, ok
-		show(g.scrollOffset())
-	}
-	var runs []string
-	for i := 0; i < len(seen); i++ {
-		if seen[i] {
-			continue
-		}
-		j := i
-		for j+1 < len(seen) && !seen[j+1] {
-			j++
-		}
-		if j > i {
-			runs = append(runs, fmt.Sprintf("%d–%d", g.first+i+1, g.first+j+1))
-		} else {
-			runs = append(runs, strconv.Itoa(g.first+i+1))
-		}
-		i = j
-	}
-	if len(runs) == 0 {
-		return ""
-	}
-	if len(runs) == 1 && !strings.Contains(runs[0], "–") {
-		return "line " + runs[0]
-	}
-	return "lines " + strings.Join(runs, ", ")
 }
 
 // color returns the palette color for role, or plain for no role.
@@ -757,7 +705,6 @@ func (k Code) drawTab(c Ctx, p *Pixels, x, y, size, maxX, maxY float64) {
 	h := size * 1.8
 	room := int((maxX - x - 2*pad) / adv) // columns of title the tab can hold
 	if room < 2 || y+h > maxY {
-		c.Report(SeverityWarning, "code-title-hidden", Rect{x, y, maxX - x, h}, quoteText("Code", k.Title)+": no room for the title tab")
 		return
 	}
 	title, cols, cut := k.Title, utf8.RuneCountInString(k.Title), false
@@ -768,10 +715,6 @@ func (k Code) drawTab(c Ctx, p *Pixels, x, y, size, maxX, maxY float64) {
 			i += sz
 		}
 		title, cols, cut = title[:i], room, true
-		if c.review != nil {
-			c.review.add(SeverityInfo, "code-title-cut", Rect{x, y, maxX - x, h},
-				fmt.Sprintf("%s: title cut to %d of %d characters", quoteText("Code", k.Title), room-1, utf8.RuneCountInString(k.Title)))
-		}
 	}
 	w := float64(cols)*adv + 2*pad
 	line := max(c.Unit(0.005), 1.5)

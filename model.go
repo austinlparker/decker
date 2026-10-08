@@ -133,7 +133,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) linkState() linkState {
-	st := linkState{Slide: m.idx, Step: m.step, Notes: m.cur().Notes, Sources: m.cur().Sources, W: m.w, H: m.h, Blank: m.blank.String()}
+	st := linkState{Slide: m.idx, Step: m.step, Notes: m.cur().Notes, W: m.w, H: m.h, Blank: m.blank.String()}
 	for i, s := range m.slides {
 		st.Outline = append(st.Outline, linkOutline{Title: s.Title, Steps: s.steps(), Section: sectionAt(m.slides, i)})
 	}
@@ -387,12 +387,6 @@ func (m model) panels() string {
 		notes := m.cur().Notes
 		if notes == "" {
 			notes = "(no notes for this slide)"
-		}
-		if src := m.cur().Sources; len(src) > 0 {
-			notes = strings.TrimRight(notes, "\n") + "\n\nsources:"
-			for _, s := range src {
-				notes += "\n" + s.line()
-			}
 		}
 		out = append(out, panel("notes", notes, m.theme.Accent2, max(m.h/4, 3)))
 	}

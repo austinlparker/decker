@@ -2,6 +2,7 @@ package decker
 
 import (
 	"fmt"
+	"math"
 	"slices"
 	"strings"
 	"testing"
@@ -365,7 +366,7 @@ func TestCodeShrink(t *testing.T) {
 	d := &Deck{Name: "shrink", Theme: testTheme, Slides: []Slide{{View: func(c Ctx, sc *Scene) {
 		Code{Source: fortyLines, Lang: "go", Overflow: CodeShrink}.Draw(c, sc.Px, c.Rect(0.1, 0.02, 0.5, 0.96))
 	}}}}
-	if got := codes(d.Review(ReviewOptions{Sizes: [][2]int{{682, 171}}}))["1.1"]; !slices.Equal(got, []string{"text-small"}) {
+	if got := codes(issuesAt(d, [2]int{682, 171}))["1.1"]; !slices.Equal(got, []string{"text-small"}) {
 		t.Errorf("review codes %v, want [text-small]", got)
 	}
 }
@@ -373,19 +374,23 @@ func TestCodeShrink(t *testing.T) {
 func TestCodeScroll(t *testing.T) {
 	k := Code{Source: fortyLines, Lang: "go", Overflow: CodeScroll, LineNumbers: true,
 		Focus: []LineRange{{1, 3}, {20, 23}, {38, 40}}}
-	at := func(step int) CodeLayout {
+	// view returns the first source line in view, 1-based, and how many show.
+	view := func(step int) (first, shown int) {
 		c := Ctx{W: 320, H: 90, T: Settled, Step: step, StepT: Settled, Theme: testTheme}
-		return k.Measure(c, c.Rect(0.1, 0.1, 0.8, 0.6))
+		g := k.geom(c, c.Rect(0.1, 0.1, 0.8, 0.6))
+		if g.Size != c.SmallText(testTheme.Mono) || !g.scroll {
+			t.Fatalf("step %d: size %d, scroll %v", step, g.Size, g.scroll)
+		}
+		return g.first + int(math.Round(g.off)) + 1, g.Shown
 	}
-	first, mid, last := at(0), at(1), at(2)
-	if first.Size != (Ctx{W: 320, H: 90, Theme: testTheme}).SmallText(testTheme.Mono) || first.Shown >= 40 || first.First != 1 {
-		t.Errorf("first focus: %+v", first)
+	if first, shown := view(0); first != 1 || shown >= 40 {
+		t.Errorf("first focus: first line %d, %d shown", first, shown)
 	}
-	if mid.First > 20 || mid.First+mid.Shown-1 < 23 {
-		t.Errorf("lines 20-23 not in view: first %d, %d shown", mid.First, mid.Shown)
+	if first, shown := view(1); first > 20 || first+shown-1 < 23 {
+		t.Errorf("lines 20-23 not in view: first %d, %d shown", first, shown)
 	}
-	if last.First+last.Shown-1 != 40 {
-		t.Errorf("last focus doesn't scroll to the end: first %d, %d shown", last.First, last.Shown)
+	if first, shown := view(2); first+shown-1 != 40 {
+		t.Errorf("last focus doesn't scroll to the end: first %d, %d shown", first, shown)
 	}
 	// Mid-glide frames draw, and stay inside the plate.
 	c := Ctx{W: 320, H: 90, T: Settled, Step: 1, StepT: 0.15, Theme: testTheme}
@@ -406,13 +411,12 @@ func TestCodeScroll(t *testing.T) {
 			k.Draw(c, sc.Px, c.Rect(0.1, 0.1, 0.8, 0.6))
 		}}}}
 		var out []string
-		for _, is := range d.Review(ReviewOptions{Sizes: [][2]int{{320, 90}}}) {
+		for _, is := range issuesAt(d, [2]int{320, 90}) {
 			out = append(out, fmt.Sprintf("%d %s %s", is.Step+1, is.Code, is.Msg))
 		}
 		return out
 	}
-	got := review(k)
-	if len(got) != 1 || !strings.HasPrefix(got[0], "1 code-unseen Code (go, 40 lines): lines ") {
+	if got := review(k); len(got) != 0 {
 		t.Errorf("scroll review: %q", got)
 	}
 	k.Focus = []LineRange{{1, 40}}
@@ -430,7 +434,7 @@ func TestCodeExcerpt(t *testing.T) {
 	k := Code{Source: fortyLines, Lang: "go", LineNumbers: true, Excerpt: LineRange{10, 15},
 		Focus: []LineRange{{12, 13}}, FirstStep: 1}
 	l := k.Measure(c, c.Frame())
-	if l.Lines != 6 || l.First != 10 || !l.Fits() {
+	if l.Lines != 6 || !l.Fits() {
 		t.Errorf("excerpt layout: %+v", l)
 	}
 	g := k.geom(c, c.Frame())

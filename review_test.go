@@ -2,15 +2,17 @@ package decker
 
 import (
 	"crypto/sha256"
-	"encoding/json"
 	"fmt"
-	"math"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 )
+
+// Ctx stays comparable, though review adds a field: apidiff counts losing ==
+// as a break.
+var _ = Ctx{} == Ctx{}
 
 const longSource = `package main
 
@@ -54,7 +56,6 @@ func problemDeck() *Deck {
 				panic("a block the rect's own size must fit")
 			}
 			c.Fits("waterfall", r, r.W*2, r.H)
-			c.Report(SeverityInfo, "waterfall-labels", r, "waterfall: 3 duration labels left out")
 		}},
 		{Title: "Second build", Steps: 2, View: func(c Ctx, sc *Scene) {
 			if c.Step == 1 {
@@ -82,14 +83,14 @@ func codes(issues []Issue) map[string][]string {
 
 func TestReviewFindsProblems(t *testing.T) {
 	d := problemDeck()
-	issues := d.Review(ReviewOptions{})
+	issues := d.Review()
 	got := codes(issues)
 	want := map[string][]string{
 		"2.1": {"code-clipped"},
 		"3.1": {"table-rows-dropped"},
 		"4.1": {"text-offcanvas"},
 		"6.1": {"text-small"},
-		"7.1": {"overflow", "waterfall-labels"},
+		"7.1": {"overflow"},
 		"8.2": {"text-offcanvas"},
 		"9.1": {"panic"},
 	}
@@ -140,8 +141,8 @@ func TestReviewFindsProblems(t *testing.T) {
 	th.Overlay = func(c Ctx, p *Pixels) {
 		Text{Font: c.Theme.Body, Size: c.SmallText(c.Theme.Body), Color: c.Theme.Muted}.Draw(p, "page 3", c.X(0.99), c.Y(0.5))
 	}
-	d.Theme = &th
-	is := d.Review(ReviewOptions{Slides: []int{0}, Sizes: [][2]int{{240, 67}}})
+	d.Theme, d.Slides = &th, d.Slides[:1]
+	is := issuesAt(d, [2]int{240, 67})
 	if len(is) != 1 || !strings.HasPrefix(is[0].Msg, `Theme.Overlay: Text "page 3" runs`) {
 		t.Errorf("overlay issue: %v", is)
 	}
@@ -174,20 +175,21 @@ func pixBytes(p *Pixels) []byte {
 	return b
 }
 
-func TestReviewingOnlyUnderReview(t *testing.T) {
-	var seen []bool
-	d := &Deck{Name: "r", Theme: testTheme, Slides: []Slide{{View: func(c Ctx, sc *Scene) { seen = append(seen, c.Reviewing()) }}}}
-	d.Render(0, Ctx{W: 40, H: 12})
-	d.Review(ReviewOptions{Sizes: [][2]int{{40, 12}}})
-	// Render, then the review's frame, then the plain frames it compares it
-	// with.
-	if len(seen) < 2 || seen[0] || !seen[1] || slices.Contains(seen[2:], true) {
-		t.Errorf("Reviewing: got %v, want false, true, then false", seen)
-	}
+// issuesAt is Deck.Review at the given sizes only, for tests that need
+// one size.
+func issuesAt(d *Deck, sizes ...[2]int) []Issue {
+	var out []Issue
+	d.review(sizes, func(f *reviewedFrame) { out = append(out, f.issues...) })
+	return out
+}
+
+func TestFitsWithoutReview(t *testing.T) {
 	if (Ctx{}).Fits("x", Rect{W: 1, H: 1}, 5, 5) {
 		t.Error("Fits: a 5×5 block fits a 1×1 rect")
 	}
-	(Ctx{}).Report(SeverityError, "x", Rect{}, "nothing records this")
+	if !(Ctx{}).Fits("x", Rect{W: 10, H: 10}, 10.4, 10) {
+		t.Error("Fits: half a pixel over is a fit")
+	}
 }
 
 func TestCodeMeasure(t *testing.T) {
@@ -217,8 +219,9 @@ func TestCodeMeasure(t *testing.T) {
 
 func TestReviewReport(t *testing.T) {
 	d := problemDeck()
+	d.Slides = []Slide{d.Slides[0], d.Slides[1], d.Slides[4], d.Slides[5]} // clean, code, allowed, small
 	dir := t.TempDir()
-	r, err := reviewDeck(d, [][2]int{{240, 67}, {320, 90}}, []int{0, 1, 4, 5}, dir, "issues")
+	r, err := reviewDeck(d, [][2]int{{240, 67}, {320, 90}}, dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -227,7 +230,7 @@ func TestReviewReport(t *testing.T) {
 	out := text.String()
 	for _, want := range []string{
 		"2.1  Code", "240x67", "code-clipped", `Code "main.go"`,
-		"6.1  Small", "320x90", "text-small",
+		"4.1  Small", "320x90", "text-small",
 		"2 errors and 2 warnings in 4 builds of 4 slides at 240x67, 320x90.",
 	} {
 		if !strings.Contains(out, want) {
@@ -237,17 +240,16 @@ func TestReviewReport(t *testing.T) {
 	if strings.Contains(out, "Allowed") {
 		t.Errorf("text report lists an allowed issue:\n%s", out)
 	}
-
 	if err := r.save(dir); err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{"frames/02-1-240x67.png", "frames/06-1-320x90.png", "sheet-240x67.png", "sheet-320x90.png"} {
+	for _, name := range []string{"frames/02-1-240x67.png", "frames/04-1-320x90.png", "sheet-240x67.png", "sheet-320x90.png"} {
 		if _, err := os.Stat(filepath.Join(dir, name)); err != nil {
 			t.Errorf("image: %v", err)
 		}
 	}
 	if _, err := os.Stat(filepath.Join(dir, "frames/01-1-240x67.png")); err == nil {
-		t.Error("an image of a build with no issues, with -frames issues")
+		t.Error("an image of a build with no issues")
 	}
 	md, _ := os.ReadFile(filepath.Join(dir, "index.md"))
 	for _, want := range []string{"# Review: problems", "## 2. Code", "**Build 1**", "- **error** `code-clipped` at 240x67: Code \"main.go\"",
@@ -256,113 +258,13 @@ func TestReviewReport(t *testing.T) {
 			t.Errorf("index.md lacks %q:\n%s", want, md)
 		}
 	}
-	js, _ := os.ReadFile(filepath.Join(dir, "report.json"))
-	var rep reviewJSON
-	if err := json.Unmarshal(js, &rep); err != nil {
-		t.Fatal(err)
-	}
-	if rep.Deck != "problems" || rep.Builds != 4 || len(rep.Issues) != 4 || rep.Issues[0].Slide != 2 || rep.Issues[0].Build != 1 || rep.Issues[0].Size != "240x67" {
-		t.Errorf("report.json: %s", js)
-	}
 
-	clean, _ := reviewDeck(d, [][2]int{{240, 67}}, []int{0}, "", "none")
+	d.Slides = d.Slides[:1]
+	clean, _ := reviewDeck(d, [][2]int{{240, 67}}, t.TempDir())
 	text.Reset()
 	clean.writeText(&text)
 	if got := text.String(); got != "No issues in 1 build of 1 slide at 240x67.\n" {
 		t.Errorf("clean report: %q", got)
-	}
-}
-
-func TestParseSizes(t *testing.T) {
-	got, err := parseSizes("240x67, 682x171")
-	if err != nil || !slices.Equal(got, [][2]int{{240, 67}, {682, 171}}) {
-		t.Errorf("parseSizes: %v %v", got, err)
-	}
-	for _, bad := range []string{"", "240", "0x10", "240x67,,", "axb"} {
-		if _, err := parseSizes(bad); err == nil {
-			t.Errorf("parseSizes(%q): no error", bad)
-		}
-	}
-}
-
-// TestReviewFrameChecks covers the checks that compare frames: builds that
-// add nothing, frames that aren't pure, slides that never settle, morphs
-// with nothing to move, overlaps and the overlay drawing over the slide.
-func TestReviewFrameChecks(t *testing.T) {
-	th := *testTheme
-	th.Overlay = func(c Ctx, p *Pixels) {
-		if c.Index == 8 {
-			p.Rect(0, c.Y(0.2), c.PW(), c.Y(0.1), c.Theme.Accent, 1)
-		}
-	}
-	calls := 0
-	head := func(c Ctx, p *Pixels, s string, x float64) {
-		Text{Font: c.Theme.Display, Size: c.Size(0.12), Color: c.Theme.Text}.Draw(p, s, x, c.Y(0.2))
-	}
-	box := func(key string) func(Ctx, *Scene) {
-		return func(c Ctx, sc *Scene) {
-			sc.Place(key, c.Rect(0.1, 0.5, 0.3, 0.2), func(p *Pixels, r Rect) { p.Rect(r.X, r.Y, r.W, r.H, c.Theme.Accent, 1) })
-		}
-	}
-	d := &Deck{Name: "frames", Theme: &th, Slides: []Slide{
-		{Title: "Dead step", Steps: 2, View: func(c Ctx, sc *Scene) { head(c, sc.Px, "Same", c.X(0.1)) }},
-		{Title: "Pulse", Steps: 2, View: func(c Ctx, sc *Scene) {
-			grow := 1 + 0.3*(1-Ease(c.Since(1), 0.5))
-			if c.Step < 1 {
-				grow = 1
-			}
-			sc.Px.Disc(c.X(0.5), c.Y(0.5), c.Unit(0.1)*grow, c.Theme.Accent, 1)
-		}},
-		{Title: "Impure", View: func(c Ctx, sc *Scene) {
-			calls++
-			head(c, sc.Px, fmt.Sprint("frame ", calls), c.X(0.1))
-		}},
-		{Title: "Spinner", View: func(c Ctx, sc *Scene) {
-			sc.Px.VGradient(0, sc.Px.H-1, Mix(c.Theme.Background, c.Theme.Accent, math.Mod(c.T, 1)), c.Theme.Background)
-		}},
-		{Title: "Placed", View: box("a")},
-		{Title: "Morph", Transition: TransitionMorph, View: box("b")},
-		{Title: "Morph matched", Transition: TransitionMorph, View: box("b")},
-		{Title: "Overlap", View: func(c Ctx, sc *Scene) {
-			head(c, sc.Px, "First line", c.X(0.1))
-			head(c, sc.Px, "Second line", c.X(0.2))
-		}},
-		{Title: "Overlaid", View: func(c Ctx, sc *Scene) { head(c, sc.Px, "Under the bar", c.X(0.1)) }},
-	}}
-	got := codes(d.Review(ReviewOptions{Sizes: [][2]int{{240, 67}}}))
-	want := map[string][]string{
-		"1.2": {"step-unchanged"},
-		"3.1": {"impure"},
-		"4.1": {"never-settles"},
-		"6.1": {"morph-unmatched"},
-		"8.1": {"overlap"},
-		"9.1": {"overlay-collision"},
-	}
-	for k, w := range want {
-		if !slices.Equal(got[k], w) {
-			t.Errorf("slide %s: got codes %v, want %v", k, got[k], w)
-		}
-	}
-	for k, g := range got {
-		if _, ok := want[k]; !ok {
-			t.Errorf("slide %s: unexpected codes %v", k, g)
-		}
-	}
-}
-
-func TestSnapshotBounds(t *testing.T) {
-	d := problemDeck()
-	path := filepath.Join(t.TempDir(), "b.png")
-	o := options{slide: 2, step: 1, at: Settled, width: 160, height: 45, png: path, bounds: true}
-	if err := runSnapshot(d, o); err != nil {
-		t.Fatal(err)
-	}
-	if fi, err := os.Stat(path); err != nil || fi.Size() == 0 {
-		t.Errorf("-bounds wrote nothing: %v", err)
-	}
-	o.png = ""
-	if err := runSnapshot(d, o); err == nil {
-		t.Error("-bounds without -png: no error")
 	}
 }
 
@@ -374,20 +276,7 @@ func TestReviewTouchingLines(t *testing.T) {
 		_, h := tx.Draw(sc.Px, "a subtitle to copy and adapt", c.X(0.1), c.Y(0.2))
 		tx.Draw(sc.Px, "Copy a recipe into your talk", c.X(0.1), c.Y(0.2)+h*0.6)
 	}}}}
-	if got := codes(d.Review(ReviewOptions{Sizes: [][2]int{{240, 67}}}))["1.1"]; !slices.Equal(got, []string{"overlap"}) {
+	if got := codes(issuesAt(d, [2]int{240, 67}))["1.1"]; !slices.Equal(got, []string{"overlap"}) {
 		t.Errorf("codes %v, want [overlap]", got)
-	}
-}
-
-func TestReviewNoFrames(t *testing.T) {
-	dir := filepath.Join(t.TempDir(), "new")
-	if _, err := reviewDeck(problemDeck(), [][2]int{{240, 67}}, []int{1}, dir, "none"); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := os.Stat(filepath.Join(dir, "sheet-240x67.png")); err != nil {
-		t.Error(err)
-	}
-	if _, err := os.Stat(filepath.Join(dir, "frames")); err == nil {
-		t.Error("-frames none wrote a frames directory")
 	}
 }

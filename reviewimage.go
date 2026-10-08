@@ -19,7 +19,6 @@ var (
 	reviewColors  = map[Severity]RGB{
 		SeverityError:   Hex("#FF4D5E"),
 		SeverityWarning: Hex("#FFB224"),
-		SeverityInfo:    Hex("#7C8CFF"),
 	}
 	reviewFont = sync.OnceValue(func() *Font { return StockFont("SpaceGrotesk-Medium") })
 )
@@ -107,23 +106,18 @@ func annotate(f *reviewedFrame, title string) *image.RGBA {
 
 // issueCounts summarizes issues by severity: "1 error and 2 warnings".
 func issueCounts(issues []Issue) string {
-	var n [3]int
+	var n [2]int
 	for _, is := range issues {
 		n[is.Severity]++
 	}
 	var parts []string
-	for _, c := range []struct {
-		sev  Severity
-		noun string
-	}{{SeverityError, "error"}, {SeverityWarning, "warning"}, {SeverityInfo, "note"}} {
-		if n[c.sev] > 0 {
-			parts = append(parts, plural(n[c.sev], c.noun))
-		}
+	if n[SeverityError] > 0 {
+		parts = append(parts, plural(n[SeverityError], "error"))
 	}
-	if len(parts) < 2 {
-		return strings.Join(parts, "")
+	if n[SeverityWarning] > 0 {
+		parts = append(parts, plural(n[SeverityWarning], "warning"))
 	}
-	return strings.Join(parts[:len(parts)-1], ", ") + " and " + parts[len(parts)-1]
+	return strings.Join(parts, " and ")
 }
 
 // worst is the most severe of issues, or -1 for none.

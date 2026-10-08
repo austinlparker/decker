@@ -18,11 +18,8 @@ type Slide struct {
 	// Notes are speaker notes, shown in the presenter view and with the n key.
 	Notes string
 
-	// Sources are the works this slide cites, kept here rather than in the
-	// notes so every place that shows them agrees: the presenter view and
-	// the n key list them under the notes, -handout and -list -json export
-	// them, and Ctx.Sources hands them to View and Theme.Overlay for an
-	// on-slide citation.
+	// Sources are the works this slide cites. -handout lists them under the
+	// slide, and gathers every source once at the end.
 	Sources []Source
 
 	// Hold is how many seconds each build step stays on screen in a video.
@@ -58,27 +55,18 @@ type Slide struct {
 	View func(c Ctx, sc *Scene)
 }
 
-// Source is one work a slide cites, in Slide.Sources. Its JSON form is what
-// -list -json prints.
+// Source is one work a slide cites, in Slide.Sources.
 type Source struct {
 	// Label is what is cited, as a reader should see it: "OpenTelemetry
 	// Logs Data Model, v1.40".
-	Label string `json:"label"`
+	Label string
 
-	// URL is where to find it; optional. Exports link Label to it.
-	URL string `json:"url,omitempty"`
+	// URL is where to find it; optional. The handout links Label to it.
+	URL string
 }
 
 // name is what to call s: its Label, or its URL when it has no label.
 func (s Source) name() string { return cmp.Or(s.Label, s.URL) }
-
-// line is s as one line of plain text: "Label — URL", or just its name.
-func (s Source) line() string {
-	if s.Label == "" || s.URL == "" {
-		return s.name()
-	}
-	return s.Label + " — " + s.URL
-}
 
 // sectionAt resolves slide i's section: its own, else the nearest non-empty
 // one before it.

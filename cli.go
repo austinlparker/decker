@@ -1,11 +1,9 @@
 package decker
 
 import (
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"sync/atomic"
@@ -16,7 +14,7 @@ import (
 
 type options struct {
 	slide, step, fps     int
-	dev, list, json      bool
+	dev, list            bool
 	snapshot             bool
 	at                   float64
 	width, height        int
@@ -30,10 +28,7 @@ type options struct {
 	video, size          string
 	hold                 float64
 	until                int
-	review, sizes        string
-	frames               string
-	strict               bool
-	bounds               bool
+	review               string
 }
 
 // Main runs a deck from the command line: live in the terminal by default, or
@@ -57,8 +52,6 @@ func run(d *Deck) error {
 		return runVideo(d, o)
 	case o.presenter:
 		return runPresenter(d, o)
-	case o.list && o.json:
-		return writeOutline(os.Stdout, d)
 	case o.list:
 		listSlides(d)
 		return nil
@@ -81,7 +74,6 @@ func parseFlags(name string) options {
 	flag.IntVar(&o.fps, "fps", 60, "animation frames per second")
 	flag.BoolVar(&o.dev, "dev", false, "rebuild and reload when .go files change")
 	flag.BoolVar(&o.list, "list", false, "print slide titles and exit")
-	flag.BoolVar(&o.json, "json", false, "with -list: print the outline (titles, steps, sections, notes, sources) as JSON")
 	flag.BoolVar(&o.snapshot, "snapshot", false, "print one frame of -slide to stdout and exit")
 	flag.Float64Var(&o.at, "t", Settled, "with -snapshot: seconds since the slide appeared")
 	flag.IntVar(&o.width, "w", 120, "with -snapshot: frame width")
@@ -98,12 +90,8 @@ func parseFlags(name string) options {
 	flag.StringVar(&o.video, "video", "", "render the deck to this video file (MP4, needs ffmpeg) and exit; starts at -slide")
 	flag.StringVar(&o.size, "size", "1920x1080", "with -video: the video's size in pixels")
 	flag.Float64Var(&o.hold, "hold", 4, "with -video: seconds each build step stays on screen")
-	flag.IntVar(&o.until, "until", 0, "with -video or -review: the last slide to include (default: the end)")
-	flag.StringVar(&o.review, "review", "", "check every build of every slide at several sizes, write the issues to DIR/index.md and DIR/report.json, and exit; fails if it finds errors")
-	flag.StringVar(&o.sizes, "sizes", "240x67,320x90,682x171", "with -review: frame sizes in cells, comma-separated")
-	flag.BoolVar(&o.strict, "strict", false, "with -review: fail on warnings too")
-	flag.StringVar(&o.frames, "frames", "issues", "with -review: annotated frame images to write: issues (builds with issues), all, or none")
-	flag.BoolVar(&o.bounds, "bounds", false, "with -snapshot -png: outline what the slide drew and box its review issues, as -review's images do")
+	flag.IntVar(&o.until, "until", 0, "with -video: the last slide to include (default: the end)")
+	flag.StringVar(&o.review, "review", "", "check every build of every slide at three sizes for clipped, unreadable or overlapping content, write a report with pictures to DIR, and exit; fails if it finds errors")
 	flag.Parse()
 	o.fps = max(o.fps, 1)
 	return o
@@ -134,31 +122,6 @@ func listSlides(d *Deck) {
 	}
 }
 
-// outlineSlide is one slide in -list -json.
-type outlineSlide struct {
-	Slide   int      `json:"slide"` // 1-based, like -slide
-	Title   string   `json:"title"`
-	Steps   int      `json:"steps"`
-	Section string   `json:"section"`
-	Notes   string   `json:"notes"`
-	Sources []Source `json:"sources"`
-}
-
-// writeOutline writes the deck's outline as a JSON array (-list -json), for
-// scripts that check or publish a talk without parsing -list's columns.
-func writeOutline(w io.Writer, d *Deck) error {
-	out := make([]outlineSlide, len(d.Slides))
-	for i, s := range d.Slides {
-		// An empty list rather than null, so readers needn't check for both.
-		sources := append([]Source{}, s.Sources...)
-		out[i] = outlineSlide{i + 1, s.Title, s.steps(), sectionAt(d.Slides, i), s.Notes, sources}
-	}
-	enc := json.NewEncoder(w)
-	enc.SetIndent("", "  ")
-	enc.SetEscapeHTML(false)
-	return enc.Encode(out)
-}
-
 // stillFrame renders slide idx at step, secs after it appeared, at w×h cells.
 func stillFrame(d *Deck, idx, step int, secs float64, w, h int) *grid {
 	return renderSlideGrid(d.Slides[idx], Ctx{W: w, H: h, T: secs, Step: step, StepT: secs, Theme: d.Theme}.at(d.Slides, idx))
@@ -173,25 +136,7 @@ func runSheet(d *Deck, o options) error {
 }
 
 func runReview(d *Deck, o options) error {
-	sizes, err := parseSizes(o.sizes)
-	if err != nil {
-		return err
-	}
-	last := len(d.Slides)
-	if o.until > 0 {
-		last = min(o.until, last)
-	}
-	if o.slide < 1 || o.slide > last {
-		return fmt.Errorf("-slide %d: the deck has slides 1 to %d", o.slide, last)
-	}
-	var slides []int
-	for i := o.slide - 1; i < last; i++ {
-		slides = append(slides, i)
-	}
-	if o.frames != "issues" && o.frames != "all" && o.frames != "none" {
-		return fmt.Errorf("-frames %q: want issues, all or none", o.frames)
-	}
-	r, err := reviewDeck(d, sizes, slides, o.review, o.frames)
+	r, err := reviewDeck(d, reviewSizes, o.review)
 	if err != nil {
 		return err
 	}
@@ -200,8 +145,8 @@ func runReview(d *Deck, o options) error {
 		return err
 	}
 	fmt.Printf("Report: %s\n", filepath.Join(o.review, "index.md"))
-	if e, w, _ := r.count(); e > 0 || o.strict && w > 0 {
-		return fmt.Errorf("review found %s and %s", plural(e, "error"), plural(w, "warning"))
+	if n := r.errors(); n > 0 {
+		return fmt.Errorf("review found %s", plural(n, "error"))
 	}
 	return nil
 }
@@ -212,15 +157,6 @@ func runSnapshot(d *Deck, o options) error {
 	}
 	if n := d.Slides[o.slide-1].steps(); o.step < 1 || o.step > n {
 		return fmt.Errorf("-step %d: slide %d has steps 1 to %d", o.step, o.slide, n)
-	}
-	if o.bounds {
-		if o.png == "" {
-			return errors.New("-bounds: needs -png")
-		}
-		f := d.reviewFrame(o.slide-1, o.step-1, [2]int{o.width, o.height}, o.at)
-		defer f.sc.Release()
-		f.done(d.Slides[o.slide-1])
-		return savePNG(annotate(f, d.Slides[o.slide-1].Title), o.png)
 	}
 	g := stillFrame(d, o.slide-1, o.step-1, o.at, o.width, o.height)
 	if o.png != "" {
