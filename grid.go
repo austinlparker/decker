@@ -68,6 +68,15 @@ func pixelCell(top, bot RGB) gcell {
 	return gcell{ch: halfBlock, fg: qt, bg: qb}
 }
 
+// flatten finishes s, converts it to cells and releases it, as every frame
+// that leaves as cells ends. The caller releases the grid.
+func (s *Scene) flatten() *grid {
+	s.finish()
+	g := s.toGrid()
+	s.Release()
+	return g
+}
+
 // toGrid converts the scene to cells: pixels as half blocks, character layer on
 // top.
 func (s *Scene) toGrid() *grid {

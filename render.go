@@ -116,8 +116,5 @@ func (s *Scene) showPanic(r any) {
 
 // renderSlideGrid is renderSlide as cells; the caller releases the grid.
 func renderSlideGrid(s Slide, c Ctx) *grid {
-	sc := renderSlide(s, c)
-	g := sc.toGrid()
-	sc.Release()
-	return g
+	return renderSlide(s, c).flatten()
 }

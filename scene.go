@@ -297,10 +297,7 @@ type placed struct {
 // the one a slide's View is given; placed elements are drawn first, but
 // Theme.Overlay is not applied.
 func (s *Scene) Render() string {
-	s.finish()
-	g := s.toGrid()
-	s.Release()
-	out := g.String()
-	g.release()
-	return out
+	g := s.flatten()
+	defer g.release()
+	return g.String()
 }

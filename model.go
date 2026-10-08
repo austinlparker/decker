@@ -315,10 +315,7 @@ func (m model) frame() *grid {
 		return blankGrid(m.w, m.h, m.blank.color())
 	}
 	bodyH, panels := m.layout()
-	sc := m.body(bodyH)
-	sc.finish()
-	body := sc.toGrid()
-	sc.Release()
+	body := m.body(bodyH).flatten()
 	if m.showHelp {
 		hb := m.helpBox()
 		w, h := lipgloss.Size(hb)
