@@ -16,7 +16,7 @@ import (
 // A snapshot cell is cellW×cellH pixels.
 const cellW, cellH = 8, 16
 
-// writePNG saves frameImage's rendering to path (-snapshot -png).
+// writePNG saves frameImage's rendering to path (snapshot --png).
 func writePNG(g *grid, path string) error { return savePNG(frameImage(g), path) }
 
 // frameImage paints a frame as a terminal would, to preview slides without
@@ -107,28 +107,79 @@ func drawBlockRune(img *image.RGBA, r rune, cell image.Rectangle, fg, bg color.C
 // sheetCols is how many frames a contact sheet puts in a row.
 const sheetCols = 4
 
+// sheetLayout places n tiles of w×h pixels on a contact sheet, sheetCols
+// across, with gap pixels around and between them.
+type sheetLayout struct{ n, w, h, gap int }
+
+// size is the sheet's size in pixels.
+func (l sheetLayout) size() (w, h int) {
+	rows := (l.n + sheetCols - 1) / sheetCols
+	return sheetCols*(l.w+l.gap) + l.gap, rows*(l.h+l.gap) + l.gap
+}
+
+// at is the top-left corner of tile i.
+func (l sheetLayout) at(i int) (x, y int) {
+	return l.gap + (i%sheetCols)*(l.w+l.gap), l.gap + (i/sheetCols)*(l.h+l.gap)
+}
+
 // writeSheet renders frames into one contact-sheet image, sheetCols across,
 // each shrunk by an integer factor.
 func writeSheet(frames []*grid, shrink int, path string) error {
-	const gap = 6
-	fw, fh := frames[0].W*cellW/shrink, frames[0].H*cellH/shrink
-	rows := (len(frames) + sheetCols - 1) / sheetCols
-	sheet := image.NewRGBA(image.Rect(0, 0, sheetCols*(fw+gap)+gap, rows*(fh+gap)+gap))
+	l := sheetLayout{n: len(frames), w: frames[0].W * cellW / shrink, h: frames[0].H * cellH / shrink, gap: 6}
+	w, h := l.size()
+	sheet := image.NewRGBA(image.Rect(0, 0, w, h))
 	fillRect(sheet, sheet.Bounds(), color.Black)
-	tile := make([]RGB, fw*fh)
+	tile := make([]RGB, l.w*l.h)
+	var full []RGB
 	for i, fr := range frames {
 		src := frameImage(fr)
-		full := make([]RGB, len(src.Pix)/4)
-		for j := range full {
-			full[j] = RGB{float32(src.Pix[4*j]), float32(src.Pix[4*j+1]), float32(src.Pix[4*j+2])}
-		}
-		boxScale(tile, fw, fh, full, src.Rect.Dx(), src.Rect.Dy())
-		ox, oy := gap+(i%sheetCols)*(fw+gap), gap+(i/sheetCols)*(fh+gap)
-		for j, c := range tile {
-			sheet.Set(ox+j%fw, oy+j/fw, c.Color())
-		}
+		full = imageRGB(full, src)
+		boxScale(tile, l.w, l.h, full, src.Rect.Dx(), src.Rect.Dy())
+		x, y := l.at(i)
+		pasteImage(sheet, x, y, tile, l.w)
 	}
 	return savePNG(sheet, path)
+}
+
+// pixelsImage converts a canvas to an image, for PNG.
+func pixelsImage(p *Pixels) *image.RGBA {
+	img := image.NewRGBA(image.Rect(0, 0, p.W, p.H))
+	pasteImage(img, 0, 0, p.Pix, p.W)
+	return img
+}
+
+// pasteImage writes the rows of src, w pixels wide, into img with their
+// top-left at (x, y), which must leave them inside img.
+func pasteImage(img *image.RGBA, x, y int, src []RGB, w int) {
+	for r := 0; r*w < len(src); r++ {
+		row := img.Pix[img.PixOffset(x, y+r):]
+		for j, c := range src[r*w : (r+1)*w] {
+			q := c.q()
+			row[4*j], row[4*j+1], row[4*j+2], row[4*j+3] = q[0], q[1], q[2], 255
+		}
+	}
+}
+
+// paste copies the rows of src, w pixels wide, into p with their top-left
+// at (x, y), which must leave them inside p.
+func paste(p *Pixels, x, y int, src []RGB, w int) {
+	for r := 0; r*w < len(src); r++ {
+		copy(p.Pix[(y+r)*p.W+x:], src[r*w:(r+1)*w])
+	}
+}
+
+// imageRGB reads img's colors into buf, grown if it is too small, and
+// returns them.
+func imageRGB(buf []RGB, img *image.RGBA) []RGB {
+	n := len(img.Pix) / 4
+	if cap(buf) < n {
+		buf = make([]RGB, n)
+	}
+	buf = buf[:n]
+	for j := range buf {
+		buf[j] = rgbOf([3]uint8(img.Pix[4*j : 4*j+3]))
+	}
+	return buf
 }
 
 func savePNG(img image.Image, path string) error {

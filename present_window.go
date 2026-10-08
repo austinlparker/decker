@@ -2,7 +2,6 @@ package decker
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"os"
 	"os/exec"
@@ -23,7 +22,8 @@ type presentationWindow struct {
 	terminal                string
 }
 
-func newPresentationWindow(socket string, fontSize float64) (*presentationWindow, error) {
+// newPresentationWindow opens decks over socket, run with args.
+func newPresentationWindow(socket string, fontSize float64, args []string) (*presentationWindow, error) {
 	executable, err := os.Executable()
 	if err != nil {
 		return nil, err
@@ -39,28 +39,13 @@ func newPresentationWindow(socket string, fontSize float64) (*presentationWindow
 	return &presentationWindow{
 		ctx:        context.Background(),
 		executable: executable, dir: dir, socket: socket, fontSize: fontSize,
-		args: presentationArgs(flag.CommandLine),
+		args: args,
 	}, nil
 }
 
-// presentationArgs preserves the talk's own flags without reopening a
-// presenter or an export mode. Position and socket are supplied at launch.
-func presentationArgs(fs *flag.FlagSet) []string {
-	var args []string
-	fs.Visit(func(f *flag.Flag) {
-		switch f.Name {
-		case "presenter", "length", "presentation-font-size", "previews",
-			"slide", "step", "socket", "list", "snapshot", "sheet", "video", "png":
-			return
-		}
-		args = append(args, "-"+f.Name+"="+f.Value.String())
-	})
-	return append(args, fs.Args()...)
-}
-
 func (w *presentationWindow) command(slide, step int) string {
-	args := []string{w.executable, "-socket=" + w.socket,
-		"-slide=" + strconv.Itoa(slide), "-step=" + strconv.Itoa(step)}
+	args := []string{w.executable, "--socket=" + w.socket,
+		"--slide=" + strconv.Itoa(slide), "--step=" + strconv.Itoa(step)}
 	args = append(args, w.args...)
 	for i := range args {
 		args[i] = shellQuote(args[i])

@@ -1,0 +1,260 @@
+# What Deck.Review finds in the gallery. Regenerate with UPDATE_GOLDEN=1 go test -run TestGalleryReview.
+1.1 Text fields 240x67 error text-offcanvas: Text "A longer paragraph that has…" runs 14px past the bottom edge
+1.1 Text fields 240x67 warning overlap: Text "A longer paragraph that has…" and Text "Per glyph" overlap
+1.1 Text fields 240x67 warning overlap: Text "Centered and wrapped inside…" and Text "Mid gjpqy" overlap
+1.1 Text fields 320x90 error text-offcanvas: Text "A longer paragraph that has…" runs 18px past the bottom edge
+1.1 Text fields 320x90 warning overlap: Text "A longer paragraph that has…" and Text "Per glyph" overlap
+1.1 Text fields 320x90 warning overlap: Text "Centered and wrapped inside…" and Text "Mid gjpqy" overlap
+1.1 Text fields 682x171 error text-offcanvas: Text "A longer paragraph that has…" runs 36px past the bottom edge
+1.1 Text fields 682x171 warning overlap: Text "A longer paragraph that has…" and Text "Per glyph" overlap
+2.1 Font metrics 240x67 error text-offcanvas: Text "24px" runs 25px past the right edge
+2.1 Font metrics 240x67 warning text-small: Text "short" is 6px; the smallest readable size here is 9px
+2.1 Font metrics 240x67 warning text-small: Text "a medium length line" is 6px; the smallest readable size here is 9px
+2.1 Font metrics 240x67 warning text-small: Text "the longest line of" is 6px; the smallest readable size here is 9px
+2.1 Font metrics 240x67 warning text-small: Text "the three goes here" is 6px; the smallest readable size here is 9px
+2.1 Font metrics 240x67 warning text-small: Text "8px" is 8px; the smallest readable size here is 9px
+2.1 Font metrics 320x90 warning text-small: Text "short" is 9px; the smallest readable size here is 12px
+2.1 Font metrics 320x90 warning text-small: Text "a medium length line" is 9px; the smallest readable size here is 12px
+2.1 Font metrics 320x90 warning text-small: Text "the longest line of" is 9px; the smallest readable size here is 12px
+2.1 Font metrics 320x90 warning text-small: Text "the three goes here" is 9px; the smallest readable size here is 12px
+2.1 Font metrics 320x90 warning text-small: Text "8px" is 8px; the smallest readable size here is 12px
+2.1 Font metrics 320x90 warning text-small: Text "10px" is 10px; the smallest readable size here is 12px
+2.1 Font metrics 682x171 warning text-small: Text "short" is 17px; the smallest readable size here is 23px
+2.1 Font metrics 682x171 warning text-small: Text "a medium length line" is 17px; the smallest readable size here is 23px
+2.1 Font metrics 682x171 warning text-small: Text "the longest line of" is 17px; the smallest readable size here is 23px
+2.1 Font metrics 682x171 warning text-small: Text "the three goes here" is 17px; the smallest readable size here is 23px
+2.1 Font metrics 682x171 warning text-small: Text "8px" is 8px; the smallest readable size here is 23px
+2.1 Font metrics 682x171 warning text-small: Text "10px" is 10px; the smallest readable size here is 23px
+2.1 Font metrics 682x171 warning text-small: Text "12px" is 12px; the smallest readable size here is 23px
+2.1 Font metrics 682x171 warning text-small: Text "13px" is 13px; the smallest readable size here is 23px
+2.1 Font metrics 682x171 warning text-small: Text "14px" is 14px; the smallest readable size here is 23px
+2.1 Font metrics 682x171 warning text-small: Text "16px" is 16px; the smallest readable size here is 23px
+4.1 Block stock A 682x171 warning text-offcanvas: Block "Block Spl" runs 5px past the bottom edge
+6.1 Block options 240x67 error text-offcanvas: Text "55x18 55x36 55x36" runs 29px past the right edge
+6.1 Block options 320x90 error text-offcanvas: Text "55x18 55x36 55x36" runs 57px past the right edge
+6.1 Block options 682x171 error text-offcanvas: Text "55x18 55x36 55x36" runs 158px past the right edge
+9.1 FigFont API 240x67 error text-offcanvas: Text "Spleen 6x12 Shadow     rows…" runs 286px past the right edge
+9.1 FigFont API 240x67 error text-offcanvas: Text "Spleen 6x12            rows…" runs 286px past the right edge
+9.1 FigFont API 240x67 error text-offcanvas: Text "Spleen 5x8             rows…" runs 286px past the right edge
+9.1 FigFont API 240x67 error text-offcanvas: Text "Spleen 8x16            rows…" runs 286px past the right edge
+9.1 FigFont API 240x67 error text-offcanvas: Text "Spleen 12x24           rows…" runs 296px past the right edge
+9.1 FigFont API 240x67 error text-offcanvas: Text "Wrap: [\"one\" \"two\" \"three\" …" runs 144px past the right edge
+9.1 FigFont API 240x67 error text-offcanvas: Block "one…" runs 46px past the bottom edge
+9.1 FigFont API 240x67 warning overlap: Text "DropQuotes \"Agents aren't u…" and Block "Disk" overlap
+9.1 FigFont API 240x67 warning overlap: Text "Spleen 6x12            rows…" and Block "abc é~" overlap
+9.1 FigFont API 240x67 warning overlap: Text "Spleen 5x8             rows…" and Block "abc é~" overlap
+9.1 FigFont API 240x67 warning overlap: Text "Spleen 8x16            rows…" and Block "abc é~" overlap
+9.1 FigFont API 240x67 warning overlap: Text "Spleen 12x24           rows…" and Block "abc é~" overlap
+9.1 FigFont API 240x67 warning overlap: Text "Spleen 12x24           rows…" and Text "ParseFont" overlap
+9.1 FigFont API 240x67 warning overlap: Block "one…" and Text "cells 25x36" overlap
+9.1 FigFont API 240x67 warning overlap: Block "abc é~" and Text "ParseFont" overlap
+9.1 FigFont API 320x90 error text-offcanvas: Text "Spleen 6x12 Shadow     rows…" runs 380px past the right edge
+9.1 FigFont API 320x90 error text-offcanvas: Text "Spleen 6x12            rows…" runs 380px past the right edge
+9.1 FigFont API 320x90 error text-offcanvas: Text "Spleen 5x8             rows…" runs 380px past the right edge
+9.1 FigFont API 320x90 error text-offcanvas: Text "Spleen 8x16            rows…" runs 380px past the right edge
+9.1 FigFont API 320x90 error text-offcanvas: Text "Spleen 12x24           rows…" runs 395px past the right edge
+9.1 FigFont API 320x90 error text-offcanvas: Text "Wrap: [\"one\" \"two\" \"three\" …" runs 192px past the right edge
+9.1 FigFont API 320x90 error text-offcanvas: Block "one…" runs 37px past the bottom edge
+9.1 FigFont API 320x90 warning overlap: Text "DropQuotes \"Agents aren't u…" and Block "Disk" overlap
+9.1 FigFont API 320x90 warning overlap: Text "Spleen 6x12            rows…" and Block "abc é~" overlap
+9.1 FigFont API 320x90 warning overlap: Text "Spleen 8x16            rows…" and Block "abc é~" overlap
+9.1 FigFont API 320x90 warning overlap: Text "Spleen 12x24           rows…" and Block "abc é~" overlap
+9.1 FigFont API 320x90 warning overlap: Text "Spleen 12x24           rows…" and Text "ParseFont" overlap
+9.1 FigFont API 320x90 warning overlap: Block "one…" and Text "cells 25x36" overlap
+9.1 FigFont API 320x90 warning overlap: Block "abc é~" and Text "ParseFont" overlap
+9.1 FigFont API 682x171 error text-offcanvas: Text "Spleen 6x12 Shadow     rows…" runs 662px past the right edge
+9.1 FigFont API 682x171 error text-offcanvas: Text "Spleen 6x12            rows…" runs 662px past the right edge
+9.1 FigFont API 682x171 error text-offcanvas: Text "Spleen 5x8             rows…" runs 662px past the right edge
+9.1 FigFont API 682x171 error text-offcanvas: Text "Spleen 8x16            rows…" runs 662px past the right edge
+9.1 FigFont API 682x171 error text-offcanvas: Text "Spleen 12x24           rows…" runs 689px past the right edge
+9.1 FigFont API 682x171 error text-offcanvas: Text "Wrap: [\"one\" \"two\" \"three\" …" runs 300px past the right edge
+9.1 FigFont API 682x171 error text-offcanvas: Block "one…" runs 11px past the bottom edge
+9.1 FigFont API 682x171 warning overlap: Text "DropQuotes \"Agents aren't u…" and Block "Disk" overlap
+9.1 FigFont API 682x171 warning overlap: Text "Spleen 6x12            rows…" and Block "abc é~" overlap
+9.1 FigFont API 682x171 warning overlap: Text "Spleen 8x16            rows…" and Block "abc é~" overlap
+9.1 FigFont API 682x171 warning overlap: Text "Spleen 12x24           rows…" and Block "abc é~" overlap
+9.1 FigFont API 682x171 warning overlap: Text "Spleen 12x24           rows…" and Text "ParseFont" overlap
+9.1 FigFont API 682x171 warning overlap: Block "one…" and Text "cells 25x36" overlap
+10.1 Components 240x67 warning text-small: Panel: Text "a label that…" is 7px; the smallest readable size here is 9px
+10.1 Components 240x67 warning overlap: Text "left label" and Text "centered" overlap
+10.1 Components 240x67 warning overlap: Text "PLACEHOLDER…" and Text "ILLUSTRATIVE DATA" overlap
+10.1 Components 240x67 warning overlap: Text "PLACEHOLDER…" and Text "ILLUSTRATIVE DATA" overlap
+10.1 Components 320x90 warning text-small: Panel: Text "a label that…" is 9px; the smallest readable size here is 12px
+10.1 Components 320x90 warning overlap: Text "left label" and Text "centered" overlap
+10.1 Components 320x90 warning overlap: Text "PLACEHOLDER…" and Text "ILLUSTRATIVE DATA" overlap
+10.1 Components 320x90 warning overlap: Text "PLACEHOLDER…" and Text "ILLUSTRATIVE DATA" overlap
+10.1 Components 682x171 warning text-small: Panel: Text "a label that…" is 18px; the smallest readable size here is 23px
+10.1 Components 682x171 warning overlap: Text "left label" and Text "centered" overlap
+10.1 Components 682x171 warning overlap: Text "PLACEHOLDER…" and Text "ILLUSTRATIVE DATA" overlap
+10.1 Components 682x171 warning overlap: Text "PLACEHOLDER…" and Text "ILLUSTRATIVE DATA" overlap
+11.1 Cycle 682x171 warning text-offcanvas: Text "loop=false th=0.00 act=-1" runs 3px past the bottom edge
+11.2 Cycle 682x171 warning text-offcanvas: Text "loop=false th=0.00 act=-1" runs 3px past the bottom edge
+11.3 Cycle 682x171 warning text-offcanvas: Text "loop=false th=0.00 act=-1" runs 3px past the bottom edge
+11.4 Cycle 682x171 warning text-offcanvas: Text "loop=false th=0.00 act=-1" runs 3px past the bottom edge
+11.5 Cycle 682x171 warning text-offcanvas: Text "loop=true th=0.63 act=-1" runs 3px past the bottom edge
+12.1 Cycle ring 682x171 warning text-offcanvas: Text "loop=false th=0.00 act=-1" runs 3px past the bottom edge
+12.2 Cycle ring 682x171 warning text-offcanvas: Text "loop=false th=0.00 act=-1" runs 3px past the bottom edge
+12.3 Cycle ring 682x171 warning text-offcanvas: Text "loop=true th=4.08 act=2" runs 3px past the bottom edge
+12.4 Cycle ring 682x171 warning text-offcanvas: Text "loop=true th=4.08 act=2" runs 3px past the bottom edge
+13.1 Bullets 240x67 error overflow: BulletList needs 101×107px, has 101×67px
+13.1 Bullets 320x90 error overflow: BulletList needs 134×156px, has 134×90px
+13.1 Bullets 682x171 error overflow: BulletList needs 286×248px, has 286×171px
+13.2 Bullets 240x67 error overflow: BulletList needs 101×107px, has 101×67px
+13.2 Bullets 320x90 error overflow: BulletList needs 134×156px, has 134×90px
+13.2 Bullets 682x171 error overflow: BulletList needs 286×248px, has 286×171px
+13.3 Bullets 240x67 error overflow: BulletList needs 101×107px, has 101×67px
+13.3 Bullets 320x90 error overflow: BulletList needs 134×156px, has 134×90px
+13.3 Bullets 682x171 error overflow: BulletList needs 286×248px, has 286×171px
+13.4 Bullets 240x67 error overflow: BulletList needs 101×107px, has 101×67px
+13.4 Bullets 320x90 error overflow: BulletList needs 134×156px, has 134×90px
+13.4 Bullets 682x171 error overflow: BulletList needs 286×248px, has 286×171px
+13.5 Bullets 240x67 error overflow: BulletList needs 101×107px, has 101×67px
+13.5 Bullets 320x90 error overflow: BulletList needs 134×156px, has 134×90px
+13.5 Bullets 682x171 error overflow: BulletList needs 286×248px, has 286×171px
+15.1 Pixel art 320x90 warning text-offcanvas: Text "cov 1.000 0.500 0.000" runs 2px past the right edge
+17.1 Motion 240x67 warning overlap: Text "EaseInOutCubic" and Text "EaseOutCubic" overlap
+17.1 Motion 320x90 warning overlap: Text "EaseInOutCubic" and Text "EaseOutCubic" overlap
+19.1 Builds 240x67 error text-offcanvas: Text "step 0  since0 99.00  since…" runs 79px past the right edge
+19.1 Builds 320x90 error text-offcanvas: Text "step 0  since0 99.00  since…" runs 107px past the right edge
+19.1 Builds 682x171 error text-offcanvas: Text "step 0  since0 99.00  since…" runs 138px past the right edge
+19.2 Builds 240x67 error text-offcanvas: Text "step 1  since0 99.00  since…" runs 81px past the right edge
+19.2 Builds 320x90 error text-offcanvas: Text "step 1  since0 99.00  since…" runs 110px past the right edge
+19.2 Builds 682x171 error text-offcanvas: Text "step 1  since0 99.00  since…" runs 142px past the right edge
+19.3 Builds 240x67 error text-offcanvas: Text "step 2  since0 99.00  since…" runs 82px past the right edge
+19.3 Builds 320x90 error text-offcanvas: Text "step 2  since0 99.00  since…" runs 111px past the right edge
+19.3 Builds 682x171 error text-offcanvas: Text "step 2  since0 99.00  since…" runs 146px past the right edge
+19.4 Builds 240x67 error text-offcanvas: Text "step 3  since0 99.00  since…" runs 86px past the right edge
+19.4 Builds 320x90 error text-offcanvas: Text "step 3  since0 99.00  since…" runs 116px past the right edge
+19.4 Builds 682x171 error text-offcanvas: Text "step 3  since0 99.00  since…" runs 154px past the right edge
+21.1 Morph A 240x67 warning overlap: Place "box" and Place "before" overlap
+21.1 Morph A 320x90 warning overlap: Place "box" and Place "before" overlap
+21.1 Morph A 682x171 warning overlap: Place "box" and Place "before" overlap
+22.1 Morph B 240x67 warning overlap: Place "box" and Place "after" overlap
+22.1 Morph B 240x67 warning overlap: Place "box" and Place "" overlap
+22.1 Morph B 320x90 warning overlap: Place "box" and Place "after" overlap
+22.1 Morph B 320x90 warning overlap: Place "box" and Place "" overlap
+22.1 Morph B 682x171 warning overlap: Place "box" and Place "after" overlap
+22.1 Morph B 682x171 warning overlap: Place "box" and Place "" overlap
+36.1 Element animations 240x67 warning text-small: Panel: 2 texts at 8px, such as Text "ZoomIn,…"; the smallest readable size here is 9px
+36.1 Element animations 320x90 warning text-small: Panel: 2 texts at 11px, such as Text "ZoomIn,…"; the smallest readable size here is 12px
+36.2 Element animations 240x67 warning text-small: Panel: 2 texts at 8px, such as Text "ZoomIn,…"; the smallest readable size here is 9px
+36.2 Element animations 320x90 warning text-small: Panel: 2 texts at 11px, such as Text "ZoomIn,…"; the smallest readable size here is 12px
+36.3 Element animations 240x67 warning text-small: Panel: Text "Combine,…" is 8px; the smallest readable size here is 9px
+36.3 Element animations 320x90 warning text-small: Panel: Text "Combine,…" is 11px; the smallest readable size here is 12px
+38.1 Rich text 240x67 error text-offcanvas: Rich "centered on its ink with gj…" runs 5px past the bottom edge
+38.1 Rich text 240x67 warning overlap: Rich "Mark under strike both and …" and Rich "Fit finds the largest size …" overlap
+38.1 Rich text 320x90 error text-offcanvas: Rich "centered on its ink with gj…" runs 5px past the bottom edge
+38.1 Rich text 320x90 warning overlap: Rich "Mark under strike both and …" and Rich "Fit finds the largest size …" overlap
+38.1 Rich text 682x171 error text-offcanvas: Rich "centered on its ink with gj…" runs 12px past the bottom edge
+39.1 Code 240x67 error code-clipped: Code "greet.go": 8 of 16 lines visible (needs 204px tall, has 115px); 23 of 64 columns visible (needs 353px wide, has 132px) at 9px, the smallest readable size
+39.1 Code 320x90 error code-clipped: Code "greet.go": 8 of 16 lines visible (needs 272px tall, has 154px); 23 of 64 columns visible (needs 470px wide, has 176px) at 12px, the smallest readable size
+39.1 Code 682x171 error code-clipped: Code "greet.go": 8 of 16 lines visible (needs 522px tall, has 293px); 26 of 64 columns visible (needs 900px wide, has 375px) at 23px, the smallest readable size
+40.1 Code focus 240x67 error code-clipped: Code (go, 16 lines): 9 of 16 lines visible (needs 187px tall, has 115px); 39 of 64 columns visible (needs 353px wide, has 216px) at 9px, the smallest readable size
+40.1 Code focus 320x90 error code-clipped: Code (go, 16 lines): 9 of 16 lines visible (needs 249px tall, has 154px); 39 of 64 columns visible (needs 470px wide, has 288px) at 12px, the smallest readable size
+40.1 Code focus 682x171 error code-clipped: Code (go, 16 lines): 9 of 16 lines visible (needs 477px tall, has 293px); 43 of 64 columns visible (needs 900px wide, has 614px) at 23px, the smallest readable size
+40.2 Code focus 240x67 error code-clipped: Code (go, 16 lines): 9 of 16 lines visible (needs 187px tall, has 115px); 39 of 64 columns visible (needs 353px wide, has 216px) at 9px, the smallest readable size
+40.2 Code focus 320x90 error code-clipped: Code (go, 16 lines): 9 of 16 lines visible (needs 249px tall, has 154px); 39 of 64 columns visible (needs 470px wide, has 288px) at 12px, the smallest readable size
+40.2 Code focus 682x171 error code-clipped: Code (go, 16 lines): 9 of 16 lines visible (needs 477px tall, has 293px); 43 of 64 columns visible (needs 900px wide, has 614px) at 23px, the smallest readable size
+40.3 Code focus 240x67 error code-clipped: Code (go, 16 lines): 9 of 16 lines visible (needs 187px tall, has 115px); 39 of 64 columns visible (needs 353px wide, has 216px) at 9px, the smallest readable size
+40.3 Code focus 320x90 error code-clipped: Code (go, 16 lines): 9 of 16 lines visible (needs 249px tall, has 154px); 39 of 64 columns visible (needs 470px wide, has 288px) at 12px, the smallest readable size
+40.3 Code focus 682x171 error code-clipped: Code (go, 16 lines): 9 of 16 lines visible (needs 477px tall, has 293px); 43 of 64 columns visible (needs 900px wide, has 614px) at 23px, the smallest readable size
+40.4 Code focus 240x67 error code-clipped: Code (go, 16 lines): 9 of 16 lines visible (needs 187px tall, has 115px); 39 of 64 columns visible (needs 353px wide, has 216px) at 9px, the smallest readable size
+40.4 Code focus 320x90 error code-clipped: Code (go, 16 lines): 9 of 16 lines visible (needs 249px tall, has 154px); 39 of 64 columns visible (needs 470px wide, has 288px) at 12px, the smallest readable size
+40.4 Code focus 682x171 error code-clipped: Code (go, 16 lines): 9 of 16 lines visible (needs 477px tall, has 293px); 43 of 64 columns visible (needs 900px wide, has 614px) at 23px, the smallest readable size
+41.1 Code diff 240x67 error code-clipped: Code "greet.go": 5 of 8 lines visible (needs 114px tall, has 80px); 30 of 34 columns visible (needs 191px wide, has 168px) at 9px, the smallest readable size
+41.1 Code diff 320x90 error code-clipped: Code "greet.go": 5 of 8 lines visible (needs 152px tall, has 108px); 30 of 34 columns visible (needs 254px wide, has 224px) at 12px, the smallest readable size
+41.1 Code diff 682x171 error code-clipped: Code "greet.go": 5 of 8 lines visible (needs 292px tall, has 205px); 33 of 34 columns visible (needs 486px wide, has 477px) at 23px, the smallest readable size
+42.1 Bar and line charts 240x67 warning text-small: BarChart: 6 texts at 7–8px, such as Text "12"; the smallest readable size here is 9px
+42.1 Bar and line charts 320x90 warning text-small: BarChart: 6 texts at 9–11px, such as Text "12"; the smallest readable size here is 12px
+42.1 Bar and line charts 682x171 warning text-small: BarChart: 2 texts at 20–22px, such as Text "-4"; the smallest readable size here is 23px
+42.2 Bar and line charts 240x67 warning text-small: BarChart: 6 texts at 7–8px, such as Text "12"; the smallest readable size here is 9px
+42.2 Bar and line charts 320x90 warning text-small: BarChart: 6 texts at 9–11px, such as Text "12"; the smallest readable size here is 12px
+42.2 Bar and line charts 682x171 warning text-small: BarChart: 2 texts at 20–22px, such as Text "-4"; the smallest readable size here is 23px
+43.1 Chart options 240x67 warning text-small: BarChart: 4 texts at 6px, such as Text "Search"; the smallest readable size here is 9px
+43.1 Chart options 320x90 warning text-small: BarChart: 4 texts at 9px, such as Text "Search"; the smallest readable size here is 12px
+43.1 Chart options 682x171 warning text-small: BarChart: 4 texts at 20px, such as Text "Search"; the smallest readable size here is 23px
+43.2 Chart options 240x67 warning text-small: BarChart: 4 texts at 6px, such as Text "Search"; the smallest readable size here is 9px
+43.2 Chart options 320x90 warning text-small: BarChart: 4 texts at 9px, such as Text "Search"; the smallest readable size here is 12px
+43.2 Chart options 320x90 warning text-small: LineChart: 5 texts at 10px, such as Text "Jan"; the smallest readable size here is 12px
+43.2 Chart options 682x171 warning text-small: BarChart: 4 texts at 20px, such as Text "Search"; the smallest readable size here is 23px
+44.1 Donut and stats 240x67 warning text-small: DonutChart: Text "100…" is 8px; the smallest readable size here is 9px
+44.1 Donut and stats 320x90 warning text-small: DonutChart: Text "100…" is 11px; the smallest readable size here is 12px
+44.1 Donut and stats 682x171 warning text-small: DonutChart: Text "100…" is 19px; the smallest readable size here is 23px
+44.2 Donut and stats 240x67 warning text-small: DonutChart: Text "100…" is 8px; the smallest readable size here is 9px
+44.2 Donut and stats 320x90 warning text-small: DonutChart: Text "100…" is 11px; the smallest readable size here is 12px
+44.2 Donut and stats 682x171 warning text-small: DonutChart: Text "100…" is 19px; the smallest readable size here is 23px
+44.3 Donut and stats 240x67 warning text-small: DonutChart: Text "100…" is 8px; the smallest readable size here is 9px
+44.3 Donut and stats 320x90 warning text-small: DonutChart: Text "100…" is 11px; the smallest readable size here is 12px
+44.3 Donut and stats 682x171 warning text-small: DonutChart: Text "100…" is 19px; the smallest readable size here is 23px
+45.1 Shapes 240x67 warning text-offcanvas: Text "clipped" runs 2px past the right edge
+45.1 Shapes 320x90 warning text-offcanvas: Text "clipped" runs 3px past the right edge
+45.1 Shapes 682x171 error text-offcanvas: Text "clipped" runs 6px past the right edge
+47.1 Timeline and process 240x67 error overflow: Timeline needs 149×49px, has 132×72px
+47.1 Timeline and process 240x67 error overflow: Timeline needs 71×83px, has 78×77px
+47.1 Timeline and process 320x90 error overflow: Timeline needs 199×63px, has 177×97px
+47.1 Timeline and process 320x90 error overflow: Timeline needs 93×110px, has 103×104px
+47.1 Timeline and process 320x90 warning text-offcanvas: Text "process 294x36 timeline 177…" runs 2px past the bottom edge
+47.1 Timeline and process 682x171 error overflow: Timeline needs 382×121px, has 376×183px
+47.1 Timeline and process 682x171 error overflow: Timeline needs 179×211px, has 224×197px
+47.1 Timeline and process 682x171 warning text-offcanvas: Text "process 627x68 timeline 376…" runs 3px past the bottom edge
+47.2 Timeline and process 240x67 error overflow: Timeline needs 149×49px, has 132×72px
+47.2 Timeline and process 240x67 error overflow: Timeline needs 71×83px, has 78×77px
+47.2 Timeline and process 320x90 error overflow: Timeline needs 199×63px, has 177×97px
+47.2 Timeline and process 320x90 error overflow: Timeline needs 93×110px, has 103×104px
+47.2 Timeline and process 320x90 warning text-offcanvas: Text "process 294x36 timeline 177…" runs 2px past the bottom edge
+47.2 Timeline and process 682x171 error overflow: Timeline needs 382×121px, has 376×183px
+47.2 Timeline and process 682x171 error overflow: Timeline needs 179×211px, has 224×197px
+47.2 Timeline and process 682x171 warning text-offcanvas: Text "process 627x68 timeline 376…" runs 3px past the bottom edge
+47.3 Timeline and process 240x67 error overflow: Timeline needs 149×49px, has 132×72px
+47.3 Timeline and process 240x67 error overflow: Timeline needs 71×83px, has 78×77px
+47.3 Timeline and process 320x90 error overflow: Timeline needs 199×63px, has 177×97px
+47.3 Timeline and process 320x90 error overflow: Timeline needs 93×110px, has 103×104px
+47.3 Timeline and process 320x90 warning text-offcanvas: Text "process 294x36 timeline 177…" runs 2px past the bottom edge
+47.3 Timeline and process 682x171 error overflow: Timeline needs 382×121px, has 376×183px
+47.3 Timeline and process 682x171 error overflow: Timeline needs 179×211px, has 224×197px
+47.3 Timeline and process 682x171 warning text-offcanvas: Text "process 627x68 timeline 376…" runs 3px past the bottom edge
+47.4 Timeline and process 240x67 error overflow: Timeline needs 149×49px, has 132×72px
+47.4 Timeline and process 240x67 error overflow: Timeline needs 71×83px, has 78×77px
+47.4 Timeline and process 320x90 error overflow: Timeline needs 199×63px, has 177×97px
+47.4 Timeline and process 320x90 error overflow: Timeline needs 93×110px, has 103×104px
+47.4 Timeline and process 320x90 warning text-offcanvas: Text "process 294x36 timeline 177…" runs 2px past the bottom edge
+47.4 Timeline and process 682x171 error overflow: Timeline needs 382×121px, has 376×183px
+47.4 Timeline and process 682x171 error overflow: Timeline needs 179×211px, has 224×197px
+47.4 Timeline and process 682x171 warning text-offcanvas: Text "process 627x68 timeline 376…" runs 3px past the bottom edge
+47.5 Timeline and process 240x67 error overflow: Timeline needs 149×49px, has 132×72px
+47.5 Timeline and process 240x67 error overflow: Timeline needs 71×83px, has 78×77px
+47.5 Timeline and process 320x90 error overflow: Timeline needs 199×63px, has 177×97px
+47.5 Timeline and process 320x90 error overflow: Timeline needs 93×110px, has 103×104px
+47.5 Timeline and process 320x90 warning text-offcanvas: Text "process 294x36 timeline 177…" runs 2px past the bottom edge
+47.5 Timeline and process 682x171 error overflow: Timeline needs 382×121px, has 376×183px
+47.5 Timeline and process 682x171 error overflow: Timeline needs 179×211px, has 224×197px
+47.5 Timeline and process 682x171 warning text-offcanvas: Text "process 627x68 timeline 376…" runs 3px past the bottom edge
+47.6 Timeline and process 240x67 error overflow: Timeline needs 149×49px, has 132×72px
+47.6 Timeline and process 240x67 error overflow: Timeline needs 71×83px, has 78×77px
+47.6 Timeline and process 320x90 error overflow: Timeline needs 199×63px, has 177×97px
+47.6 Timeline and process 320x90 error overflow: Timeline needs 93×110px, has 103×104px
+47.6 Timeline and process 320x90 warning text-offcanvas: Text "process 294x36 timeline 177…" runs 2px past the bottom edge
+47.6 Timeline and process 682x171 error overflow: Timeline needs 382×121px, has 376×183px
+47.6 Timeline and process 682x171 error overflow: Timeline needs 179×211px, has 224×197px
+47.6 Timeline and process 682x171 warning text-offcanvas: Text "process 627x68 timeline 376…" runs 3px past the bottom edge
+48.1 Table 240x67 warning table-cell-cut: Table "Engine": 5 cells cut short at 9px text
+48.1 Table 240x67 error table-rows-dropped: Table "n": 36 of 40 rows don't fit in 67px at 9px text
+48.1 Table 240x67 warning table-cell-cut: Table "n": 5 cells cut short at 9px text
+48.1 Table 320x90 warning table-cell-cut: Table "Engine": 5 cells cut short at 12px text
+48.1 Table 320x90 error table-rows-dropped: Table "n": 36 of 40 rows don't fit in 90px at 12px text
+48.1 Table 320x90 warning table-cell-cut: Table "n": 5 cells cut short at 12px text
+48.1 Table 682x171 warning table-cell-cut: Table "Engine": 4 cells cut short at 23px text
+48.1 Table 682x171 error table-rows-dropped: Table "n": 36 of 40 rows don't fit in 171px at 23px text
+48.1 Table 682x171 warning table-cell-cut: Table "n": 5 cells cut short at 23px text
+53.1 Code overflow 240x67 warning text-small: Code (go, 8 lines) is set at 6px to fit; the smallest readable size here is 9px
+53.1 Code overflow 240x67 error code-clipped: Code (go, 8 lines): 6 of 8 lines visible (needs 67px tall, has 55px) at 6px
+53.1 Code overflow 320x90 warning text-small: Code (go, 8 lines) is set at 6px to fit; the smallest readable size here is 12px
+53.1 Code overflow 682x171 warning text-small: Code (go, 8 lines) is set at 12px to fit; the smallest readable size here is 23px
+53.2 Code overflow 240x67 warning text-small: Code (go, 8 lines) is set at 6px to fit; the smallest readable size here is 9px
+53.2 Code overflow 240x67 error code-clipped: Code (go, 8 lines): 6 of 8 lines visible (needs 67px tall, has 55px) at 6px
+53.2 Code overflow 320x90 warning text-small: Code (go, 8 lines) is set at 6px to fit; the smallest readable size here is 12px
+53.2 Code overflow 682x171 warning text-small: Code (go, 8 lines) is set at 12px to fit; the smallest readable size here is 23px
+53.3 Code overflow 240x67 warning text-small: Code (go, 8 lines) is set at 6px to fit; the smallest readable size here is 9px
+53.3 Code overflow 240x67 error code-clipped: Code (go, 8 lines): 6 of 8 lines visible (needs 67px tall, has 55px) at 6px
+53.3 Code overflow 320x90 warning text-small: Code (go, 8 lines) is set at 6px to fit; the smallest readable size here is 12px
+53.3 Code overflow 682x171 warning text-small: Code (go, 8 lines) is set at 12px to fit; the smallest readable size here is 23px

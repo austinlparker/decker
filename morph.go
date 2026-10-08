@@ -7,9 +7,7 @@ package decker
 // whose elements were drawn already (a frame captured mid-transition) just
 // cross-fades.
 func morph(from, to *Scene, p float64, _ Direction, t *Theme) {
-	e := EaseInOutCubic(p)
-	blend(from.Px, to.Px, e)
-	moveChars(from, to, func(x, y int, old bool) (int, int, bool) { return x, y, old == (e < 0.5) })
+	e := fadeFrames(from, to, p)
 
 	var olds []placed
 	if !from.finished {
@@ -31,6 +29,7 @@ func morph(from, to *Scene, p float64, _ Direction, t *Theme) {
 	drawn := to.finished // its elements and the overlay too
 	to.finished = true
 	to.safely(func() {
+		to.drawing = "a placed element"
 		margin := to.Px.H / 10 // room for a glow around the rect
 		for j, o := range olds {
 			if !to.taken[j] {
@@ -68,11 +67,26 @@ func (s *Scene) pairScratch(n, m int) []int {
 // layers holds scratch canvases for fade, frame-sized like scenes.
 var layers = sizedPool[Pixels]{max: 4}
 
+// layer lends a canvas the size of like. Drawing on it reports to no review:
+// a Composite that shows the layer says how what is drawn there lands.
 func layer(like *Pixels) *Pixels {
 	if l := layers.get(func(l *Pixels) bool { return l.W == like.W && l.H == like.H }); l != nil {
+		l.review = nil
 		return l
 	}
 	return &Pixels{W: like.W, H: like.H, Pix: make([]RGB, len(like.Pix))}
+}
+
+// snapshot lends a layer holding p's pixels in the box x0..x1 × y0..y1,
+// inclusive, on p's background; the rest of it is undefined. Hand it back
+// to layers.
+func snapshot(p *Pixels, x0, y0, x1, y1 int) *Pixels {
+	l := layer(p)
+	for y := y0; y <= y1; y++ {
+		copy(l.Pix[y*p.W+x0:y*p.W+x1+1], p.Pix[y*p.W+x0:y*p.W+x1+1])
+	}
+	l.BG = p.BG
+	return l
 }
 
 // fade mixes draw(r) into p at weight a, as if drawn on a layer of its own,
@@ -95,21 +109,13 @@ func fade(p *Pixels, r Rect, margin int, a float64, draw, under func(*Pixels, Re
 	if x0 > x1 || y0 > y1 {
 		return
 	}
-	snap := func(l *Pixels) {
-		for y := y0; y <= y1; y++ {
-			copy(l.Pix[y*p.W+x0:y*p.W+x1+1], p.Pix[y*p.W+x0:y*p.W+x1+1])
-		}
-		l.BG = p.BG
-	}
-	top := layer(p)
+	top := snapshot(p, x0, y0, x1, y1)
 	defer layers.put(top)
-	snap(top)
 	draw(top, r)
 	base := p
 	if under != nil {
-		base = layer(p)
+		base = snapshot(p, x0, y0, x1, y1)
 		defer layers.put(base)
-		snap(base)
 		under(base, r)
 	}
 	for y := y0; y <= y1; y++ {

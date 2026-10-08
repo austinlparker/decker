@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 )
 
@@ -101,6 +102,25 @@ func TestPace(t *testing.T) {
 	for _, c := range cases {
 		if got := pace(outline, c.slide, c.step, c.elapsed, talk); got != c.want {
 			t.Errorf("pace(slide %d, step %d, %v) = %v, want %v", c.slide, c.step, c.elapsed, got, c.want)
+		}
+	}
+}
+
+// TestPresenterQuitsOnQuitBindings checks the presenter view quits on the
+// keys the bindings table gives "quit", including one added to it, and on
+// no other bound key.
+func TestPresenterQuitsOnQuitBindings(t *testing.T) {
+	keyActs["f12"] = binding{keys: "f12", act: "quit"}
+	defer delete(keyActs, "f12")
+	p := newPresenter(testDeck(), "/tmp/x.sock", 30*time.Minute)
+	for k, b := range keyActs {
+		_, cmd := p.handleKey(k)
+		quits := false
+		if cmd != nil {
+			_, quits = cmd().(tea.QuitMsg)
+		}
+		if want := b.act == "quit"; quits != want {
+			t.Errorf("key %q (%s): quits %v, want %v", k, b.act, quits, want)
 		}
 	}
 }

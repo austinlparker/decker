@@ -87,12 +87,17 @@ type Connector struct {
 	Prog float64
 }
 
-// autoSides picks the sides of a and b that face each other: left and right
-// when they are apart more across than down, top and bottom otherwise. Rects
-// that overlap on both axes go by the offset of their centers.
-func autoSides(a, b Rect) (from, to Side) {
-	gapX := max(b.X-a.Right(), a.X-b.Right())
-	gapY := max(b.Y-a.Bottom(), a.Y-b.Bottom())
+// gaps is how far apart a and b are across and down, negative on an axis
+// where they overlap.
+func gaps(a, b Rect) (x, y float64) {
+	return max(b.X-a.Right(), a.X-b.Right()), max(b.Y-a.Bottom(), a.Y-b.Bottom())
+}
+
+// autoSides picks the sides of a and b, gapX and gapY apart (see gaps), that
+// face each other: left and right when they are apart more across than down,
+// top and bottom otherwise. Rects that overlap on both axes go by the offset
+// of their centers.
+func autoSides(a, b Rect, gapX, gapY float64) (from, to Side) {
 	acx, acy := a.Center()
 	bcx, bcy := b.Center()
 	horizontal := gapX >= gapY
@@ -119,9 +124,8 @@ func (k Connector) sides() (from, to Side) {
 	from, to = k.FromSide, k.ToSide
 	switch {
 	case from == SideAuto && to == SideAuto:
-		from, to = autoSides(k.From, k.To)
-		gapX := max(k.To.X-k.From.Right(), k.From.X-k.To.Right())
-		gapY := max(k.To.Y-k.From.Bottom(), k.From.Y-k.To.Bottom())
+		gapX, gapY := gaps(k.From, k.To)
+		from, to = autoSides(k.From, k.To, gapX, gapY)
 		if k.Route == RouteElbow && gapX > 0 && gapY > 0 {
 			acx, acy := k.From.Center()
 			bcx, bcy := k.To.Center()
@@ -233,9 +237,12 @@ func headSize(h ArrowHead, w float64) float64 {
 	return 0
 }
 
-// drawHead draws the mark h with its tip at (tx, ty), pointing along the unit
-// vector (dx, dy), at scale f (1 is full size).
-func drawHead(p *Pixels, h ArrowHead, tx, ty, dx, dy, w, f float64, col RGB) {
+// drawHead draws the mark h with its tip at (tx, ty), an end of path,
+// pointing away from the point at length at along path, at scale f (1 is
+// full size).
+func drawHead(p *Pixels, h ArrowHead, path []float64, tx, ty, at, w, f float64, col RGB) {
+	px, py := pathAt(path, at)
+	dx, dy := unit(tx-px, ty-py)
 	l := headSize(h, w) * f
 	switch h {
 	case HeadArrow:
@@ -286,16 +293,10 @@ func (k Connector) Draw(c Ctx, p *Pixels) {
 		}
 	}
 	if tl > 0 {
-		sx, sy := full[0], full[1]
-		px, py := pathAt(full, tl)
-		dx, dy := unit(sx-px, sy-py)
-		drawHead(p, k.Tail, sx, sy, dx, dy, width, scale*Clamp01(cut/tl), col)
+		drawHead(p, k.Tail, full, full[0], full[1], tl, width, scale*Clamp01(cut/tl), col)
 	}
 	if hl > 0 && cut > total-hl {
-		ex, ey := full[len(full)-2], full[len(full)-1]
-		px, py := pathAt(full, total-hl)
-		dx, dy := unit(ex-px, ey-py)
-		drawHead(p, k.Head, ex, ey, dx, dy, width, scale*Clamp01((cut-(total-hl))/hl), col)
+		drawHead(p, k.Head, full, full[len(full)-2], full[len(full)-1], total-hl, width, scale*Clamp01((cut-(total-hl))/hl), col)
 	}
 	if k.Label != "" && prog > 0.5 {
 		mx, my := pathAt(full, total/2)

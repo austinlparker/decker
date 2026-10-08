@@ -35,6 +35,42 @@ func TestGalleryGolden(t *testing.T) {
 
 func TestGallerySlides(t *testing.T) { decktest.Slides(t, gallery()) }
 
+// TestGalleryReview pins what a review finds in the gallery: its slides
+// exercise every stock component, clipping and tiny text included, so this
+// is where a change to what review reports shows up. Record with
+// UPDATE_GOLDEN=1 go test -run TestGalleryReview.
+func TestGalleryReview(t *testing.T) {
+	d := gallery()
+	var b strings.Builder
+	b.WriteString("# What Deck.Review finds in the gallery. Regenerate with UPDATE_GOLDEN=1 go test -run TestGalleryReview.\n")
+	for _, is := range d.Review() {
+		b.WriteString(is.String() + "\n")
+	}
+	const path = "testdata/gallery-review.golden"
+	if os.Getenv("UPDATE_GOLDEN") != "" {
+		if err := os.WriteFile(path, []byte(b.String()), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		return
+	}
+	want, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("%v (record it with UPDATE_GOLDEN=1)", err)
+	}
+	got, wantLines := strings.Split(b.String(), "\n"), strings.Split(string(want), "\n")
+	line := func(ls []string, i int) string {
+		if i < len(ls) {
+			return ls[i]
+		}
+		return "(nothing)"
+	}
+	for i := range max(len(got), len(wantLines)) {
+		if g, w := line(got, i), line(wantLines, i); g != w {
+			t.Fatalf("%s line %d:\n got  %s\n want %s", path, i+1, g, w)
+		}
+	}
+}
+
 // decktest.Hashes and decktest.Hash are API: talks diff them in CI.
 var (
 	_ = decktest.Hashes
@@ -165,6 +201,8 @@ func gallery() Deck {
 		slideTableRows(),
 		slideTableCols(),
 		slideBlockCatalog(),
+		slideScales(),
+		slideCodeOverflow(),
 	}}
 }
 
@@ -335,21 +373,23 @@ func slideMetrics() Slide {
 			top := heading(c, p, "Font metrics")
 			f := th.Display
 
-			// Fit: biggest size that fits a box, and the wrapped text.
+			// Fit: the biggest size, at most Size, at which the text wraps
+			// into a box. It sets MaxW, so Draw wraps the text as Fit did.
 			bx, by, bw, bh := c.X(0.03), top, c.X(0.3), c.Y(0.22)
 			p.RoundRect(bx, by, bw, bh, 2, 1, th.Faint, 1)
-			size, wrapped := f.Fit("What Your MCP Server Does", bw, bh, c.Size(0.3), 0)
-			Text{Font: f, Size: size, Color: th.Text}.Draw(p, wrapped, bx, by)
-			size2, wrapped2 := f.Fit("Tight leading wraps here too", bw, bh, c.Size(0.3), 0.95)
+			const mcp, tight = "What Your MCP Server Does", "Tight leading wraps here too"
+			Text{Font: f, Size: c.Size(0.3), Color: th.Text}.Fit(mcp, bw, bh).Draw(p, mcp, bx, by)
 			p.RoundRect(bx, by+bh+c.Unit(0.03), bw, bh, 2, 1, th.Faint, 1)
-			Text{Font: f, Size: size2, Color: th.Muted, Leading: 0.95}.Draw(p, wrapped2, bx, by+bh+c.Unit(0.03))
+			Text{Font: f, Size: c.Size(0.3), Color: th.Muted, Leading: 0.95}.Fit(tight, bw, bh).Draw(p, tight, bx, by+bh+c.Unit(0.03))
 
-			// FitAll: one size for several parts.
+			// Fit across "\n" breaks: one size for several parts, each
+			// wrapped line drawn on its own.
 			ax := c.X(0.38)
 			p.RoundRect(ax, by, bw, bh, 2, 1, th.Faint, 1)
-			fs, parts := FitAll(th.Body, []string{"short", "a medium length line", "the longest line of the three goes here"}, bw, bh, c.Size(0.2))
+			const parts = "short\na medium length line\nthe longest line of the three goes here"
+			fs := Text{Font: th.Body, Size: c.Size(0.2)}.Fit(parts, bw, bh).Size
 			yy := by
-			for _, part := range parts {
+			for _, part := range th.Body.Wrap(parts, fs, bw) {
 				_, h := Text{Font: th.Body, Size: fs, Color: th.Accent2}.Draw(p, part, ax, yy)
 				yy += h + 2
 			}
@@ -1108,8 +1148,8 @@ func slideMorph(after bool) Slide {
 				box = box.Inset(c.Unit(0.03), c.Unit(0.03))
 			}
 			sc.Place("title", head, func(p *Pixels, r Rect) {
-				size, s := th.Display.Fit(title, r.W, r.H, c.Size(0.3), 0)
-				Text{Font: th.Display, Size: size, Color: th.Accent, Align: Center, Glow: 0.4}.Draw(p, s, r.X+r.W/2, r.Y)
+				Text{Font: th.Display, Size: c.Size(0.3), Color: th.Accent, Align: Center, Glow: 0.4}.
+					Fit(title, r.W, r.H).Draw(p, title, r.X+r.W/2, r.Y)
 			})
 			sc.Place("box", box, func(p *Pixels, r Rect) {
 				fill := th.Panel
@@ -1169,8 +1209,9 @@ func slideTransition(title string, tr Transition, n int) Slide {
 		View: func(c Ctx, sc *Scene) {
 			th := c.Theme
 			sc.Px.VGradient(0, sc.Px.H-1, Mix(th.Background, th.Accent2, 0.1*float64(n%4)), Mix(th.Panel, th.Accent, 0.06*float64(1+n%5)))
-			size, s := th.Display.Fit(title, c.X(0.8), c.Y(0.3), c.Size(0.3), 0)
-			Text{Font: th.Display, Size: size, Color: th.Text, Align: Center, Glow: 0.3, FX: FadeUp(c.StepT, 0.4, size)}.Draw(sc.Px, s, c.X(0.5), c.Y(0.3))
+			t := Text{Font: th.Display, Size: c.Size(0.3), Color: th.Text, Align: Center, Glow: 0.3}.Fit(title, c.X(0.8), c.Y(0.3))
+			t.FX = FadeUp(c.StepT, 0.4, t.Size)
+			t.Draw(sc.Px, title, c.X(0.5), c.Y(0.3))
 			x, y := c.X(0.5), c.Y(0.72)
 			sc.Px.Disc(x, y, c.Unit(0.06), th.Good, 1)
 			sc.Px.Disc(x+c.Unit(0.1)*math.Sin(c.T), y, c.Unit(0.03), th.Warn, 1)
@@ -1315,9 +1356,7 @@ func slideRich() Slide {
 			bx, by, bw, bh := c.X(0.55), c.Y(0.38), c.X(0.42), c.Y(0.5)
 			p.RoundRect(bx, by, bw, bh, 2, 1, th.Faint, 1)
 			fit := ParseSpans("Fit finds the *largest size* at which a {accent:rich} block, wrapped to its box, still fits.", th)
-			fr := Rich{Font: th.Display, Color: th.Text, Leading: 1.05}
-			fr.Size, fr.MaxW = fr.Fit(fit, bw, bh, c.Size(0.3)), bw
-			fr.Draw(p, fit, bx, by)
+			Rich{Font: th.Display, Size: c.Size(0.3), Color: th.Text, Leading: 1.05}.Fit(fit, bw, bh).Draw(p, fit, bx, by)
 		}}
 }
 
@@ -1692,5 +1731,92 @@ func slideTableCols() Slide {
 				Align:  []Align{Left, Center, Right},
 				Rules:  true, Highlight: 3, Reveal: TableRevealCols,
 			}.Draw(c, p, NewRect(c.X(0.1), top+c.Y(0.05), c.X(0.8), c.Y(0.5)))
+		}}
+}
+
+// slideScales exercises the primitives for purpose-built visuals: a trace
+// waterfall on a seconds axis from a Scale, and a plate sized to wrapped
+// text by Text.Measure.
+func slideScales() Slide {
+	spans := []struct {
+		name       string
+		start, dur float64
+	}{
+		{"GET /checkout", 0, 0.93},
+		{"auth", 0.05, 0.14},
+		{"db.query", 0.21, 0.47},
+		{"render", 0.7, 0.2},
+	}
+	return Slide{Title: "Scales and measures", Transition: TransitionPush,
+		View: func(c Ctx, sc *Scene) {
+			p, th := sc.Px, c.Theme
+			top := heading(c, p, "Scales and measures")
+			gap := c.Unit(0.02)
+			page := NewRect(c.X(0.03), top+gap, c.X(0.94), c.Y(0.97)-top-gap)
+			left, right := page.CutLeft(page.W * 0.62)
+			_, right = right.CutLeft(2 * gap)
+
+			// The waterfall: names and tick room sized by Measure, bars and
+			// gridlines placed by At, tick labels from Label with the step's
+			// decimals.
+			ticks := Text{Font: th.Body, Size: c.SmallText(th.Body), Color: th.Muted, Align: Center}
+			names := Text{Font: th.Body, Size: c.SmallText(th.Body), Color: th.Text, Align: Right}
+			tickW, tickH := ticks.Measure("0.0s")
+			nameW := 0.0
+			for _, s := range spans {
+				w, _ := names.Measure(s.name)
+				nameW = max(nameW, w)
+			}
+			axis, plot := left.CutBottom(tickH + gap/2)
+			_, plot = plot.CutLeft(nameW + gap)
+			_, plot = plot.CutRight(tickW / 2)
+			ax := NiceScale(0, spans[0].dur, int(plot.W/tickW), plot.X, plot.Right())
+			for _, v := range ax.Ticks() {
+				x := ax.At(v)
+				p.Rect(x, plot.Y, 1, plot.H, th.Faint, 1)
+				ticks.Draw(p, ax.Label(v)+"s", x, axis.Y+gap/2)
+			}
+			for i, r := range plot.Rows(gap/2, 1, 1, 1, 1) {
+				s := spans[i]
+				grow := Ease(c.T-0.15*float64(i), 0.8)
+				x0, x1 := ax.At(s.start), ax.At(s.start+s.dur*grow)
+				p.RoundRect(x0, r.Y, max(x1-x0, 1), r.H, min(r.H/4, gap/2), 0, th.SeriesColor(i), 1)
+				names.DrawMid(p, s.name, plot.X-gap/2, r.Y+r.H/2)
+			}
+
+			// A plate sized to its wrapped caption before either is drawn.
+			pad := gap / 2
+			note := Text{Font: th.Body, Size: c.SmallText(th.Body), Color: th.Text, MaxW: right.W - 2*pad}
+			const caption = "db.query is half of the request: cache it"
+			w, h := note.Measure(caption)
+			plate := right.Anchor(w+2*pad, h+2*pad, 0, 0)
+			p.RoundRect(plate.X, plate.Y, plate.W, plate.H, pad, 0, th.Panel, 1)
+			p.RoundRect(plate.X, plate.Y, plate.W, plate.H, pad, 1, th.Accent, 1)
+			note.Draw(p, caption, plate.X+pad, plate.Y+pad)
+		}}
+}
+
+// slideCodeOverflow shows the three ways a Code block handles source too
+// long for its rect: CodeScroll walking Focus ranges down a long file over
+// the builds, CodeShrink fitting it all, and an Excerpt keeping its real
+// line numbers.
+func slideCodeOverflow() Slide {
+	var b strings.Builder
+	for i := 1; i <= 30; i++ {
+		fmt.Fprintf(&b, "v%02d := f(%d)\n", i, i)
+	}
+	long := b.String()
+	return Slide{Title: "Code overflow", Steps: 3, Transition: TransitionDefault,
+		View: func(c Ctx, sc *Scene) {
+			p := sc.Px
+			top := heading(c, p, "Code overflow")
+			_, page := c.Frame().Inset(c.X(0.03), c.Y(0.02)).CutTop(top)
+			cols := page.Cols(c.Unit(0.04), 1, 1)
+			Code{Source: long, Lang: "go", LineNumbers: true, Overflow: CodeScroll,
+				Focus: []LineRange{{2, 4}, {14, 17}, {27, 30}}}.Draw(c, p, cols[0])
+			right := cols[1].Rows(c.Unit(0.04), 1, 1)
+			short := strings.Join(strings.SplitAfter(long, "\n")[:8], "")
+			Code{Source: short, Lang: "go", Overflow: CodeShrink}.Draw(c, p, right[0])
+			Code{Source: long, Lang: "go", LineNumbers: true, Excerpt: LineRange{21, 23}}.Draw(c, p, right[1])
 		}}
 }

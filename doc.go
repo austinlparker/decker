@@ -3,8 +3,9 @@
 //
 // A [Deck] holds a [Theme] and a list of slides. Each [Slide] has a View, a
 // function that draws one frame from a [Ctx] onto a [Scene], and [Main] gives
-// the deck its command line: present, presenter view, dev reload, snapshots,
-// contact sheets and video.
+// the deck its command line: present, presenter view, dev reload, a review of
+// every build for clipped or unreadable content, snapshots, contact sheets,
+// handouts and video.
 // The presenter can open a deck window in Ghostty on macOS with its own
 // terminal font size; Ghostty and kitty also support full-resolution previews.
 //
@@ -50,12 +51,14 @@
 //
 // # Main types
 //
-//   - [Deck], [Slide]: the talk, and one slide with its steps, notes and
-//     [Transition].
+//   - [Deck], [Slide]: the talk, and one slide with its steps, notes,
+//     [Source] citations and [Transition].
 //   - [Ctx]: what changes between frames (T, Step, StepT), the slide's position
 //     (Index, Count, Section), plus layout helpers.
 //   - [Rect]: a box on the canvas; layout cuts and splits rects
 //     ([Rect.CutTop], [Rect.Cols], [Rect.Grid]).
+//   - [Scale]: data values mapped onto pixels, with round ticks from
+//     [NiceScale], for axes a slide draws itself.
 //   - [Theme]: colors, typefaces, chart series colors and an optional overlay
 //     the engine uses. Display, Body and Mono fonts are required.
 //   - [Scene], [Pixels]: what a View draws on (the engine makes the scene and
@@ -63,7 +66,8 @@
 //     a native character layer; that layer is omitted from video exports.
 //     [Scene.Place] hands the engine a keyed element to draw instead, which
 //     [TransitionMorph] can move from one slide to the next.
-//   - [Text], [Font]: smooth antialiased type, fitted and wrapped to a box.
+//   - [Text], [Font]: smooth antialiased type, wrapped and fitted to a box
+//     ([Text.Fit]) and measured before drawing ([Text.Measure]).
 //   - [Rich], [Span]: the same type with mixed fonts, colors and decorations
 //     inside a line ([ParseSpans] reads a light markup).
 //   - [Block], [FigletFont]: FIGlet block letters scaled to fill a box ([FitBlock]);
@@ -83,19 +87,26 @@
 //     ([Transition.From]).
 //   - [Connector]: a line, elbow or curve joining two [Rect]s, with arrowheads
 //     that sit on the edges and a [Connector.Prog] that draws it on.
+//   - [Issue]: a problem [Deck.Review] finds in a build: Code lines clipped,
+//     Table rows dropped, text off the canvas or too small to read. Stock
+//     components report what they can't fit; a slide's own drawing reports
+//     through [Ctx.Fits]. The review command prints them.
 //
 // Shapes beyond the basics ([Pixels.Polygon], [Pixels.Ellipse],
 // [Pixels.Polyline], [Pixels.Bezier], [Pixels.DashedLine]) are in shapes.go.
 // Stock components ([Panel], [Arrow], [CycleDiagram], [BulletList],
 // [PageNumber], [ProgressBar], [Timeline], [Process], [Table], and [Code] with
-// its [SyntaxColors] and [LineRange] focus) and easing helpers ([Ease],
+// its [SyntaxColors], [LineRange] focus, [CodeOverflow] modes and
+// [Code.Measure]) and easing helpers ([Ease],
 // [CubicBezier], [Spring]) are in draw.go, diagram.go, table.go, code.go and
 // anim.go. Charts ([BarChart], [LineChart], [DonutChart], [Sparkline]) and the
 // counting [Stat] are in chart.go; their series colors are [Theme.Series]. The
 // guide covers the command line, keys and presenter view; the README starts
-// with a runnable talk.
+// with a runnable talk, and the [authoring guide] covers writing one, by
+// hand or with an agent.
 //
 // [hello example]: https://github.com/austinlparker/decker/blob/main/examples/hello/main.go
 // [guide]: https://github.com/austinlparker/decker/blob/main/docs/guide.md
 // [CLI reference]: https://github.com/austinlparker/decker/blob/main/docs/cli.md
+// [authoring guide]: https://github.com/austinlparker/decker/blob/main/docs/authoring.md
 package decker

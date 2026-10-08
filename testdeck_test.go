@@ -3,6 +3,7 @@ package decker
 import (
 	"math"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -130,19 +131,14 @@ func TestDeckCheck(t *testing.T) {
 func TestSnapshotRange(t *testing.T) {
 	d := testDeck()
 	png := filepath.Join(t.TempDir(), "s.png")
-	ok := options{slide: 2, step: 3, at: Settled, width: 40, height: 12, png: png}
-	if err := runSnapshot(d, ok); err != nil {
+	frame := []string{"-w", "40", "-h", "12", "--png", png}
+	if err := runCLI(d, append([]string{"snapshot", "--slide", "2", "--step", "3"}, frame...)...); err != nil {
 		t.Fatal(err)
 	}
-	for _, o := range []options{
-		{slide: 0, step: 1},
-		{slide: len(d.Slides) + 1, step: 1},
-		{slide: 2, step: 0},
-		{slide: 2, step: 4},
-	} {
-		o.at, o.width, o.height, o.png = Settled, 40, 12, png
-		if err := runSnapshot(d, o); err == nil {
-			t.Errorf("-slide %d -step %d: accepted", o.slide, o.step)
+	for _, at := range [][2]int{{0, 1}, {len(d.Slides) + 1, 1}, {2, 0}, {2, 4}} {
+		args := append([]string{"snapshot", "--slide", strconv.Itoa(at[0]), "--step", strconv.Itoa(at[1])}, frame...)
+		if err := runCLI(d, args...); err == nil {
+			t.Errorf("--slide %d --step %d: accepted", at[0], at[1])
 		}
 	}
 }

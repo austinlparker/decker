@@ -1,8 +1,11 @@
 // Package decktest is the test suite every deck wants: every slide renders at
-// every step, size and moment without panicking; golden hashes catch
-// unintended changes; and a per-slide benchmark measures frame time. A talk's test file is a few lines:
+// every step, size and moment without panicking; every build shows all it
+// means to (nothing clipped, dropped or off the canvas); golden hashes catch
+// unintended changes; and a per-slide benchmark measures frame time. A
+// talk's test file is a few lines:
 //
 //	func TestSlides(t *testing.T)      { decktest.Slides(t, talk()) }
+//	func TestReview(t *testing.T)      { decktest.Review(t, talk()) }
 //	func TestGolden(t *testing.T)      { decktest.Golden(t, talk(), "testdata/golden.txt") }
 //	func BenchmarkFrames(b *testing.B) { decktest.Frames(b, talk()) }
 package decktest
@@ -21,34 +24,37 @@ import (
 )
 
 // Slides renders every slide at every step, at three sizes and four moments
-// (appearing, mid-entrance, entered, settled), failing on panics.
+// (appearing, mid-entrance, entered, settled), as the deck draws them
+// (Deck.Draw), and fails on the first panic: in a View, a placed element or
+// the theme's overlay.
 func Slides(t *testing.T, d decker.Deck) {
 	t.Helper()
-	for i, s := range d.Slides {
+	for i := range d.Slides {
 		for _, size := range [][2]int{{80, 24}, {120, 36}, {200, 50}} {
 			for step := 0; step < d.Steps(i); step++ {
 				for _, at := range []float64{0, 0.3, 1.5, decker.Settled} {
-					view(t, s, decker.Ctx{W: size[0], H: size[1], T: at, Step: step, StepT: at, Theme: d.Theme,
-						Index: i, Count: len(d.Slides), Section: d.Section(i)})
+					if err := d.Draw(i, decker.Ctx{W: size[0], H: size[1], T: at, Step: step, StepT: at}); err != nil {
+						t.Fatalf("%v (at %dx%d, build %d, t=%v)", err, size[0], size[1], step+1, at)
+					}
 				}
 			}
 		}
 	}
 }
 
-// view draws one frame straight from the slide so a panic fails the test
-// instead of being drawn.
-func view(t *testing.T, s decker.Slide, c decker.Ctx) {
+// Review fails t for every error a review of the deck finds: a build that
+// loses content at 240×67, 320×90 or 682×171 (Code lines clipped, Table rows
+// dropped, text off the canvas, a slide's own Ctx.Fits failing) or panics.
+// Warnings and notes, such as text below the readable size, are logged. A
+// slide that means to have an issue lists its code in Slide.Allow.
+func Review(t *testing.T, d decker.Deck) {
 	t.Helper()
-	sc := decker.NewScene(c.W, c.H, c.Theme)
-	defer sc.Release()
-	defer func() {
-		if r := recover(); r != nil {
-			t.Fatalf("slide %q panicked at %dx%d step %d t=%v: %v", s.Title, c.W, c.H, c.Step, c.T, r)
+	for _, is := range d.Review() {
+		if is.Severity == decker.SeverityError {
+			t.Error(is)
+		} else {
+			t.Log(is)
 		}
-	}()
-	if s.View != nil {
-		s.View(c, sc)
 	}
 }
 
@@ -158,12 +164,13 @@ func Frames(b *testing.B, d decker.Deck) {
 	for _, size := range [][2]int{{240, 67}, {320, 90}, {682, 171}} {
 		for i := range d.Slides {
 			b.Run(fmt.Sprintf("%dx%d/%d", size[0], size[1], i+1), func(b *testing.B) {
-				c := decker.Ctx{W: size[0], H: size[1], T: 1.3, Step: d.Steps(i) - 1, StepT: 1.3,
-					Index: i, Count: len(d.Slides), Section: d.Section(i)}
+				c := decker.Ctx{W: size[0], H: size[1], T: 1.3, Step: d.Steps(i) - 1, StepT: 1.3}
 				for b.Loop() {
 					c.T += 1.0 / 60
 					c.StepT += 1.0 / 60
-					d.Draw(i, c)
+					if err := d.Draw(i, c); err != nil {
+						b.Fatal(err)
+					}
 				}
 			})
 		}

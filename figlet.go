@@ -96,33 +96,6 @@ func ParseFigletFont(name string, data []byte) (*FigletFont, error) {
 	return parseFig(name, string(data))
 }
 
-// FigFont is an alias for FigletFont.
-//
-// Deprecated: Use FigletFont.
-type FigFont = FigletFont
-
-// StockFigFont loads a bundled FIGlet font.
-//
-// Deprecated: Use StockFigletFont.
-func StockFigFont(name string) *FigletFont { return StockFigletFont(name) }
-
-// StockFigFontNames lists the bundled FIGlet font names.
-//
-// Deprecated: Use StockFigletFontNames.
-func StockFigFontNames() []string { return StockFigletFontNames() }
-
-// LoadFigFont loads a FIGlet font from fsys.
-//
-// Deprecated: Use LoadFigletFont.
-func LoadFigFont(fsys fs.FS, path string) *FigletFont { return LoadFigletFont(fsys, path) }
-
-// ParseFigFont parses a FIGlet font from data.
-//
-// Deprecated: Use ParseFigletFont.
-func ParseFigFont(name string, data []byte) (*FigletFont, error) {
-	return ParseFigletFont(name, data)
-}
-
 // parseFig reads the .flf format: header, comment lines, then each character's
 // rows, which end with an end mark (usually '@', doubled on the last row). Only
 // ASCII is loaded.

@@ -94,7 +94,8 @@ func (k Composite) Clipped(bounds, clip Rect) Composite {
 // learn how much of each pixel it covers (the canvas has no alpha), then
 // resamples that: bilinear when moving or growing, averaged over the pixels
 // each one covers when shrinking. So draw must be pure and may run twice, and
-// an element moved off whole pixels is slightly soft.
+// an element moved off whole pixels is slightly soft. A review sees what
+// draw reports where k shows it, and only once.
 //
 // The layers are pooled and only the region around bounds is cleared and
 // composited, so a steady-state frame does not allocate. They are canvas
@@ -124,41 +125,20 @@ func (k Composite) Draw(p *Pixels, bounds Rect, draw func(p *Pixels)) {
 	px, py := bounds.X+bounds.W*(0.5+k.PivotX), bounds.Y+bounds.H*(0.5+k.PivotY)
 	tx0, ty0 := px+(bounds.X-px)*s+k.DX, py+(bounds.Y-py)*s+k.DY
 	tw, th := bounds.W*s, bounds.H*s
-	const open = 1e9
-	win := [4]float64{-open, -open, open, open}
-	// On a trimmed axis the window follows the bounds: a trimmed side sits at
-	// its cut, and the other side reaches past the bounds (for a glow) only
-	// as far as the share of the axis left showing, so nothing strays out of
-	// a side that is hidden, and a fully cut axis shows nothing at all.
+	var win [4]float64
+	var hidden bool
 	reach := margin * s
-	l, r := Clamp01(k.Trim.Left), Clamp01(k.Trim.Right)
-	if l+r >= 1 {
+	if win[0], win[2], hidden = trimSpan(k.Trim.Left, k.Trim.Right, tx0, tw, reach); hidden {
 		return
 	}
-	if l+r > 0 {
-		win[0], win[2] = tx0-reach*(1-l-r), tx0+tw+reach*(1-l-r)
-		if l > 0 {
-			win[0] = tx0 + l*tw
-		}
-		if r > 0 {
-			win[2] = tx0 + tw - r*tw
-		}
-	}
-	t, b := Clamp01(k.Trim.Top), Clamp01(k.Trim.Bottom)
-	if t+b >= 1 {
+	if win[1], win[3], hidden = trimSpan(k.Trim.Top, k.Trim.Bottom, ty0, th, reach); hidden {
 		return
-	}
-	if t+b > 0 {
-		win[1], win[3] = ty0-reach*(1-t-b), ty0+th+reach*(1-t-b)
-		if t > 0 {
-			win[1] = ty0 + t*th
-		}
-		if b > 0 {
-			win[3] = ty0 + th - b*th
-		}
 	}
 
 	src := [4]int{sx0, sy0, sx1, sy1}
+	if l := p.review; l != nil {
+		defer l.mapLayer(layerMap{s: s, px: px, py: py, dx: k.DX, dy: k.DY, src: src, win: win})()
+	}
 	if moved {
 		k.resample(p, src, win, g, s, px, py, draw)
 		return
@@ -171,6 +151,32 @@ func (k Composite) Draw(p *Pixels, bounds Rect, draw func(p *Pixels)) {
 	k.fade(p, src, [4]int{x0, y0, x1, y1}, win, g, draw)
 }
 
+// trimSpan is the window [lo, hi] a trim leaves of one axis of the bounds,
+// which land at start and are size long, cutting the shares a from the
+// start and b from the end; hidden reports that the cuts meet. An untrimmed
+// axis is open. On a trimmed one the window follows the bounds: a trimmed
+// side sits at its cut, and the other side reaches past the bounds (for a
+// glow) only as far as reach times the share of the axis left showing, so
+// nothing strays out of a side that is hidden.
+func trimSpan(a, b, start, size, reach float64) (lo, hi float64, hidden bool) {
+	const open = 1e9
+	a, b = Clamp01(a), Clamp01(b)
+	if a+b >= 1 {
+		return 0, 0, true
+	}
+	if !(a+b > 0) {
+		return -open, open, false
+	}
+	lo, hi = start-reach*(1-a-b), start+size+reach*(1-a-b)
+	if a > 0 {
+		lo = start + a*size
+	}
+	if b > 0 {
+		hi = start + size - b*size
+	}
+	return lo, hi, false
+}
+
 // coverSpan is how much of the pixel [v, v+1] lies in [lo, hi].
 func coverSpan(v, lo, hi float64) float64 { return Clamp01(min(v+1, hi) - max(v, lo)) }
 
@@ -178,12 +184,9 @@ func coverSpan(v, lo, hi float64) float64 { return Clamp01(min(v+1, hi) - max(v,
 // weight g within the window win: the weighted "over" of a layer, exactly,
 // without needing its coverage.
 func (k Composite) fade(p *Pixels, src, dst [4]int, win [4]float64, g float64, draw func(p *Pixels)) {
-	top := layer(p)
+	top := snapshot(p, src[0], src[1], src[2], src[3])
 	defer layers.put(top)
-	for y := src[1]; y <= src[3]; y++ {
-		copy(top.Pix[y*p.W+src[0]:y*p.W+src[2]+1], p.Pix[y*p.W+src[0]:y*p.W+src[2]+1])
-	}
-	top.BG = p.BG
+	top.review = p.review
 	draw(top)
 	for y := max(dst[1], src[1]); y <= min(dst[3], src[3]); y++ {
 		wy := g * coverSpan(float64(y), win[1], win[3])
@@ -224,7 +227,14 @@ func (k Composite) resample(p *Pixels, src [4]int, win [4]float64, g, s, px, py 
 		}
 	}
 	black.BG, white.BG = p.BG, p.BG
+	black.review = p.review
 	draw(black)
+	// The second drawing is the same element, there only for its coverage.
+	if l := p.review; l != nil {
+		was := l.mute
+		l.mute = true
+		defer func() { l.mute = was }()
+	}
 	draw(white)
 
 	// Most of the region around the bounds is empty: shrink it to what the

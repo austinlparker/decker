@@ -74,6 +74,28 @@ func (b Block) Draw(p *Pixels, s string, x, y float64) (w, h float64) {
 	for _, c := range placed {
 		drawBlockRunePx(p, c.r, c.x, c.y, k, c.c, c.a)
 	}
+	if l := p.review; l != nil && !l.mute {
+		name := quoteText("Block", s)
+		id := l.scopeID
+		if id == 0 && !l.overlay {
+			id = l.element(name, Rect{left, y, w, h})
+			l.elems[id-1].text = s
+		}
+		ink := noInk
+		for _, c := range placed {
+			if c.a < 0.5 {
+				continue
+			}
+			if id != 0 {
+				l.inkRect(id, Rect{c.x, c.y, k, 2 * k})
+			}
+			ink = [4]float64{
+				min(ink[0], math.Round(c.x)), min(ink[1], math.Round(c.y)),
+				max(ink[2], math.Round(c.x+k)), max(ink[3], math.Round(c.y+2*k)),
+			}
+		}
+		l.reportEdges(ink, int(2*k), name, Rect{left, y, w, h})
+	}
 	return w, h
 }
 

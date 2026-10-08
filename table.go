@@ -1,7 +1,9 @@
 package decker
 
 import (
+	"fmt"
 	"math"
+	"slices"
 	"strings"
 )
 
@@ -65,6 +67,11 @@ type tableLayout struct {
 	lines      [][][]string // [row][col] wrapped lines, in step with rowY
 	padX, padY float64
 	h          float64 // bottom of the last row
+
+	// For review: how many rows the table has, header included (those past
+	// rowY were left out), and the cells cut short, by row and column.
+	rows int
+	cut  [][2]int
 }
 
 type tableKey struct {
@@ -190,21 +197,18 @@ func (t Table) fit(c Ctx, r Rect) *tableLayout {
 	height := func(lines [][][]string, size, limit int) float64 {
 		h := 0.0
 		for _, cells := range lines {
-			h += float64(min(rowLines(cells), limit))*float64(size)*DefaultLeading + 2*l.padY
+			h += linesHeight(min(rowLines(cells), limit), size, DefaultLeading) + 2*l.padY
 		}
 		return h
 	}
 
 	minSize := c.SmallText(c.Theme.Body)
-	size := max(c.Theme.Body.Drawn(c.Size(tableMaxText)), minSize)
 	var lines [][][]string
-	for ; ; size-- {
+	size := largestSize(max(c.Theme.Body.Drawn(c.Size(tableMaxText)), minSize), minSize, func(size int) bool {
 		var ok bool
 		lines, ok = wrap(size)
-		if (ok && height(lines, size, math.MaxInt) <= r.H) || size <= minSize {
-			break
-		}
-	}
+		return ok && height(lines, size, math.MaxInt) <= r.H
+	})
 
 	limit := math.MaxInt
 	if height(lines, size, limit) > r.H {
@@ -217,19 +221,77 @@ func (t Table) fit(c Ctx, r Rect) *tableLayout {
 	l.size = size
 	y := 0.0
 	for row, cells := range lines {
-		rh := float64(min(rowLines(cells), limit))*float64(size)*DefaultLeading + 2*l.padY
+		rh := linesHeight(min(rowLines(cells), limit), size, DefaultLeading) + 2*l.padY
 		if y+rh > r.H+1e-9 {
 			break
 		}
 		for j := range cells {
-			cells[j] = clipLines(font(row), cells[j], size, inner(j), limit)
+			clipped := clipLines(font(row), cells[j], size, inner(j), limit)
+			if !slices.Equal(clipped, cells[j]) {
+				l.cut = append(l.cut, [2]int{row, j})
+			}
+			cells[j] = clipped
 		}
 		l.rowY, l.rowH = append(l.rowY, y), append(l.rowH, rh)
 		l.lines = append(l.lines, cells)
 		y += rh
 	}
 	l.h = y
+	l.rows = len(lines)
 	return l
+}
+
+// name is how a review message refers to the table.
+func (t Table) name() string {
+	if len(t.Header) > 0 {
+		return quoteText("Table", t.Header[0])
+	}
+	return fmt.Sprintf("Table (%d rows)", len(t.Rows))
+}
+
+// report records the rows left out, header included, and the cells cut
+// short among those this build reveals: a row or a column still to come is
+// not lost yet.
+func (t Table) report(c Ctx, r Rect, l *tableLayout) {
+	off := 0 // layout rows before the first body row
+	if l.header {
+		off = 1
+	}
+	shown := func(row, col int) bool { return t.since(c, row-off, col) >= 0 }
+	revealed, dropped := 0, 0
+	for row := off; row < l.rows; row++ {
+		if shown(row, 0) {
+			revealed++
+			if row >= len(l.rowY) {
+				dropped++
+			}
+		}
+	}
+	cut := 0
+	for _, rc := range l.cut {
+		if shown(rc[0], rc[1]) {
+			cut++
+		}
+	}
+	name := t.name()
+	// The header is laid out first, so it is lost only when nothing fits.
+	var lost string
+	switch header := l.header && shown(0, 0) && len(l.rowY) == 0; {
+	case header && dropped > 0:
+		lost = fmt.Sprintf("the header and %d of %d rows don't fit", dropped, revealed)
+	case header:
+		lost = "the header doesn't fit"
+	case dropped > 0:
+		lost = fmt.Sprintf("%d of %d rows don't fit", dropped, revealed)
+	}
+	if lost != "" {
+		c.review.add(SeverityError, "table-rows-dropped", r,
+			fmt.Sprintf("%s: %s in %.0fpx at %dpx text", name, lost, r.H, l.size))
+	}
+	if cut > 0 {
+		c.review.add(SeverityWarning, "table-cell-cut", r,
+			fmt.Sprintf("%s: %d cells cut short at %dpx text", name, cut, l.size))
+	}
 }
 
 // clipLines keeps at most limit lines of ls and ellipsizes any that are wider
@@ -307,8 +369,14 @@ func (t Table) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 	if len(l.colW) == 0 {
 		return 0, 0
 	}
+	if c.review != nil {
+		t.report(c, r, l)
+	}
 	if !c.Reached(t.FirstStep) {
 		return r.W, l.h
+	}
+	if c.review != nil {
+		defer c.within(t.name(), r)()
 	}
 	th := c.Theme
 	size := float64(l.size)
@@ -372,7 +440,7 @@ func (t Table) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 			default:
 				x += l.padX
 			}
-			block := float64(len(ls)) * size * DefaultLeading
+			block := linesHeight(len(ls), l.size, DefaultLeading)
 			y := r.Y + l.rowY[row] + l.padY + (l.rowH[row]-2*l.padY-block)/2
 			// The rise can't leave the row: the fit budgets only the settled
 			// text, and nothing clips the glyphs, so a bigger rise would paint

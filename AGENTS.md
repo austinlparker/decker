@@ -3,13 +3,15 @@
 The Go library `github.com/austinlparker/decker`: a terminal slide-deck engine.
 A talk is a separate `main` package, usually in another repo, that builds a
 `Deck` and calls `Main`. Read `doc.go` for the model, `README.md` for the
-quick start, and `docs/architecture.md` for the file map.
+quick start, and `docs/architecture.md` for the file map. Writing a talk
+rather than the engine? Read `docs/authoring.md` and start from
+`examples/starter`, whose `AGENTS.md` goes into the talk's repo.
 
 ## Invariants
 
 - **Frame purity.** A frame depends only on its `Ctx`. No `time.Now`, no
   `math/rand`, no globals that change between frames; use `Hash01` for noise.
-  Anything stateful breaks replay, `-snapshot`, video and the goldens.
+  Anything stateful breaks replay, snapshots, video and the goldens.
 - **The engine owns the scene.** A slide's `View(c Ctx, sc *Scene)` only
   draws; `drawSlide` makes the scene and runs `View`, and `finish` draws the
   elements it placed and `Theme.Overlay`, once; both catch panics (drawn into
@@ -19,7 +21,8 @@ quick start, and `docs/architecture.md` for the file map.
   character layer. Styled strings are
   parsed only for the engine's own chrome (footer, panels, help box).
 - **Goldens pin every byte.** `gallery_test.go` (`testdata/gallery.golden`) hashes
-  every pixel and cell of a deck that exercises each exported drawing API.
+  every pixel and cell of a deck that exercises each exported drawing API, and
+  `testdata/gallery-review.golden` lists what `Deck.Review` finds in it.
   `golden_internal_test.go` (`testdata/internal.golden`) hashes what the gallery
   can't reach: transitions in cells and video, PNG export, the live model's screen,
   the terminal writer's escape sequences, the presenter view.
@@ -28,16 +31,25 @@ quick start, and `docs/architecture.md` for the file map.
   fails goldens. A refactor must leave every hash unchanged.
 - **Never re-record goldens to make a test pass.** Re-record only when the
   output is meant to change, and say in the commit which keys changed and why.
-  `UPDATE_GOLDEN=1 go test ./...` rewrites both files; review `git diff testdata`
+  `UPDATE_GOLDEN=1 go test ./...` rewrites them all; review `git diff testdata`
   and confirm only the intended keys moved. A pure refactor has an empty diff.
 - **Perf budget.** Per-frame paths are hot: a 682x171 frame is ~117k cells and
   ~2.8MB of pixels, made 60 times a second. Don't allocate per frame; reuse
   buffers through `pool.go` and cache pure results with `memo.go`. Measure with
   `go test -run '^$' -bench Live` before and after touching `scene.go`, `grid.go`,
   `pixels.go`, `text.go`, `termout.go`, `model.go` or `transition.go`.
-- **The exported API is used by talks in other repos.** Don't rename, remove or
-  change the behavior of an exported identifier without being asked. Additions
-  are fine. Unexported code is free to change if the goldens hold.
+- **API changes: change in place, never leave a shim.** Decker is pre-1.0.
+  When an exported name, signature or behavior should change, change it, move
+  every caller (gallery, examples, README, docs), and say in the PR that it
+  breaks. Talks in other repos import the API, so make each break worth its
+  edit, and make it once rather than in steps. Don't keep the old form
+  compiling: no alias, no `Deprecated:` wrapper, no function that forwards
+  its arguments to the new one, no `FooV2` beside `Foo`. `TestNoCompatShims`
+  (`shim_test.go`) type-checks the API and fails on aliases, `Deprecated:`
+  declarations, vars and consts that rename another, and forwarders; a
+  `FooV2` with its own body gets past it and is still a shim. Its
+  grandfathered list only shrinks. Unexported code is free to change if the
+  goldens hold.
 - **Merging releases.** A merge to main that changes library code is tagged
   and released by CI, the version bumped from the API diff (`apidiff`): a
   break bumps the major (minor at v0), an addition the minor. Say in the PR
@@ -51,6 +63,7 @@ go test -short ./...                # skips the slow golden tests
 go vet ./...
 gofmt -l .                          # must print nothing
 go test -run '^$' -bench Live       # the engine's share of a live frame
+go run ./examples/showcase review /tmp/review   # what a review reports, on a real deck
 UPDATE_GOLDEN=1 go test ./...       # re-record goldens: only for intended output changes
 ```
 
@@ -103,8 +116,12 @@ take `(c Ctx, p *Pixels, ...)` with pixel coordinates, size from `c.Unit` and
 `c.SmallText`, take colors and fonts from `c.Theme`, reveal builds with
 `c.Reached` and `c.Since`, return the size drawn. Many options means a struct
 with a `Draw` method, like `CycleDiagram`. Draw into `p`, not into a new
-`Scene`. Add it to the "Components" slide in `gallery_test.go` and to the guide
-Toolbox.
+`Scene`. Start `Draw` with `defer c.within("Name")()` so the text it draws
+reports to a review as part of it, and report what it can't fit: `c.Fits`
+for a block bigger than its rect, `c.review.add` (behind `c.review != nil`)
+for anything with its own code, like `Code`'s "code-clipped". Never clip or
+drop content silently. Add it to the "Components" slide in `gallery_test.go`
+and to the guide Toolbox, and check `testdata/gallery-review.golden`.
 
 **Add a key binding** (`keys.go`, `model.go`). Add one row to `bindings`: the
 space-separated key names (as `tea.KeyPressMsg.String` reports them), an action
@@ -114,11 +131,13 @@ the help-box text (empty to hide it). Handle the action name in the `switch` in
 `presenter.handleKey` instead. Update the guide Keys table. The help box
 is generated from `bindings`.
 
-**Add a CLI flag or mode** (`cli.go`). Add a field to `options`, register it in
-`parseFlags` with `flag.*Var` (the usage string starts "with -mode:" if it only
-applies to one). For a mode, add a `case` to the `switch` in `run`, ordered
-before the cases it should win over, and write `runXxx(d *Deck, o options)
-error`. Rendering without a terminal should go through `stillFrame` or
-`renderSlideGrid`/`Deck.Render` (cells), or `renderSlide` (pixels), not a live
-model. Update "Running a deck" in
-`docs/guide.md` and `docs/cli.md`.
+**Add a CLI flag or command** (`cli.go`). The command line is parsed by
+kong. A command is a field of `cli` tagged `cmd:""` with a `help:` line; its
+type holds its flags, tagged with `default:`, `help:`, `enum:` for a fixed set
+or `arg:""` for a positional, and has `Run(d *Deck) error`, plus
+`Validate() error` for checks the tags can't say. Commands share flags by
+embedding a group (`position`, `deckFlags`, `frameFlags`). Put a flag on the
+commands it applies to and no others, so kong rejects it elsewhere. Rendering
+without a terminal should go through `Deck.still` or `Deck.cells` (cells),
+or `renderSlide` (pixels), not a live model. Add cases to `TestCommandLine` and `TestCommandLineRejects`, and
+update "Running a deck" in `docs/guide.md` and `docs/cli.md`.

@@ -42,33 +42,96 @@ func TestWrapKeepsBreaksAndReturnsACopy(t *testing.T) {
 	}
 }
 
-func TestFitRespectsBox(t *testing.T) {
-	size, text := testTheme.Body.Fit("of weekly query volume comes from agents", 100, 60, 40, 0)
-	assertFits(t, testTheme.Body, text, size, 100)
-	if h := float64(len(strings.Split(text, "\n"))) * float64(size) * DefaultLeading; h > 60 {
-		t.Errorf("text is %.1fpx tall, want <= 60", h)
+func TestTextFitRespectsBox(t *testing.T) {
+	for _, s := range []string{"of weekly query volume comes from agents", "first part of it\nsecond part", "x"} {
+		for _, box := range [][2]float64{{100, 60}, {100, 80}, {300, 40}, {60, 300}} {
+			for _, leading := range []float64{0, 0.95, 1.4} {
+				tx := Text{Font: testTheme.Body, Size: 40, Leading: leading}.Fit(s, box[0], box[1])
+				if tx.Size > 40 || tx.Size < minFitSize || tx.MaxW != box[0] {
+					t.Fatalf("%q in %v: size %d, MaxW %v", s, box, tx.Size, tx.MaxW)
+				}
+				if w, h := tx.Measure(s); w > box[0] || h > box[1] {
+					t.Errorf("%q in %v at leading %v: size %d measures %.1fx%.1f", s, box, leading, tx.Size, w, h)
+				}
+				// One size up must not fit, or Fit left room on the table.
+				if up := tx; up.Size < 40 {
+					up.Size++
+					if w, h := up.Measure(s); w <= box[0] && h <= box[1] {
+						t.Errorf("%q in %v at leading %v: size %d also fits", s, box, leading, up.Size)
+					}
+				}
+			}
+		}
+	}
+	// Fit only shrinks, and never below 6px.
+	if got := (Text{Font: testTheme.Body}).Fit("x", 100, 100).Size; got != minFitSize {
+		t.Errorf("a zero Size fits at %d, want %d", got, minFitSize)
 	}
 }
 
-func TestFitWrapsRatherThanOverflows(t *testing.T) {
+func TestTextFitWrapsRatherThanOverflows(t *testing.T) {
 	// When nothing fits the box, Fit wraps to the width and runs taller.
-	size, text := testTheme.Body.Fit("a line that is far too long to fit on one row", 60, 10, 20, 0)
-	assertFits(t, testTheme.Body, text, size, 60)
+	const s = "a line that is far too long to fit on one row"
+	tx := Text{Font: testTheme.Body, Size: 20}.Fit(s, 60, 10)
+	if tx.Size != minFitSize {
+		t.Errorf("size %d, want the smallest, %d", tx.Size, minFitSize)
+	}
+	if w, _ := tx.Measure(s); w > 60 {
+		t.Errorf("fallback is %.1fpx wide, want <= 60", w)
+	}
 }
 
-func TestFitAllFitsTogetherAndReturnsACopy(t *testing.T) {
-	parts := []string{"first part of it", "second part"}
-	size, lines := FitAll(testTheme.Body, parts, 100, 80, 40)
-	if size > 40 || len(lines) < len(parts) {
-		t.Fatalf("size %d, lines %q", size, lines)
+func TestTextFitAllocatesNothing(t *testing.T) {
+	tx := Text{Font: testTheme.Body, Size: 30}
+	const s = "a few words to fit\nand a second paragraph"
+	tx.Fit(s, 120, 50) // fills the fit, glyph and wrap caches
+	if n := testing.AllocsPerRun(50, func() { tx.Fit(s, 120, 50) }); n != 0 {
+		t.Errorf("a repeated Fit allocated %v times", n)
 	}
-	assertFits(t, testTheme.Body, strings.Join(lines, "\n"), size, 100)
-	if h := float64(len(lines)) * float64(size) * DefaultLeading; h > 80 {
-		t.Errorf("lines are %.1fpx tall, want <= 80", h)
+}
+
+func TestTextMeasureMatchesDraw(t *testing.T) {
+	p := NewPixels(120, 80, testTheme.Background)
+	texts := []string{
+		"", "Hi", "two\nlines", "\n\n", "trailing \n", "界 é",
+		"   spaced   out  ", "a long sentence that wraps across several lines of a box",
+		"What Your MCP Server Does", "overlongwordthatcannotbreak and more\nafter a break",
 	}
-	lines[0] = "scribble"
-	if _, again := FitAll(testTheme.Body, parts, 100, 80, 40); again[0] == "scribble" {
-		t.Error("FitAll handed out its cached slice")
+	for _, font := range []*Font{testTheme.Display, testTheme.Body, testTheme.Mono} {
+		for _, size := range []int{0, 3, 9, 13, 20, 48} {
+			for _, maxW := range []float64{0, -5, 30, 80, 300} {
+				for _, leading := range []float64{0, 1, 1.4} {
+					for i, s := range texts {
+						tx := Text{Font: font, Size: size, MaxW: maxW, Leading: leading, Align: Align(i % 3)}
+						dw, dh := tx.Draw(p, s, 10, 5)
+						if mw, mh := tx.Measure(s); mw != dw || mh != dh {
+							t.Errorf("size %d maxW %v leading %v %q: Measure = %v×%v, Draw = %v×%v", size, maxW, leading, s, mw, mh, dw, dh)
+						}
+					}
+				}
+			}
+		}
+	}
+	// Font.Small takes over below SmallBelow, in Measure as in Draw.
+	small := StockFont("SpaceGrotesk-Medium")
+	small.Small, small.SmallBelow = testTheme.Mono, 14
+	for _, size := range []int{10, 13, 14} {
+		tx := Text{Font: small, Size: size, MaxW: 50}
+		dw, dh := tx.Draw(p, "small type wraps", 0, 0)
+		if mw, mh := tx.Measure("small type wraps"); mw != dw || mh != dh {
+			t.Errorf("size %d with Small: Measure = %v×%v, Draw = %v×%v", size, mw, mh, dw, dh)
+		}
+	}
+}
+
+func TestTextMeasureAllocatesNothing(t *testing.T) {
+	for _, maxW := range []float64{0, 60} {
+		tx := Text{Font: testTheme.Body, Size: 14, MaxW: maxW}
+		s := "a few words to wrap\nand a second paragraph"
+		tx.Measure(s) // fills the glyph and wrap caches
+		if n := testing.AllocsPerRun(50, func() { tx.Measure(s) }); n != 0 {
+			t.Errorf("Measure with MaxW %v allocated %v times", maxW, n)
+		}
 	}
 }
 

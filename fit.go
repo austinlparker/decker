@@ -44,9 +44,24 @@ var wraps = memo[wrapKey, []string]{max: 8192}
 // maxW does, so "What Your MCP / Server Does" beats "What Your MCP Server /
 // Does".
 func (f *Font) Wrap(s string, size int, maxW float64) []string {
-	return slices.Clone(wraps.get(wrapKey{f, s, size, maxW}, func() []string {
+	return slices.Clone(f.wrapped(s, size, maxW))
+}
+
+// wrapped is Wrap without the copy, for callers that only read the lines; the
+// slice is the cache's and must not be modified.
+func (f *Font) wrapped(s string, size int, maxW float64) []string {
+	return wraps.get(wrapKey{f, s, size, maxW}, func() []string {
 		return wrapBalanced(s, maxW, func(l string) float64 { return f.Measure(l, size) })
-	}))
+	})
+}
+
+// widest is the width of the widest of lines at size, 0 for none.
+func (f *Font) widest(lines []string, size int) float64 {
+	w := 0.0
+	for _, l := range lines {
+		w = max(w, f.Measure(l, size))
+	}
+	return w
 }
 
 // wrapBalanced is wrapGreedy per paragraph, narrowed by bisection to the
@@ -78,58 +93,26 @@ func fits(lines []string, maxW float64, measure func(line string) float64) bool 
 
 const minFitSize = 6
 
+// largestSize counts down from from and returns the first size fits accepts,
+// or floor once it gets there, accepted or not. fits is called for every size
+// tried, the returned one last, so it can keep the layout it made there. A
+// from at or below floor is tried once and returned as it is; callers that
+// mean floor as a minimum pass max(from, floor).
+func largestSize(from, floor int, fits func(size int) bool) int {
+	size := from
+	for !fits(size) && size > floor {
+		size--
+	}
+	return size
+}
+
 type fitKey struct {
-	f          *Font
-	text       string // text, or length-prefixed FitAll parts
-	maxW, maxH float64
-	maxSize    int
-	leading    float64
-	all        bool
+	f       *Font
+	s       string
+	w, h    float64
+	size    int // the largest size wanted
+	leading float64
 }
 
-type fitResult struct {
-	size  int
-	lines []string
-}
-
-var fitted = memo[fitKey, fitResult]{max: 5000}
-
-// fit finds the largest size at which parts, each wrapped to maxW, stack into
-// at most maxH. If none fits it returns the smallest size wrapped to the width:
-// running taller beats running off the side of the screen.
-func (f *Font) fit(parts []string, maxW, maxH float64, maxSize int, leading float64) (int, []string) {
-	wrap := func(size int) (lines []string) {
-		for _, part := range parts {
-			lines = append(lines, f.Wrap(part, size, maxW)...)
-		}
-		return lines
-	}
-	for size := maxSize; size > minFitSize; size-- {
-		lines := wrap(size)
-		if fits(lines, maxW, func(l string) float64 { return f.Measure(l, size) }) && float64(len(lines))*float64(size)*leading <= maxH {
-			return size, lines
-		}
-	}
-	return minFitSize, wrap(minFitSize)
-}
-
-// Fit returns the largest size (at most maxSize) at which s, wrapped to maxW,
-// fits maxW×maxH, with the wrapped text. A zero leading means DefaultLeading.
-func (f *Font) Fit(s string, maxW, maxH float64, maxSize int, leading float64) (int, string) {
-	leading = leadingOr(leading)
-	r := fitted.get(fitKey{f, s, maxW, maxH, maxSize, leading, false}, func() fitResult {
-		size, lines := f.fit([]string{s}, maxW, maxH, maxSize, leading)
-		return fitResult{size, lines}
-	})
-	return r.size, strings.Join(r.lines, "\n")
-}
-
-// FitAll is Fit for several parts stacked at DefaultLeading; it returns the
-// size and all the wrapped lines in order.
-func FitAll(f *Font, parts []string, maxW, maxH float64, maxSize int) (int, []string) {
-	r := fitted.get(fitKey{f, labelsKey(parts), maxW, maxH, maxSize, DefaultLeading, true}, func() fitResult {
-		size, lines := f.fit(parts, maxW, maxH, maxSize, DefaultLeading)
-		return fitResult{size, lines}
-	})
-	return r.size, slices.Clone(r.lines)
-}
+// fitted remembers Text.Fit's sizes: a View fits the same text every frame.
+var fitted = memo[fitKey, int]{max: 5000}

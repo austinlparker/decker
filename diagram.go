@@ -23,6 +23,7 @@ type Timeline struct {
 // the size of the whole timeline once built: it fills the length of r along
 // the line and takes as much across it as its text needs.
 func (t Timeline) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
+	defer c.within("Timeline", r)()
 	n := len(t.Items)
 	if n == 0 {
 		return 0, 0
@@ -82,9 +83,18 @@ func (t Timeline) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 		}
 	}
 	if t.Vertical {
-		return textX - r.X + widest, float64(n-1)*slotH + float64(ls)*0.55 + labelH + detailH
+		w, h = textX-r.X+widest, float64(n-1)*slotH+float64(ls)*0.55+labelH+detailH
+	} else {
+		w, h = r.W, dotR*2+gap/2+labelH+float64(ds)*0.2+detailH
 	}
-	return r.W, dotR*2 + gap/2 + labelH + float64(ds)*0.2 + detailH
+	if c.review != nil {
+		needW := w
+		if !t.Vertical && widest > textW { // a word wider than its slot
+			needW = float64(n) * (widest + gap)
+		}
+		c.Fits("Timeline", r, needW, h)
+	}
+	return w, h
 }
 
 // fit finds the label and detail sizes that make every item's text fit
@@ -92,35 +102,34 @@ func (t Timeline) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 // text at those sizes. Label and detail share the height, three to two.
 func (t Timeline) fit(c Ctx, textW, textH float64) (ls, ds int, labelH, detailH, widest float64) {
 	th := c.Theme
-	ls, ds = c.Size(0.1), c.Size(0.07)
 	lh, dh := max(textH*0.6, 1), max(textH*0.4, 1)
+	ls = fitEach(c, th.Display, t.Items, func(it TimelineItem) (string, bool) { return it.Label, true }, textW, lh, c.Size(0.1))
+	ds = fitEach(c, th.Body, t.Items, func(it TimelineItem) (string, bool) { return it.Detail, it.Detail != "" }, textW, dh, c.Size(0.07))
 	for _, it := range t.Items {
-		s, _ := th.Display.Fit(it.Label, textW, lh, ls, 0)
-		ls = min(ls, s)
+		lines := th.Display.wrapped(it.Label, ls, textW)
+		labelH = max(labelH, linesHeight(len(lines), ls, DefaultLeading))
+		widest = max(widest, th.Display.widest(lines, ls))
+		lines = th.Body.wrapped(it.Detail, ds, textW)
 		if it.Detail != "" {
-			s, _ = th.Body.Fit(it.Detail, textW, dh, ds, 0)
-			ds = min(ds, s)
+			detailH = max(detailH, linesHeight(len(lines), ds, DefaultLeading))
 		}
-	}
-	// Past this floor shrinking stops helping: a smaller line is unreadable,
-	// and the text runs a little past its slot instead.
-	ls = max(th.Display.Drawn(ls), c.SmallText(th.Display))
-	ds = max(th.Body.Drawn(ds), c.SmallText(th.Body))
-	for _, it := range t.Items {
-		lines := th.Display.Wrap(it.Label, ls, textW)
-		labelH = max(labelH, float64(len(lines))*float64(ls)*DefaultLeading)
-		for _, l := range lines {
-			widest = max(widest, th.Display.Measure(l, ls))
-		}
-		lines = th.Body.Wrap(it.Detail, ds, textW)
-		if it.Detail != "" {
-			detailH = max(detailH, float64(len(lines))*float64(ds)*DefaultLeading)
-		}
-		for _, l := range lines {
-			widest = max(widest, th.Body.Measure(l, ds))
-		}
+		widest = max(widest, th.Body.widest(lines, ds))
 	}
 	return ls, ds, labelH, detailH, widest
+}
+
+// fitEach is one size for the texts of items set in f, each fitted to w×h
+// from size down: the smallest of their fits. text gives an item's text, or
+// false to leave the item out. The size stops at c's smallest readable text:
+// past that, shrinking stops helping, and the text runs a little past its box
+// instead.
+func fitEach[T any](c Ctx, f *Font, items []T, text func(T) (string, bool), w, h float64, size int) int {
+	for _, it := range items {
+		if s, ok := text(it); ok {
+			size = min(size, Text{Font: f, Size: size}.Fit(s, w, h).Size)
+		}
+	}
+	return max(f.Drawn(size), c.SmallText(f))
 }
 
 // Process is a row of chevrons, one per step of a procedure, revealed one at a
@@ -135,6 +144,7 @@ type Process struct {
 // Draw renders the row at the top of r, built out to the current step, and
 // returns its size once built: the width of r and a chevron's height.
 func (pr Process) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
+	defer c.within("Process", r)()
 	n := len(pr.Steps)
 	if n == 0 {
 		return 0, 0
@@ -147,12 +157,15 @@ func (pr Process) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 	pad := c.Unit(0.015)
 	textW, textH := cw-2*tip-pad, h*0.8
 
-	size := c.Size(0.1)
-	for _, s := range pr.Steps {
-		fs, _ := th.Body.Fit(s, textW, textH, size, 0)
-		size = min(size, fs)
+	size := fitEach(c, th.Body, pr.Steps, func(s string) (string, bool) { return s, true }, textW, textH, c.Size(0.1))
+	if c.review != nil {
+		for i, s := range pr.Steps {
+			lines := th.Body.wrapped(s, size, textW)
+			x := r.X + float64(i)*(cw-tip+gap)
+			c.Fits(quoteText("Process step", s), Rect{x + tip, r.Y + (h-textH)/2, textW, textH},
+				th.Body.widest(lines, size), linesHeight(len(lines), size, DefaultLeading))
+		}
 	}
-	size = max(th.Body.Drawn(size), c.SmallText(th.Body))
 
 	for i, s := range pr.Steps {
 		step := pr.FirstStep + i
@@ -178,15 +191,9 @@ func (pr Process) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 		p.Polyline(closed, max(c.Unit(0.005), 1), edge, e)
 
 		mid := x + left + (cw-tip-left)/2
-		wrapped := strings.Join(th.Body.Wrap(s, size, textW), "\n")
-		lines := float64(strings.Count(wrapped, "\n") + 1)
+		wrapped := strings.Join(th.Body.wrapped(s, size, textW), "\n")
 		// The text fades with the shape: at e == 0 nothing of the step shows.
-		tx := Text{Font: th.Body, Size: size, Align: Center, Color: text, FX: func(int) GlyphFX { return GlyphFX{Alpha: e} }}
-		if lines > 1 {
-			tx.Draw(p, wrapped, mid, y+h/2-lines*float64(size)*DefaultLeading/2)
-		} else {
-			tx.DrawMid(p, wrapped, mid, y+h/2)
-		}
+		Text{Font: th.Body, Size: size, Align: Center, Color: text, FX: fadeFX(e)}.drawCentered(p, wrapped, mid, y+h/2)
 	}
 	return r.W, h
 }

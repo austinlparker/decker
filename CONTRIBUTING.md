@@ -34,8 +34,11 @@ CI also checks the GoReleaser configuration.
 
 Frames must depend only on `Ctx`; use `Hash01` for noise and `Ctx.T` or
 `Ctx.StepT` for time. Preserve floating-point operation order during refactors.
-Do not rename or remove exported APIs without agreement: talks in other
-repositories depend on them.
+Before 1.0 the exported API changes in place: when a name, signature or
+behavior should change, change it, update every caller in the repository, and
+call out the break in the PR. Don't keep the old form compiling beside the
+new one: aliases, `Deprecated:` declarations, renaming vars and forwarding
+functions fail `TestNoCompatShims` in `shim_test.go`.
 
 Goldens pin pixels and terminal cells. Do not regenerate them to hide a
 failure. For an intentional visual change, run:
@@ -59,7 +62,7 @@ workflow uses the API diff to choose the next version.
 Keep the [README](README.md), [guide](docs/guide.md), [CLI reference](docs/cli.md)
 and Go comments aligned with the implementation. The README's complete first
 program is [examples/hello/main.go](examples/hello/main.go); update both copies
-together, then run the example with `-list` and a PNG snapshot. Keep badge
+together, then run the example with `list` and a PNG snapshot. Keep badge
 claims tied to checked-in configuration or an actual service.
 
 See [releasing](docs/releasing.md) for the automation and versioning rules.

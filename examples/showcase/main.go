@@ -1,6 +1,6 @@
 // Command showcase is the deck behind the README's example videos: three short
 // clips of what a talk can draw. Each clip is a range of slides; record.sh
-// exports them with -video and turns them into GIFs.
+// exports them with the video command and turns them into GIFs.
 package main
 
 import (
@@ -55,9 +55,9 @@ func talk() decker.Deck {
 // heading draws a slide's title and returns the y below it.
 func heading(c decker.Ctx, p *decker.Pixels, s string) float64 {
 	th := c.Theme
-	size, s := th.Display.Fit(s, c.X(0.88), c.Y(0.14), c.Size(0.11), 0)
-	_, h := decker.Text{Font: th.Display, Size: size, Color: th.Text,
-		FX: decker.RiseIn(c.T, 0.02, size)}.Draw(p, s, c.X(0.06), c.Y(0.07))
+	t := decker.Text{Font: th.Display, Size: c.Size(0.11), Color: th.Text}.Fit(s, c.X(0.88), c.Y(0.14))
+	t.FX = decker.RiseIn(c.T, 0.02, t.Size)
+	_, h := t.Draw(p, s, c.X(0.06), c.Y(0.07))
 	p.Rect(c.X(0.06), c.Y(0.07)+h+c.Unit(0.015), c.X(0.06)*decker.EaseOutExpo(decker.Progress(c.T, 0.1, 0.7)), c.Unit(0.008), th.Accent, 1)
 	return c.Y(0.07) + h + c.Unit(0.05)
 }
@@ -84,8 +84,7 @@ func statementSlide() decker.Slide {
 			p, th := sc.Px, c.Theme
 			box := c.Rect(0.08, 0.2, 0.84, 0.36)
 			spans := decker.ParseSpans("Every slide is a *function* of `time`.", th)
-			r := decker.Rich{Font: th.Body, Color: th.Text}
-			r.Size, r.MaxW = r.Fit(spans, box.W, box.H, c.Size(0.16)), box.W
+			r := decker.Rich{Font: th.Body, Size: c.Size(0.16), Color: th.Text}.Fit(spans, box.W, box.H)
 			r.FX = decker.RiseIn(c.T, 0.025, r.Size)
 			r.Draw(p, spans, box.X, box.Y)
 			if c.Reached(1) {
@@ -117,9 +116,9 @@ func effectsSlide() decker.Slide {
 			}
 			for i, f := range fx {
 				r := rows[i]
-				size, s := th.Display.Fit(f.word, r.W*0.45, r.H, c.Size(0.2), 0)
-				decker.Text{Font: th.Display, Size: size, Color: f.col, Glow: 0.3, FX: f.fx(size)}.
-					DrawMid(p, s, r.X, r.Y+r.H/2)
+				t := decker.Text{Font: th.Display, Size: c.Size(0.2), Color: f.col, Glow: 0.3}.Fit(f.word, r.W*0.45, r.H)
+				t.FX = f.fx(t.Size)
+				t.DrawMid(p, f.word, r.X, r.Y+r.H/2)
 			}
 			blk := decker.NewRect(c.X(0.52), top, c.X(0.42), c.Y(0.88)-top)
 			f, lines, scale := decker.FitBlock("BLOCK FX", blk.W, blk.H, 2, 1, decker.BlockShadow)

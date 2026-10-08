@@ -1,6 +1,6 @@
 # Decker guide
 
-[README](../README.md) · [CLI reference](cli.md) · [API reference](https://pkg.go.dev/github.com/austinlparker/decker)
+[README](../README.md) · [Authoring a talk](authoring.md) · [CLI reference](cli.md) · [API reference](https://pkg.go.dev/github.com/austinlparker/decker)
 
 ## How it draws big type in a terminal
 
@@ -36,7 +36,8 @@ FIGlet loader currently loads ASCII input glyphs only.
 
 One idea per slide: a headline and at most a couple of short lines or a
 visual. Put the detail in the speaker notes (`Notes`, shown in the presenter
-view). Keep titles under about 24 characters so they stay full size.
+view) and what you cite in `Sources`. Keep titles under about 24 characters
+so they stay full size.
 
 ### Choosing and loading fonts
 
@@ -51,10 +52,6 @@ faces are converted from licensed outline fonts to pixel blocks:
 | `"Decker Geometric"` | Rubik Mono One | Very heavy, wide geometric lettering, uppercase-shaped lowercase |
 | `"Decker Stencil"` | Black Ops One | Angular stencil lettering with true lowercase |
 | `"Decker Slab"` | Alfa Slab One | Heavy slab serifs with true lowercase |
-
-The older `FigFont`, `LoadFigFont`, `ParseFigFont`, `StockFigFont` and
-`StockFigFontNames` names remain available as deprecated compatibility
-aliases. Use the `FigletFont` spellings in new code.
 
 Load fonts once while building the deck, then capture them in slide
 functions and pass them through `Block.Font` or `FitBlock`:
@@ -118,17 +115,19 @@ and attribution with your talk; the bundled conversions retain their
 
 Every deck has the same command line, from `decker.Main`. Run these commands
 from the talk's `main` package. See the [CLI reference](cli.md) for all flags
-and defaults:
+and defaults, or run `go run . --help`:
 
 ```sh
 go run .                     # present, from slide 1
-go run . -dev                # rebuild and reload on every save, staying on the current slide
-go run . -presenter          # the presenter view, in a second window
-go run . -presenter -presentation-font-size 5 # p opens the deck at 5pt in Ghostty
-go run . -list               # slide titles, step counts and sections
-go run . -snapshot -slide 6 -step 4 -t 2.5 -w 240 -h 67 -png frame.png
-go run . -sheet sheet.png -w 682 -h 171 -shrink 8
-go run . -video talk.mp4 -fps 30
+go run . --dev               # rebuild and reload on every save, staying on the current slide
+go run . present             # the presenter view, in a second window
+go run . present --presentation-font-size 5 # p opens the deck at 5pt in Ghostty
+go run . list                # slide titles, step counts and sections
+go run . review review       # check every build at three sizes for clipped or lost content
+go run . handout handout     # handout/handout.md: thumbnails, notes and sources
+go run . snapshot --slide 6 --step 4 -t 2.5 -w 240 -h 67 --png frame.png
+go run . sheet sheet.png -w 682 -h 171 --shrink 8
+go run . video talk.mp4 --fps 30
 ```
 
 In dev mode, a save starts a rebuild. Dev mode watches every package of the
@@ -138,17 +137,29 @@ restarts on the slide and step you were on. If it fails, the compiler errors
 show in a red panel and the old version keeps running. Press `r` to replay
 the current slide's animations.
 
-`-snapshot` renders one frame without a terminal. `-t` is the number of
+`snapshot` renders one frame without a terminal. `-t` is the number of
 seconds since the slide appeared; the default is `decker.Settled` (1000), which shows
-the selected step fully settled. Omitting `-step` selects the first step;
-to capture the completed slide, pass its final step explicitly. `-step` and `-slide` are 1-based. `-sheet` renders
+the selected step fully settled. Omitting `--step` selects the first step;
+to capture the completed slide, pass its final step explicitly. `--step` and `--slide` are 1-based. `sheet` renders
 every slide at its last step, four across.
 
-`-video` renders the whole deck with its animations and transitions. Each
-build step stays on screen for `-hold` seconds (a slide can ask for longer
+`review DIR` checks every build of every slide, settled, at 240×67, 320×90
+and 682×171, and lists what is lost or hard to read: Code lines clipped,
+Table rows dropped, text off the canvas or below the readable size, a
+panic. It writes `DIR/index.md` with pictures of what it found, and exits
+non-zero when it finds an error. See [Reviewing a deck](#reviewing-a-deck).
+
+`handout DIR` writes a document to rehearse from or hand out: `DIR/handout.md`
+and a thumbnail of every slide (`01.png`, `02.png`…) at its last step, at
+`-w`×`-h` cells. The Markdown gives each slide its title, section, build
+count, thumbnail, notes as written and sources, then ends with every source
+once and the slides that cite it.
+
+`video FILE` renders the whole deck with its animations and transitions. Each
+build step stays on screen for `--hold` seconds (a slide can ask for longer
 with its `Hold` field), and a slide's first step also gets the time its
 transition takes. Frames come straight from the pixel canvas, so the video is
-as sharp as its `-size` allows. It needs `ffmpeg` with the `libx264` encoder. Video contains only the pixel
+as sharp as its `--size` allows. It needs `ffmpeg` with the `libx264` encoder. Video contains only the pixel
 canvas, so native terminal text from `Scene.Text`, `Put` and `Sprite` is
 omitted. The video has no sound, and export replaces an existing output file.
 
@@ -163,7 +174,7 @@ omitted. The video has no sound, and export replaces an existing output file.
 - The deck paints its own background, so your terminal theme doesn't matter.
 - Clickers that send page-up/page-down or arrow keys work out of the box, and
   a "blank" button (`b` or `.`) blanks the screen to black.
-- It animates at 60 fps (`-fps 30` if the terminal can't keep up).
+- It animates at 60 fps (`--fps 30` if the terminal can't keep up).
 - The deck writes to the terminal itself rather than through Bubble Tea's
   renderer (`termout.go`): each frame sends only the cells that
   changed, inside synchronized output so the terminal never shows half a
@@ -184,18 +195,18 @@ in the **presenter view**: a second window on your laptop screen, at a normal
 font size, that drives the deck.
 
 ```sh
-go run . -presenter   # on your screen: notes, timer and previews
+go run . present      # on your screen: notes, timer and previews
 ```
 
 In Ghostty 1.3+ on macOS, press `p` to open the deck in a new window at a
 4pt font. Move that window to the projector. The presenter stays at its
 normal font size, and focus returns to it after the deck window opens.
-Use `-presentation-font-size 5` for a different deck-window font size.
+Use `--presentation-font-size 5` for a different deck-window font size.
 macOS may ask for permission to automate Ghostty the first time.
 
 The new window runs the same executable, even when you used `go run`, with
-the same working directory, socket, and talk-specific command-line flags.
-It starts at `-slide`/`-step`, or the last reported position after a
+the same working directory and socket, and the presenter's `--fps` and
+`--dev`. It starts at `--slide`/`--step`, or the last reported position after a
 disconnect. Repeated `p` presses do not open duplicate windows; after the
 deck closes, `p` can reopen it. Quitting the presenter leaves the deck
 running. Launch failures appear in the presenter and can be retried with `p`.
@@ -204,7 +215,7 @@ Other terminals and platforms can start the two windows manually:
 
 ```sh
 go run .              # window 1, on the projector: the deck
-go run . -presenter   # window 2, on your screen: the presenter view
+go run . present      # window 2, on your screen: the presenter view
 ```
 
 Start them in either order. The presenter view waits for the deck, and if
@@ -225,16 +236,16 @@ The presenter view shows:
 
 Ghostty and kitty show full-resolution slide images automatically using
 the Kitty graphics protocol. Other terminals, and sessions inside tmux or
-zellij, use half-block previews. Use `-previews image` to force image
-previews, or `-previews cells` to force cells. Images render at the deck's
+zellij, use half-block previews. Use `--previews image` to force image
+previews, or `--previews cells` to force cells. Images render at the deck's
 actual dimensions and settled build step; while an image loads, its cell
 preview remains visible. Resizing either window refreshes the images.
 
-For a different talk length, pass `-length 45m` to the presenter view.
+For a different talk length, pass `--length 45m` to the presenter view.
 
 The two windows talk over a Unix socket in the temp directory, named after
 the deck. To run two copies of one deck at once, give each pair its own
-`-socket /tmp/other.sock`.
+`--socket /tmp/other.sock`.
 
 ## Keys
 
@@ -264,8 +275,8 @@ previews. Blanking closes the notes and help.
 Only in the presenter view: `p` opens the deck in a new Ghostty window
 (macOS), `t` starts or pauses the timer, `T` resets it.
 
-Only in the deck: `n` shows the notes on the projector (a fallback if the
-presenter view isn't running), `?` shows help (`esc` closes it) and
+Only in the deck: `n` shows the notes on the projector (a
+fallback if the presenter view isn't running), `?` shows help (`esc` closes it) and
 `ctrl+l` redraws the screen. In dev mode the deck also has a one-line
 footer with the build status and slide counter. The key table is [`keys.go`](../keys.go).
 
@@ -321,6 +332,9 @@ func mySlide() decker.Slide {
 		Notes:      "say the thing",                 // shown in the presenter view
 		Section:    "Part one",                      // chapter; later slides inherit it until one sets another
 		Transition: decker.TransitionWipe.Over(0.6), // Push (default), Dissolve, Wipe, Morph, Fade, FadeThrough, Cover, Uncover, Split, Iris, Zoom, Pixelate, Glitch, None; Over sets seconds, From a side
+		Sources: []decker.Source{ // what it cites, for the handout
+			{Label: "OpenTelemetry Logs Data Model, v1.40", URL: "https://opentelemetry.io/docs/specs/otel/logs/data-model/"},
+		},
 		View: func(c decker.Ctx, sc *decker.Scene) {
 			p := sc.Px // the pixel canvas; c.PW() × c.PH() pixels
 
@@ -328,9 +342,11 @@ func mySlide() decker.Slide {
 
 			// Big text: size is a fraction of screen height. Fit shrinks it
 			// (and wraps it) until it fits the box you give it.
-			size, text := c.Theme.Display.Fit("A short, punchy line", c.X(0.84), c.Y(0.3), c.Size(0.14), 0)
-			decker.Text{Font: c.Theme.Display, Size: size, Color: c.Theme.Accent, Glow: 0.4,
-				FX: decker.RiseIn(c.T, 0.02, size)}.Draw(p, text, c.X(0.08), top)
+			const line = "A short, punchy line"
+			big := decker.Text{Font: c.Theme.Display, Size: c.Size(0.14), Color: c.Theme.Accent, Glow: 0.4}.
+				Fit(line, c.X(0.84), c.Y(0.3))
+			big.FX = decker.RiseIn(c.T, 0.02, big.Size)
+			big.Draw(p, line, c.X(0.08), top)
 
 			if c.Reached(1) { // appears on the second step
 				r := c.Unit(0.05) * decker.EaseOutBack(decker.Progress(c.Since(1), 0, 0.4))
@@ -378,8 +394,8 @@ than the other transitions' 0.45s; `TransitionMorph.Over(1.2)` changes it.
 
 ```go
 sc.Place("headline", head, func(p *decker.Pixels, r decker.Rect) {
-	size, s := c.Theme.Display.Fit("Agents", r.W, r.H, c.Size(0.3), 0)
-	decker.Text{Font: c.Theme.Display, Size: size, Color: c.Theme.Accent}.Draw(p, s, r.X, r.Y)
+	decker.Text{Font: c.Theme.Display, Size: c.Size(0.3), Color: c.Theme.Accent}.
+		Fit("Agents", r.W, r.H).Draw(p, "Agents", r.X, r.Y)
 })
 ```
 
@@ -432,14 +448,16 @@ Everything here is in package `decker`.
 | Layout | `Rect` (or `NewRect(x, y, w, h)` in pixels): start from `c.Frame()` or `c.Rect(fx, fy, fw, fh)`, then `Inset`, `CutTop`/`CutBottom`/`CutLeft`/`CutRight`, `Rows`/`Cols` (by weight), `Grid`, `Sub` (fractions of the rect) and `Anchor` (a box of a given size inside it); `LerpRect` animates between two |
 | Transitions | `Slide.Transition`: `TransitionPush` (default), `Cover`, `Uncover`, `Wipe`, `Split`, `Fade`, `FadeThrough`, `Dissolve`, `Iris`, `Zoom`, `Pixelate`, `Glitch`, `Morph`, `None`. `.Over(secs)` sets the time; `.From(DirLeft / DirRight / DirUp / DirDown)` sets the side of Push, Cover, Uncover and Wipe (and the axis of Split); going back plays from the opposite side. Vertical moves go in whole cell rows |
 | Magic move | `sc.Place(key, rect, draw)` on both slides, `Transition: TransitionMorph` on the second; see [Magic move](#magic-move) |
-| Big type | `Text{Font, Size, Color, To (gradient), Glow, Shine, FX, MaxW}.Draw(p, s, x, y)` with `Align`; returns width and height. `DrawMid` centers a line's ink on a y |
-| Mixed styles in a line | `Rich{Font, Size, Color, Glow, FX, MaxW}.Draw(p, spans, x, y)` with `[]Span{Text, Font, Color, Underline, Strike, Mark}`: bold a word, color a keyword, highlight, inline code, one baseline, wrapping across spans; ``ParseSpans("*bold* _muted_ `code` {accent:word}", theme)`` builds spans from light markup (see [Rich text](#rich-text)); `rich.Fit(spans, w, h, maxSize)` sizes them to a box |
-| Sizing text to a box | `font.Fit(...)`, `FitAll(...)` for several lines at one size |
+| Big type | `Text{Font, Size, Color, To (gradient), Glow, Shine, FX, MaxW}.Draw(p, s, x, y)` with `Align`; returns width and height. `DrawMid` centers a line's ink on a y, which suits one label in a box; a row of labels (a legend, column heads) should `Draw` at one top so they share a baseline |
+| Mixed styles in a line | `Rich{Font, Size, Color, Glow, FX, MaxW}.Draw(p, spans, x, y)` with `[]Span{Text, Font, Color, Underline, Strike, Mark}`: bold a word, color a keyword, highlight, inline code, one baseline, wrapping across spans; ``ParseSpans("*bold* _muted_ `code` {accent:word}", theme)`` builds spans from light markup (see [Rich text](#rich-text)); `rich.Fit(spans, w, h)` sizes them to a box, as `Text.Fit` does |
+| Sizing text to a box | `Text{Font, Size, ...}.Fit(s, w, h)` returns the `Text` with `Size` shrunk to the largest, at most `Size`, at which `s` fits the box, and `MaxW` set to `w`, so `.Draw(p, s, x, y)` draws it wrapped as it was fitted; `"\n"` breaks fit several lines at one size. `Rich.Fit(spans, w, h)` does the same for spans. `Text{...}.Measure(s)` and `rich.Measure(spans)` return the size `Draw` would, without drawing, to size a plate or center a block first |
+| Checking what fits | `c.Fits(what, rect, w, h)` reports a block that doesn't fit its rect to the review; `Code.Measure(c, rect)` says what a code block shows before drawing it. See [Reviewing a deck](#reviewing-a-deck) |
+| Scales and axes | `NiceScale(lo, hi, maxTicks, from, to)` maps data onto pixels with round ticks, for axes you draw yourself (a waterfall's milliseconds): `s.At(v)` places a value, `s.Ticks()` lists the tick values and `s.Label(v)` writes one, as the charts' axes do. Set `s.Min`/`s.Max` back afterwards to keep the data's own ends |
 | Small labels | `c.SmallText(font)`: the smallest readable size; `Label`, `Chip`, `LineLabel` (text sitting on an arrow) |
 | Block letters | `f, lines, scale := FitBlock(s, maxW, maxH, maxLines, gap, fonts...)` picks a font and scale for a pixel box; `Block{Font, Scale, Color, To, Shadow, Drop, Align, Glow, FX}.Draw(p, s, x, y)`; `BlockEffect`s for `Block.FX`: `BlockDecrypt`, `BlockRain`, `BlockBeam`, `BlockSlide`, `BlockType`, `BlockGlitch`, `BlockFade`, combined with `BlockChain` |
 | Diagrams | `Panel`, `Arrow`, `CycleDiagram` (numbered ring with a legend), `BulletList`, `SpeechBubble`; `Timeline{Items, FirstStep, Vertical}.Draw(c, p, rect)` (milestones on a line, one per step) and `Process{Steps, FirstStep}.Draw(c, p, rect)` (a row of chevrons, one per step) |
 | Joining boxes | `Connector{From, To Rect, Route, Head, Tail, Width, Color, Dashed, Label, Prog}.Draw(c, p)`: a line, an elbow (`RouteElbow`) or a curve (`RouteCurved`) between two rects, leaving and arriving at the sides that face each other (`FromSide`/`ToSide` to force them), with `HeadArrow`/`HeadDot` ends flush on the edge; `Prog` draws it on, so `Ease(c.Since(step), 0.6)` animates it |
-| Code | `Code{Source, Lang, LineNumbers, Title, Focus, FirstStep, Diff, Size}.Draw(c, p, rect)`: syntax-highlighted (chroma) in `Theme.Mono` on a plate, sized to fit the rect; `Focus` is one `LineRange{From, To}` per step from `FirstStep`, dimming the other lines behind a highlight bar that glides between ranges; `Diff` reads a unified diff. Colors from `Theme.Syntax`, or derived from the theme |
+| Code | `Code{Source, Lang, LineNumbers, Title, Focus, FirstStep, Diff, Size}.Draw(c, p, rect)`: syntax-highlighted (chroma) in `Theme.Mono` on a plate, sized to fit the rect; `Focus` is one `LineRange{From, To}` per step from `FirstStep`, dimming the other lines behind a highlight bar that glides between ranges; `Diff` reads a unified diff. Colors from `Theme.Syntax`, or derived from the theme. When the source doesn't fit at the smallest readable size, `Overflow` says what happens: `CodeClip` (the default) clips, `CodeShrink` shrinks below the readable size, `CodeScroll` keeps the size and scrolls to each `Focus` range in turn. `Excerpt: LineRange{40, 60}` shows part of a file with its real line numbers. `Measure(c, rect)` returns the fitted size, plate and lines in view before drawing |
 | Charts | `BarChart{Labels, Values or Series, Max, Horizontal, ShowValues, Step}`, `LineChart{Labels, Series, Names, Min, Max, Points, Step}`, `DonutChart{Labels, Values, Thickness, Center, Step}`, each with `.Draw(c, p, rect)`: they grow in on their step, take colors from `Theme.Series` (`t.SeriesColor(i)`; default Accent, Accent2, Good, Warn, Muted) and survive empty, zero, negative and NaN data. `Sparkline(c, p, rect, values, col, prog)` is a tiny inline line |
 | A counting number | `Stat{Value, Prefix, Suffix, Decimals, Label, Step, Duration}.Draw(c, p, rect)`: counts up from 0 on its step, at a steady width |
 | Tables | `Table{Header, Rows, Weights, Align, Zebra, Rules, FirstStep, Reveal, Highlight, Walk}.Draw(c, p, rect)`: one text size for every cell, ragged rows, reveal by row or column over steps (`TableRevealRows`, `TableRevealCols`), and a highlight that can `Walk` down the rows |
@@ -460,13 +478,11 @@ Everything here is in package `decker`.
 
 ### Rich text
 
-`Text` draws one font and color. `Rich` takes `[]Span` and lets each span differ, on a shared baseline; it wraps at spaces across span boundaries and counts `FX` glyph indexes as `Text` does. `Rich.Fit` finds the largest size at which spans fill a box, remembered between frames like `Font.Fit`.
+`Text` draws one font and color. `Rich` takes `[]Span` and lets each span differ, on a shared baseline; it wraps at spaces across span boundaries and counts `FX` glyph indexes as `Text` does. `Rich.Fit` finds the largest size at which spans fill a box, remembered between frames like `Text.Fit`.
 
 ```go
 spans := decker.ParseSpans("Call *Draw* with `[]Span`, {accent:not} a string.", c.Theme)
-r := decker.Rich{Font: c.Theme.Body, Color: c.Theme.Text}
-r.Size, r.MaxW = r.Fit(spans, w, h, c.Size(0.2)), w
-r.Draw(p, spans, x, y)
+decker.Rich{Font: c.Theme.Body, Size: c.Size(0.2), Color: c.Theme.Text}.Fit(spans, w, h).Draw(p, spans, x, y)
 ```
 
 `ParseSpans` markup, with the theme supplying fonts and colors:
@@ -497,17 +513,95 @@ import (
 )
 
 func TestSlides(t *testing.T)      { decktest.Slides(t, talk()) }
+func TestReview(t *testing.T)      { decktest.Review(t, talk()) }
 func TestGolden(t *testing.T)      { decktest.Golden(t, talk(), "testdata/golden.txt") }
 func BenchmarkFrames(b *testing.B) { decktest.Frames(b, talk()) }
 ```
 
 `Slides` renders every slide at every build step, at three sizes and four
-moments, and fails on panics. `Golden` hashes every frame of every step at eight moments and
+moments, and fails on panics in a View, a placed element or the overlay.
+`Review` fails on every error `review` would report (see below), so a slide
+that starts clipping fails the build. `Golden` hashes every frame of every step at eight moments and
 three sizes, and fails if any of them changed: after changing a slide on
 purpose, record it with `UPDATE_GOLDEN=1 go test -run Golden`. That makes
 the engine safe to change: an engine change that moves one pixel of any
 talk fails that talk's test.
 
+
+### Reviewing a deck
+
+A slide that compiles and renders can still lose half its content: a code
+block taller than its rect, a table with more rows than fit, a line of text
+running off the bottom. Each only shows up at some sizes, and often only at
+an intermediate build. The review finds them:
+
+```sh
+go run . review review
+```
+
+```
+11.2  Collector config  320x90  error    code-clipped  Code "otel.yaml": 5 of 10 lines visible (needs 236px tall, has 118px) at 12px, the smallest readable size
+7.3   Waterfall         240x67  warning  text-small    BarChart: 4 texts at 7px, such as Text "db.query"; the smallest readable size here is 9px
+1 error and 1 warning in 41 builds of 12 slides at 240x67, 320x90, 682x171.
+```
+
+It draws every build of every slide, settled, at each size, and listens
+while the frames are drawn (the frames are the ones the deck shows). Each
+issue has a severity, a stable code, the rect it is about and a message with
+the numbers:
+
+| Code | Severity | Means |
+| --- | --- | --- |
+| `code-clipped` | error | a `Code` block shows only some of its lines or columns |
+| `table-rows-dropped` | error | a `Table` left out rows that don't fit, even at the smallest readable size |
+| `text-offcanvas` | error, or a warning for the tail of a letter | `Text`, `Rich` or `Block` ink runs past an edge of the canvas |
+| `overflow` | error | a block needs more room than its rect: a `Timeline`, `Process` step, `BulletList`, cycle legend, or a slide's own `c.Fits` |
+| `panic` | error | the View, a placed element or the overlay panicked |
+| `text-small` | warning | text below the smallest readable size (`c.SmallText`); a component's text counts once for the component |
+| `table-cell-cut` | warning | `Table` cells shortened with "..." |
+| `overlap` | warning | two elements (blocks of text, stock components, placed elements) ink the same pixels, or two blocks of text have lines running into each other |
+
+The report is also written to `review/index.md`, by slide and build, with
+pictures:
+
+- `review/frames/11-2-320x90.png` for each build with issues: the frame,
+  scaled up, with a faint outline around everything it drew and a numbered
+  box around each issue, listed under it.
+- `review/sheet-320x90.png` per size: every build at a glance, each framed
+  in the color of its worst issue (red errors, amber warnings). An
+  intermediate build that clips shows up here even when the last one is
+  fine.
+
+The images come from the pixel canvas, so `Scene.Text`, `Put` and `Sprite`
+characters are not in them.
+
+A slide that means to have an issue says so: `Allow: []string{"text-offcanvas"}`
+on a headline that bleeds off the edge on purpose.
+
+Drawing of your own reports the same way. `c.Fits(what, rect, w, h)` returns
+whether a `w`×`h` block fits `rect`, and when it doesn't, records an
+`overflow` error naming `what`. It does nothing while presenting.
+
+```go
+lay := layoutWaterfall(spans, r) // your own layout: pure, from the rect
+if lay.W > r.W || lay.H > r.H {
+	lay = layoutWaterfall(spans[:8], r) // drop the tail rather than clip it
+}
+c.Fits("waterfall", r, lay.W, lay.H) // the layout drawn: the review hears if even this doesn't fit
+```
+
+Call `c.Fits` on the layout you draw, not on one you only try: a fallback
+that works is the slide doing its job, not an error.
+
+`Code.Measure(c, rect)` returns how a code block fits before it draws:
+the size its text is set at, the plate, the lines and columns that show
+(`Shown`, `ShownCols`), and the plate it would need
+(`NeedW`, `NeedH`). A block too long for its rect has three ways out, all
+of which the review checks: a bigger rect, `Overflow: CodeShrink` (smaller
+text, a warning below the readable size), or `Overflow: CodeScroll` with a
+`Focus` range per build, which keeps the text readable and walks through
+the file (an error if a range is taller than the view). `Excerpt` shows
+part of the file with its real line numbers, to split it across slides.
 
 [Bubble Tea]: https://github.com/charmbracelet/bubbletea
 [Lip Gloss]: https://github.com/charmbracelet/lipgloss

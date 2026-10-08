@@ -30,7 +30,7 @@ Built on [Bubble Tea](https://github.com/charmbracelet/bubbletea),
 ## What you can make
 
 These clips come from the [showcase deck](examples/showcase/main.go),
-recorded with `-video`.
+recorded with `video`.
 
 Block-letter titles and animated text:
 
@@ -100,9 +100,11 @@ func talk() decker.Deck {
 			Title: "Hello, decker", Steps: 2,
 			Notes: "Press space to reveal the second line. Press q to quit.",
 			View: func(c decker.Ctx, sc *decker.Scene) {
-				size, title := c.Theme.Display.Fit("Hello, decker", c.X(0.84), c.Y(0.3), c.Size(0.18), 0)
-				decker.Text{Font: c.Theme.Display, Size: size, Color: c.Theme.Accent,
-					FX: decker.RiseIn(c.T, 0.02, size)}.Draw(sc.Px, title, c.X(0.08), c.Y(0.2))
+				const title = "Hello, decker"
+				t := decker.Text{Font: c.Theme.Display, Size: c.Size(0.18), Color: c.Theme.Accent}.
+					Fit(title, c.X(0.84), c.Y(0.3))
+				t.FX = decker.RiseIn(c.T, 0.02, t.Size)
+				t.Draw(sc.Px, title, c.X(0.08), c.Y(0.2))
 				if c.Reached(1) {
 					decker.Text{Font: c.Theme.Body, Size: c.SmallText(c.Theme.Body), Color: c.Theme.Text,
 						FX: decker.FadeUp(c.Since(1), 0.4, c.SmallText(c.Theme.Body))}.
@@ -136,24 +138,26 @@ go run ./examples/hello
 These commands run from your talk's directory:
 
 ```sh
-go run . -dev                         # rebuild on save; keep your slide and step
-go run . -presenter -length 45m        # notes, timer and previews; p opens the deck
-go run . -list                        # titles, step counts and sections
-go run . -snapshot -step 2 -w 160 -h 45 -png frame.png
-go run . -sheet sheet.png             # all slides at their final step
-go run . -video talk.mp4 -fps 30       # silent video; needs ffmpeg
+go run . --dev                        # rebuild on save; keep your slide and step
+go run . present --length 45m         # notes, timer and previews; p opens the deck
+go run . list                         # titles, step counts and sections
+go run . review review                # every build at three sizes: what's clipped or unreadable
+go run . handout handout              # handout.md: thumbnails, notes and sources
+go run . snapshot --step 2 -w 160 -h 45 --png frame.png
+go run . sheet sheet.png              # all slides at their final step
+go run . video talk.mp4 --fps 30      # silent video; needs ffmpeg
 ```
 
-In Ghostty 1.3+ on macOS, start `-presenter` and press `p` to open the deck
+In Ghostty 1.3+ on macOS, start `present` and press `p` to open the deck
 in a separate window at 4pt. Change that size with
-`-presentation-font-size 5`. The presenter keeps its normal font size;
+`--presentation-font-size 5`. The presenter keeps its normal font size;
 move the deck window to your projector and navigate from the presenter.
 Full-resolution image previews are automatic in Ghostty and kitty;
-`-previews cells` selects half-block previews instead.
+`--previews cells` selects half-block previews instead.
 
-You can also start the deck and `-presenter` manually in separate terminals.
+You can also start the deck and `present` manually in separate terminals.
 They connect using the deck's name and reconnect after a dev rebuild.
-See the [CLI reference](docs/cli.md) for every flag,
+See the [CLI reference](docs/cli.md) for every command and flag,
 default, export behavior and socket options.
 
 | Key | Action |
@@ -178,6 +182,8 @@ presenter-only timer controls.
 | Build a theme and your own slide templates | [Anatomy of a deck](docs/guide.md#anatomy-of-a-deck) |
 | Find text, charts, shapes, code blocks and diagrams | [Toolbox](docs/guide.md#toolbox) and [API reference](https://pkg.go.dev/github.com/austinlparker/decker) |
 | Animate builds and move elements between slides | [Element animations](docs/guide.md#element-animations) and [magic move](docs/guide.md#magic-move) |
+| Write a talk, or have an agent write one: what to build, what not to, and the review loop | [Authoring a talk](docs/authoring.md) and the [starter](examples/starter) |
+| Find clipped code, dropped rows and text off the screen | [Reviewing a deck](docs/guide.md#reviewing-a-deck) |
 | Test your talk and pin its rendered output | [Deck tests](docs/guide.md#tests) |
 | Resolve setup, presenter or export problems | [Troubleshooting](docs/troubleshooting.md) |
 | Change the engine | [Contributing](CONTRIBUTING.md), [invariants](AGENTS.md) and [file map](docs/architecture.md) |
