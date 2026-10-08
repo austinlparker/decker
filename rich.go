@@ -64,7 +64,7 @@ func (r Rich) Baseline() float64 {
 func (r Rich) Measure(spans []Span) (w, h float64) {
 	_, size := r.resolved()
 	l, _ := r.layout(spans)
-	return l.w, float64(len(l.lines)) * float64(size) * leadingOr(r.Leading)
+	return l.w, l.height(size, leadingOr(r.Leading))
 }
 
 // richGlyph is one rune of the flattened spans, measured at the block's size.
@@ -225,6 +225,12 @@ func buildRichLayout(spans []Span, font *Font, size int, maxW float64) *richLayo
 	return l
 }
 
+// height is the block's height at size and leading, multiplied as Draw does,
+// line height first.
+func (l *richLayout) height(size int, leading float64) float64 {
+	return float64(size) * leading * float64(len(l.lines))
+}
+
 // eachGlyph calls fn with the glyph index of each glyph of a wrapped line. A
 // space between words stands for the original space just before the next word,
 // so it keeps that space's span; the wrapper collapses runs of spaces to one,
@@ -263,7 +269,7 @@ func (r Rich) Draw(p *Pixels, spans []Span, x, y float64) (w, h float64) {
 	f, size := r.resolved()
 	l, _ := r.layout(spans)
 	lineH := float64(size) * leadingOr(r.Leading)
-	w, h = l.w, lineH*float64(len(l.lines))
+	w, h = l.w, l.height(size, leadingOr(r.Leading))
 	blockX := x + r.Align.shift(w)
 
 	// Each distinct color gets its own mask, painted marks first, then glows,
@@ -394,7 +400,7 @@ func (r Rich) Fit(spans []Span, maxW, maxH float64, maxSize int) int {
 		r.MaxW = maxW
 		return largestSize(max(maxSize, minFitSize), minFitSize, func(size int) bool {
 			l := r.layoutSig(sig, spans, size)
-			return l.w <= maxW && float64(len(l.lines))*float64(size)*lead <= maxH
+			return l.w <= maxW && l.height(size, lead) <= maxH
 		})
 	})
 }

@@ -278,6 +278,32 @@ func TestRichFitRespectsBox(t *testing.T) {
 	}
 }
 
+// TestRichMeasureMatchesDraw pins Measure to the size Draw returns, to the
+// bit. Measure used to multiply lines by size before leading, Draw size by
+// leading first, and at five lines of 7px they differ in the last bit.
+func TestRichMeasureMatchesDraw(t *testing.T) {
+	p := NewPixels(120, 80, testTheme.Background)
+	blocks := [][]Span{
+		nil,
+		{{Text: "one line"}},
+		{{Text: "a\nb\nc"}, {Text: "\nd\ne", Font: testTheme.Mono}},
+		{{Text: "a sentence that wraps "}, {Text: "across spans", Font: testTheme.Display}, {Text: " in a box"}},
+	}
+	for _, size := range []int{0, 3, 7, 9, 15, 20, 48} {
+		for _, maxW := range []float64{0, 30, 80} {
+			for _, leading := range []float64{0, 1, 1.4} {
+				for i, spans := range blocks {
+					r := Rich{Font: testTheme.Body, Size: size, MaxW: maxW, Leading: leading, Align: Align(i % 3)}
+					dw, dh := r.Draw(p, spans, 10, 5)
+					if mw, mh := r.Measure(spans); mw != dw || mh != dh {
+						t.Errorf("size %d maxW %v leading %v block %d: Measure = %v×%v, Draw = %v×%v", size, maxW, leading, i, mw, mh, dw, dh)
+					}
+				}
+			}
+		}
+	}
+}
+
 func TestRichFitWrapsRatherThanOverflows(t *testing.T) {
 	spans := []Span{{Text: "a line that is far too long "}, {Text: "to fit", Font: testTheme.Mono}, {Text: " on one row"}}
 	r := Rich{Font: testTheme.Body}
