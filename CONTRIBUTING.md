@@ -34,8 +34,11 @@ CI also checks the GoReleaser configuration.
 
 Frames must depend only on `Ctx`; use `Hash01` for noise and `Ctx.T` or
 `Ctx.StepT` for time. Preserve floating-point operation order during refactors.
-Do not rename or remove exported APIs without agreement: talks in other
-repositories depend on them.
+Before 1.0 the exported API changes in place: when a name, signature or
+behavior should change, change it, update every caller in the repository, and
+call out the break in the PR. Compatibility shims (aliases, `Deprecated:`
+wrappers, forwarding functions, `V2` variants) fail `TestNoCompatShims` in
+`shim_test.go`.
 
 Goldens pin pixels and terminal cells. Do not regenerate them to hide a
 failure. For an intentional visual change, run:
