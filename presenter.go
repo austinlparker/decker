@@ -337,11 +337,11 @@ func (p presenter) mainView() string {
 		right = append(right, p.sty.warn.Bold(true).Render("BLANK")+p.sty.muted.Render(" ("+p.st.Blank+")"))
 	}
 	if p.count != "" {
-		right = append(right, p.sty.accent2.Render("go to "+p.count+"…"))
+		right = append(right, p.sty.jumping(p.count))
 	}
 	if cur.Steps > 1 {
 		right = append(right, p.sty.muted.Render(fmt.Sprintf("step %d/%d ", p.st.Step+1, cur.Steps))+
-			p.sty.accent.Render(strings.Repeat("●", p.st.Step+1))+p.sty.faint.Render(strings.Repeat("○", cur.Steps-p.st.Step-1)))
+			p.sty.meter("●", "○", p.st.Step+1, cur.Steps))
 	}
 	header := spread(left, strings.Join(right, "   "), inner)
 	rest := p.h - presHeader - footerLines
@@ -350,9 +350,7 @@ func (p presenter) mainView() string {
 	var previews string
 	if k, ok := p.key(p.st.Slide, p.st.Step); ok {
 		nextLabel, nextBox := "END OF DECK", p.placeholder(k.pw, k.ph, "that's the last slide")
-		if next, label, ok := p.nextTarget(); ok {
-			nk := k
-			nk.slide, nk.step = next[0], next[1]
+		if nk, label, ok := p.nextKey(k); ok {
 			nextLabel, nextBox = label, p.preview(nk)
 		}
 		now := lipgloss.JoinVertical(lipgloss.Left, p.sty.accent.Render("NOW"), frame(p.preview(k), p.deck.Theme.Accent))
@@ -363,7 +361,7 @@ func (p presenter) mainView() string {
 
 	notes := p.st.Notes
 	if notes == "" {
-		notes = p.sty.faint.Render("(no notes for this slide)")
+		notes = p.sty.faint.Render(noNotes)
 	}
 	lines := strings.Split(lipgloss.NewStyle().Width(inner).Foreground(p.deck.Theme.Text.Color()).Render(notes), "\n")
 	if avail := rest - 1; len(lines) > avail { // the NOTES label takes a line
@@ -402,6 +400,14 @@ func (p presenter) nextTarget() (next [2]int, label string, ok bool) {
 	return next, "", false
 }
 
+// nextKey is k moved to the slide and step the "next" preview shows
+// (nextTarget), with its label.
+func (p presenter) nextKey(k previewKey) (next previewKey, label string, ok bool) {
+	at, label, ok := p.nextTarget()
+	k.slide, k.step = at[0], at[1]
+	return k, label, ok
+}
+
 // matches reports whether this build's slide i is the deck's slide i; in dev
 // mode the deck rebuilds and the presenter view doesn't, so they can drift.
 func (p presenter) matches(i int) bool {
@@ -438,9 +444,7 @@ func (p presenter) upload() tea.Cmd {
 		return nil
 	}
 	targets := []previewKey{k}
-	if next, _, ok := p.nextTarget(); ok {
-		nk := k
-		nk.slide, nk.step = next[0], next[1]
+	if nk, _, ok := p.nextKey(k); ok {
 		targets = append(targets, nk)
 	}
 	var cmds []tea.Cmd
@@ -500,7 +504,7 @@ func (p presenter) footer() string {
 	barW := max(inner/4, 10)
 	cells := func(d time.Duration) int { return int(float64(barW) * float64(d) / float64(max(p.length, 1))) }
 	used := min(cells(el), barW)
-	bar := p.sty.accent.Render(strings.Repeat("━", used)) + p.sty.faint.Render(strings.Repeat("━", barW-used))
+	bar := p.sty.meter("━", "━", used, barW)
 	if p.st.Outline != nil {
 		at := pace(p.st.Outline, p.st.Slide, p.st.Step, 0, p.length) // share of the deck shown, as time
 		pos := min(cells(at), barW-1)
@@ -508,13 +512,25 @@ func (p presenter) footer() string {
 	}
 
 	line1 := spread(timer+"   "+bar+"   "+status, p.sty.muted.Render(p.now.Format("15:04")), inner)
-	keys := p.sty.faint.Render("→ ← step   ] [ slide   12g jump   r replay   t timer   T reset   q quit")
+	keys := "→ ← step   ] [ slide   12g jump   r replay   t timer   T reset   q quit"
 	if p.launch != nil {
-		keys = p.sty.faint.Render("p open deck   → ← step   ] [ slide   12g jump   r replay   t timer   T reset   q quit")
+		keys = "p open deck   " + keys
 	}
 	rule := p.sty.faint.Render(strings.Repeat("─", inner))
-	return indent(rule+"\n"+line1+"\n"+truncate(keys, inner), strings.Repeat(" ", presMargin))
+	return indent(rule+"\n"+line1+"\n"+truncate(p.sty.faint.Render(keys), inner), strings.Repeat(" ", presMargin))
 }
+
+// noNotes stands in for the speaker notes of a slide that has none.
+const noNotes = "(no notes for this slide)"
+
+// meter is a gauge total cells long: lit of them drawn as on in the accent
+// color, the rest as off, faint. Build steps are dots, progress a bar.
+func (s styles) meter(on, off string, lit, total int) string {
+	return s.accent.Render(strings.Repeat(on, lit)) + s.faint.Render(strings.Repeat(off, total-lit))
+}
+
+// jumping is the prompt shown while the slide number of a jump is typed.
+func (s styles) jumping(count string) string { return s.accent2.Render("go to " + count + "…") }
 
 func spread(left, right string, w int) string {
 	gap := w - lipgloss.Width(left) - lipgloss.Width(right)
