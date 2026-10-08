@@ -36,8 +36,8 @@ func heading(c decker.Ctx, p *decker.Pixels, title string) decker.Rect {
 	th := c.Theme
 	page := decker.NewRect(c.X(0.04), c.Y(0.06), c.X(0.92), c.Y(0.82))
 	head, body := page.CutTop(c.Y(0.18))
-	size, s := th.Display.Fit(title, head.W, head.H, c.Size(0.11), 0)
-	decker.Text{Font: th.Display, Size: size, Color: th.Text, FX: decker.RiseIn(c.T, 0.02, size)}.
-		Draw(p, s, head.X, head.Y)
+	t := decker.Text{Font: th.Display, Size: c.Size(0.11), Color: th.Text}.Fit(title, head.W, head.H)
+	t.FX = decker.RiseIn(c.T, 0.02, t.Size)
+	t.Draw(p, title, head.X, head.Y)
 	return body
 }

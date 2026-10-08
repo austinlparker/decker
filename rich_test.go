@@ -251,30 +251,83 @@ func TestRichEmptyIsHarmless(t *testing.T) {
 
 func TestRichFitRespectsBox(t *testing.T) {
 	spans := []Span{{Text: "of weekly query volume "}, {Text: "comes", Font: testTheme.Display}, {Text: " from agents, "}, {Text: "mostly", Font: testTheme.Mono}}
-	r := Rich{Font: testTheme.Body}
+	r := Rich{Font: testTheme.Body, Size: 40}
 	for _, box := range [][2]float64{{100, 60}, {200, 40}, {60, 300}} {
-		size := r.Fit(spans, box[0], box[1], 40)
-		if size > 40 || size < minFitSize {
-			t.Fatalf("size %d out of range", size)
+		fr := r.Fit(spans, box[0], box[1])
+		if fr.Size > 40 || fr.Size < minFitSize || fr.MaxW != box[0] {
+			t.Fatalf("box %v: size %d, MaxW %v", box, fr.Size, fr.MaxW)
 		}
-		r.Size, r.MaxW = size, box[0]
-		w, h := r.Measure(spans)
+		w, h := fr.Measure(spans)
 		if w > box[0] || h > box[1] {
-			t.Errorf("box %v: size %d measures %.1fx%.1f", box, size, w, h)
+			t.Errorf("box %v: size %d measures %.1fx%.1f", box, fr.Size, w, h)
 		}
 		// One size up must not fit, or Fit left room on the table.
-		if size < 40 {
-			r.Size = size + 1
-			if w, h := r.Measure(spans); w <= box[0] && h <= box[1] {
-				t.Errorf("box %v: size %d also fits", box, size+1)
+		if fr.Size < 40 {
+			fr.Size++
+			if w, h := fr.Measure(spans); w <= box[0] && h <= box[1] {
+				t.Errorf("box %v: size %d also fits", box, fr.Size)
 			}
 		}
 	}
-	if r.Fit(spans, 100, 60, 40) != r.Fit(spans, 100, 60, 40) {
+	if r.Fit(spans, 100, 60).Size != r.Fit(spans, 100, 60).Size {
 		t.Error("Fit is not stable across calls")
 	}
-	if big, small := r.Fit(spans, 300, 100, 60), r.Fit(spans, 100, 100, 60); big < small {
+	r.Size = 60
+	if big, small := r.Fit(spans, 300, 100).Size, r.Fit(spans, 100, 100).Size; big < small {
 		t.Errorf("a wider box fits size %d, a narrower one %d", big, small)
+	}
+}
+
+func TestRichFitAllocatesNothing(t *testing.T) {
+	r := Rich{Font: testTheme.Body, Size: 30}
+	spans := []Span{{Text: "a few words "}, {Text: "to fit", Font: testTheme.Mono}, {Text: "\nand more"}}
+	r.Fit(spans, 120, 50) // fills the fit and layout caches
+	if n := testing.AllocsPerRun(50, func() { r.Fit(spans, 120, 50) }); n != 0 {
+		t.Errorf("a repeated Fit allocated %v times", n)
+	}
+}
+
+// TestRichFitSurvivesHashCollision plants another block's fit under the
+// key of these spans: Fit must see the signature differs and fit them anew.
+func TestRichFitSurvivesHashCollision(t *testing.T) {
+	r := Rich{Font: testTheme.Body, Size: 30}
+	spans := []Span{{Text: "two words"}}
+	want := r.Fit(spans, 80, 40).Size
+	k := richFitKey{richSigHash(r.Font, spans), 80, 40, 30, DefaultLeading}
+	richFits.mu.Lock()
+	richFits.m[k] = richFit{sig: "other spans", size: want - 1}
+	richFits.mu.Unlock()
+	if got := r.Fit(spans, 80, 40).Size; got != want {
+		t.Errorf("Fit returned %d from another block's entry, want %d", got, want)
+	}
+}
+
+func TestRichSigHashAndMatch(t *testing.T) {
+	blocks := [][]Span{
+		nil,
+		{{Text: ""}},
+		{{Text: "ab"}},
+		{{Text: "a"}, {Text: "b"}},
+		{{Text: "a", Font: testTheme.Mono}, {Text: "b"}},
+		{{Text: "a"}, {Text: "b", Font: testTheme.Mono}},
+		{{Text: "界 é\n", Color: &testTheme.Accent}},
+	}
+	for i, a := range blocks {
+		sig := richSig(testTheme.Body, a)
+		if !richSigIs(sig, testTheme.Body, a) {
+			t.Errorf("block %d: richSigIs rejects its own signature", i)
+		}
+		if richSigIs(sig, testTheme.Display, a) {
+			t.Errorf("block %d: richSigIs ignores the base font", i)
+		}
+		for j, b := range blocks {
+			if same := richSig(testTheme.Body, b) == sig; richSigIs(sig, testTheme.Body, b) != same {
+				t.Errorf("blocks %d and %d: richSigIs = %v, signatures equal = %v", i, j, !same, same)
+			}
+			if richSig(testTheme.Body, b) == sig && richSigHash(testTheme.Body, a) != richSigHash(testTheme.Body, b) {
+				t.Errorf("blocks %d and %d: equal signatures hash apart", i, j)
+			}
+		}
 	}
 }
 
@@ -306,11 +359,9 @@ func TestRichMeasureMatchesDraw(t *testing.T) {
 
 func TestRichFitWrapsRatherThanOverflows(t *testing.T) {
 	spans := []Span{{Text: "a line that is far too long "}, {Text: "to fit", Font: testTheme.Mono}, {Text: " on one row"}}
-	r := Rich{Font: testTheme.Body}
-	size := r.Fit(spans, 60, 10, 20)
-	r.Size, r.MaxW = size, 60
+	r := Rich{Font: testTheme.Body, Size: 20}.Fit(spans, 60, 10)
 	if w, _ := r.Measure(spans); w > 60 {
-		t.Errorf("fallback is %.1fpx wide at size %d, want <= 60", w, size)
+		t.Errorf("fallback is %.1fpx wide at size %d, want <= 60", w, r.Size)
 	}
 }
 

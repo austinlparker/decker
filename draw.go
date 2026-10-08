@@ -22,8 +22,9 @@ func Panel(c Ctx, p *Pixels, x, y, w, h float64, label string, fill, edge, text 
 		p.RoundRect(x, y, w, h, r, max(c.Unit(0.008), 1), edge, alpha)
 	}
 	if label != "" {
-		s, t := c.Theme.Body.Fit(label, w-c.Unit(0.04), h-c.Unit(0.02), c.Size(0.1), 0)
-		Text{Font: c.Theme.Body, Size: s, Align: Center, Color: Mix(fill, text, alpha)}.drawCentered(p, t, x+w/2, y+h/2)
+		t := Text{Font: c.Theme.Body, Size: c.Size(0.1), Align: Center, Color: Mix(fill, text, alpha)}.
+			Fit(label, w-c.Unit(0.04), h-c.Unit(0.02))
+		t.drawCentered(p, t.wrapText(label), x+w/2, y+h/2)
 	}
 }
 

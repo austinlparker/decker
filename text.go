@@ -182,6 +182,39 @@ func (t Text) Measure(s string) (w, h float64) {
 	return w, lineH * float64(n)
 }
 
+// Fit returns t with MaxW set to w and Size set to the largest size, at most
+// t.Size, at which s wrapped to w fits w×h as Measure measures it, so
+//
+//	t.Fit(s, w, h).Draw(p, s, x, y)
+//
+// draws s as big as the box allows. Set Size to the largest you want: Fit
+// only shrinks. It stops at 6px, wrapped to w, when nothing fits, since
+// running taller beats running off the side of the screen, and a Size below
+// 6, zero included, comes back as 6. Results are remembered, so a View can
+// call it every frame; a repeat allocates nothing.
+func (t Text) Fit(s string, w, h float64) Text {
+	t.resolved() // panics without a Font
+	t.MaxW = w
+	t.Size = fitted.get(fitKey{t.Font, s, w, h, t.Size, leadingOr(t.Leading)}, func() int {
+		try := t
+		return largestSize(max(t.Size, minFitSize), minFitSize, func(size int) bool {
+			try.Size = size
+			mw, mh := try.Measure(s)
+			return mw <= w && mh <= h
+		})
+	})
+	return t
+}
+
+// wrapText is s with its lines as Draw lays them out, joined by "\n".
+func (t Text) wrapText(s string) string {
+	if t.MaxW <= 0 {
+		return s
+	}
+	f, size := t.resolved()
+	return strings.Join(f.wrapped(s, size, t.MaxW), "\n")
+}
+
 func (t Text) stamp(cov coverage, f *Font, size int, lines []string, widths []float64, x, y, lineH float64) {
 	baseOff := t.baseOff(f, size)
 	gi := 0

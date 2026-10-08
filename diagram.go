@@ -126,7 +126,7 @@ func (t Timeline) fit(c Ctx, textW, textH float64) (ls, ds int, labelH, detailH,
 func fitEach[T any](c Ctx, f *Font, items []T, text func(T) (string, bool), w, h float64, size int) int {
 	for _, it := range items {
 		if s, ok := text(it); ok {
-			size = min(size, f.fitText(s, w, h, size, 0).size)
+			size = min(size, Text{Font: f, Size: size}.Fit(s, w, h).Size)
 		}
 	}
 	return max(f.Drawn(size), c.SmallText(f))

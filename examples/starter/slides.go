@@ -13,9 +13,10 @@ func titleSlide() decker.Slide {
 			th := c.Theme
 			box := c.Frame().Inset(c.X(0.08), c.Y(0.2))
 			title, rest := box.CutTop(box.H * 0.6)
-			size, s := th.Display.Fit("Your talk's title", title.W, title.H, c.Size(0.2), 0)
-			decker.Text{Font: th.Display, Size: size, Color: th.Accent, FX: decker.RiseIn(c.T, 0.02, size)}.
-				Draw(sc.Px, s, title.X, title.Y)
+			const name = "Your talk's title"
+			t := decker.Text{Font: th.Display, Size: c.Size(0.2), Color: th.Accent}.Fit(name, title.W, title.H)
+			t.FX = decker.RiseIn(c.T, 0.02, t.Size)
+			t.Draw(sc.Px, name, title.X, title.Y)
 			sub := decker.Text{Font: th.Body, Size: c.SmallText(th.Body), Color: th.Muted, MaxW: rest.W,
 				FX: decker.FadeUp(c.T-0.4, 0.4, c.SmallText(th.Body))}
 			sub.Draw(sc.Px, "a subtitle, a name, a date", rest.X, rest.Y+c.Unit(0.03))
@@ -30,8 +31,9 @@ func pointSlide() decker.Slide {
 			th := c.Theme
 			body := heading(c, sc.Px, "One idea per slide")
 			claim, evidence := body.CutTop(body.H * 0.55)
-			size, s := th.Display.Fit("Say the point in the headline.", claim.W, claim.H, c.Size(0.12), 0)
-			decker.Text{Font: th.Display, Size: size, Color: th.Accent}.Draw(sc.Px, s, claim.X, claim.Y)
+			const point = "Say the point in the headline."
+			decker.Text{Font: th.Display, Size: c.Size(0.12), Color: th.Accent}.
+				Fit(point, claim.W, claim.H).Draw(sc.Px, point, claim.X, claim.Y)
 			if c.Reached(1) {
 				small := c.SmallText(th.Body)
 				decker.Text{Font: th.Body, Size: small, Color: th.Text, MaxW: evidence.W,

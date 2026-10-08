@@ -935,10 +935,10 @@ func (d DonutChart) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 
 	if d.Center != "" && outer-thick > 0 {
 		inner := (outer - thick) * 2 * 0.8
-		size, txt := th.Display.Fit(d.Center, inner, inner*0.6, c.Size(0.25), 0)
-		lines := float64(strings.Count(txt, "\n") + 1)
-		Text{Font: th.Display, Size: size, Color: th.Text, Align: Center, FX: fadeFX(Ease(since-0.3, 0.5))}.
-			Draw(p, txt, cx, cy-lines*float64(size)*DefaultLeading/2)
+		t := Text{Font: th.Display, Size: c.Size(0.25), Color: th.Text, Align: Center, FX: fadeFX(Ease(since-0.3, 0.5))}.
+			Fit(d.Center, inner, inner*0.6)
+		txt := t.wrapText(d.Center)
+		t.Draw(p, txt, cx, cy-linesHeight(strings.Count(txt, "\n")+1, t.Size, DefaultLeading)/2)
 	}
 
 	if hasLegend {

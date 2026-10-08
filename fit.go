@@ -107,61 +107,12 @@ func largestSize(from, floor int, fits func(size int) bool) int {
 }
 
 type fitKey struct {
-	f          *Font
-	text       string // text, or length-prefixed FitAll parts
-	maxW, maxH float64
-	maxSize    int
-	leading    float64
-	all        bool
+	f       *Font
+	s       string
+	w, h    float64
+	size    int // the largest size wanted
+	leading float64
 }
 
-type fitResult struct {
-	size  int
-	lines []string
-}
-
-var fitted = memo[fitKey, fitResult]{max: 5000}
-
-// fit finds the largest size at which parts, each wrapped to maxW, stack into
-// at most maxH. If none fits it returns the smallest size wrapped to the width:
-// running taller beats running off the side of the screen.
-func (f *Font) fit(parts []string, maxW, maxH float64, maxSize int, leading float64) (int, []string) {
-	wrap := func(size int) (lines []string) {
-		for _, part := range parts {
-			lines = append(lines, f.wrapped(part, size, maxW)...)
-		}
-		return lines
-	}
-	var lines []string
-	size := largestSize(max(maxSize, minFitSize), minFitSize, func(size int) bool {
-		lines = wrap(size)
-		return fits(lines, maxW, func(l string) float64 { return f.Measure(l, size) }) && linesHeight(len(lines), size, leading) <= maxH
-	})
-	return size, lines
-}
-
-// Fit returns the largest size (at most maxSize) at which s, wrapped to maxW,
-// fits maxW×maxH, with the wrapped text. A zero leading means DefaultLeading.
-func (f *Font) Fit(s string, maxW, maxH float64, maxSize int, leading float64) (int, string) {
-	r := f.fitText(s, maxW, maxH, maxSize, leading)
-	return r.size, strings.Join(r.lines, "\n")
-}
-
-// fitText is Fit's remembered result, its lines the cache's own.
-func (f *Font) fitText(s string, maxW, maxH float64, maxSize int, leading float64) fitResult {
-	leading = leadingOr(leading)
-	return fitted.get(fitKey{f, s, maxW, maxH, maxSize, leading, false}, func() fitResult {
-		size, lines := f.fit([]string{s}, maxW, maxH, maxSize, leading)
-		return fitResult{size, lines}
-	})
-}
-
-// FitAll is Fit for several parts stacked at DefaultLeading; it returns the
-// size and all the wrapped lines in order.
-func FitAll(f *Font, parts []string, maxW, maxH float64, maxSize int) (int, []string) {
-	r := fitted.get(fitKey{f, labelsKey(parts), maxW, maxH, maxSize, DefaultLeading, true}, func() fitResult {
-		size, lines := f.fit(parts, maxW, maxH, maxSize, DefaultLeading)
-		return fitResult{size, lines}
-	})
-	return r.size, slices.Clone(r.lines)
-}
+// fitted remembers Text.Fit's sizes: a View fits the same text every frame.
+var fitted = memo[fitKey, int]{max: 5000}

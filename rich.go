@@ -109,20 +109,65 @@ type richKey struct {
 var richLayouts = memo[richKey, *richLayout]{max: 4096}
 
 // richSig identifies spans by their text and fonts, the only inputs a layout
-// reads. It allocates once, which is what lets a View lay out every frame.
+// reads: the base font, then each span's font, text length and text. It
+// allocates once, which is what lets a View lay out every frame.
 func richSig(base *Font, spans []Span) string {
 	n := 8
 	for i := range spans {
 		n += 8 + binary.MaxVarintLen64 + len(spans[i].Text)
 	}
-	b := make([]byte, 0, n)
-	b = binary.LittleEndian.AppendUint64(b, fontID(base))
+	b := binary.LittleEndian.AppendUint64(make([]byte, 0, n), fontID(base))
 	for i := range spans {
-		b = binary.LittleEndian.AppendUint64(b, fontID(spans[i].Font))
-		b = binary.AppendUvarint(b, uint64(len(spans[i].Text)))
-		b = append(b, spans[i].Text...)
+		b = append(appendSpanHead(b, &spans[i]), spans[i].Text...)
 	}
 	return string(b)
+}
+
+// appendSpanHead appends what richSig writes before a span's text: its font
+// and the text's length.
+func appendSpanHead(b []byte, sp *Span) []byte {
+	b = binary.LittleEndian.AppendUint64(b, fontID(sp.Font))
+	return binary.AppendUvarint(b, uint64(len(sp.Text)))
+}
+
+// richSigHash is FNV-1a over richSig(base, spans), without building it.
+func richSigHash(base *Font, spans []Span) uint64 {
+	var head [8 + binary.MaxVarintLen64]byte
+	h := fnv1a(14695981039346656037, binary.LittleEndian.AppendUint64(head[:0], fontID(base)))
+	for i := range spans {
+		h = fnv1a(h, appendSpanHead(head[:0], &spans[i]))
+		h = fnv1a(h, spans[i].Text)
+	}
+	return h
+}
+
+// fnv1a folds s into the FNV-1a hash h.
+func fnv1a[S ~string | ~[]byte](h uint64, s S) uint64 {
+	for i := 0; i < len(s); i++ {
+		h = (h ^ uint64(s[i])) * 1099511628211
+	}
+	return h
+}
+
+// richSigIs reports whether sig is richSig(base, spans), without building
+// the latter.
+func richSigIs(sig string, base *Font, spans []Span) bool {
+	var head [8 + binary.MaxVarintLen64]byte
+	rest, ok := cutBytes(sig, binary.LittleEndian.AppendUint64(head[:0], fontID(base)))
+	for i := 0; ok && i < len(spans); i++ {
+		if rest, ok = cutBytes(rest, appendSpanHead(head[:0], &spans[i])); ok {
+			rest, ok = strings.CutPrefix(rest, spans[i].Text)
+		}
+	}
+	return ok && rest == ""
+}
+
+// cutBytes is strings.CutPrefix for a prefix held in bytes.
+func cutBytes(s string, prefix []byte) (string, bool) {
+	if len(s) < len(prefix) || s[:len(prefix)] != string(prefix) {
+		return s, false
+	}
+	return s[len(prefix):], true
 }
 
 func fontID(f *Font) uint64 {
@@ -377,30 +422,47 @@ func (ls *richLayers) get(col RGB, x0, y0, w, h int) coverage {
 	return c
 }
 
+// richFitKey identifies a fit by the hash of its spans' signature, which a
+// lookup computes without allocating; the entry keeps the signature itself to
+// tell a hit from a collision.
 type richFitKey struct {
-	sig        string
-	maxW, maxH float64
-	maxSize    int
-	leading    float64
+	sig     uint64 // richSigHash
+	w, h    float64
+	size    int // the largest size wanted
+	leading float64
 }
 
-var richFitted = memo[richFitKey, int]{max: 5000}
+type richFit struct {
+	sig  string
+	size int
+}
 
-// Fit returns the largest size (at most maxSize) at which spans, wrapped to
-// maxW, fit maxW×maxH, as Font.Fit does for plain text; set it as r.Size and
-// r.MaxW = maxW to draw the result. It uses r.Font and r.Leading and ignores
-// r.Size and r.MaxW. If nothing fits it returns the smallest size (wrapped to
-// the width): running taller beats running off the side. Results are
-// remembered, so a View can call it every frame.
-func (r Rich) Fit(spans []Span, maxW, maxH float64, maxSize int) int {
-	r.resolved()
+var richFits = memo[richFitKey, richFit]{max: 5000}
+
+// Fit returns r with MaxW set to w and Size set to the largest size, at most
+// r.Size, at which spans wrapped to w fit w×h as Measure measures them, as
+// Text.Fit does for plain text:
+//
+//	r.Fit(spans, w, h).Draw(p, spans, x, y)
+//
+// Like Text.Fit it only shrinks, and stops at 6px wrapped to w when nothing
+// fits. Results are remembered, so a View can call it every frame; a repeat
+// allocates nothing.
+func (r Rich) Fit(spans []Span, w, h float64) Rich {
+	r.resolved() // panics without a Font
+	r.MaxW = w
 	lead := leadingOr(r.Leading)
-	sig := richSig(r.Font, spans)
-	return richFitted.get(richFitKey{sig, maxW, maxH, maxSize, lead}, func() int {
-		r.MaxW = maxW
-		return largestSize(max(maxSize, minFitSize), minFitSize, func(size int) bool {
+	fit := func() richFit {
+		sig := richSig(r.Font, spans)
+		return richFit{sig, largestSize(max(r.Size, minFitSize), minFitSize, func(size int) bool {
 			l := r.layoutSig(sig, spans, size)
-			return l.w <= maxW && l.height(size, lead) <= maxH
-		})
-	})
+			return l.w <= w && l.height(size, lead) <= h
+		})}
+	}
+	got := richFits.get(richFitKey{richSigHash(r.Font, spans), w, h, r.Size, lead}, fit)
+	if !richSigIs(got.sig, r.Font, spans) {
+		got = fit() // other spans with the same hash: fit these afresh
+	}
+	r.Size = got.size
+	return r
 }

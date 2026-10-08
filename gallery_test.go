@@ -373,21 +373,23 @@ func slideMetrics() Slide {
 			top := heading(c, p, "Font metrics")
 			f := th.Display
 
-			// Fit: biggest size that fits a box, and the wrapped text.
+			// Fit: the biggest size, at most Size, at which the text wraps
+			// into a box. It sets MaxW, so Draw wraps the text as Fit did.
 			bx, by, bw, bh := c.X(0.03), top, c.X(0.3), c.Y(0.22)
 			p.RoundRect(bx, by, bw, bh, 2, 1, th.Faint, 1)
-			size, wrapped := f.Fit("What Your MCP Server Does", bw, bh, c.Size(0.3), 0)
-			Text{Font: f, Size: size, Color: th.Text}.Draw(p, wrapped, bx, by)
-			size2, wrapped2 := f.Fit("Tight leading wraps here too", bw, bh, c.Size(0.3), 0.95)
+			const mcp, tight = "What Your MCP Server Does", "Tight leading wraps here too"
+			Text{Font: f, Size: c.Size(0.3), Color: th.Text}.Fit(mcp, bw, bh).Draw(p, mcp, bx, by)
 			p.RoundRect(bx, by+bh+c.Unit(0.03), bw, bh, 2, 1, th.Faint, 1)
-			Text{Font: f, Size: size2, Color: th.Muted, Leading: 0.95}.Draw(p, wrapped2, bx, by+bh+c.Unit(0.03))
+			Text{Font: f, Size: c.Size(0.3), Color: th.Muted, Leading: 0.95}.Fit(tight, bw, bh).Draw(p, tight, bx, by+bh+c.Unit(0.03))
 
-			// FitAll: one size for several parts.
+			// Fit across "\n" breaks: one size for several parts, each
+			// wrapped line drawn on its own.
 			ax := c.X(0.38)
 			p.RoundRect(ax, by, bw, bh, 2, 1, th.Faint, 1)
-			fs, parts := FitAll(th.Body, []string{"short", "a medium length line", "the longest line of the three goes here"}, bw, bh, c.Size(0.2))
+			const parts = "short\na medium length line\nthe longest line of the three goes here"
+			fs := Text{Font: th.Body, Size: c.Size(0.2)}.Fit(parts, bw, bh).Size
 			yy := by
-			for _, part := range parts {
+			for _, part := range th.Body.Wrap(parts, fs, bw) {
 				_, h := Text{Font: th.Body, Size: fs, Color: th.Accent2}.Draw(p, part, ax, yy)
 				yy += h + 2
 			}
@@ -1146,8 +1148,8 @@ func slideMorph(after bool) Slide {
 				box = box.Inset(c.Unit(0.03), c.Unit(0.03))
 			}
 			sc.Place("title", head, func(p *Pixels, r Rect) {
-				size, s := th.Display.Fit(title, r.W, r.H, c.Size(0.3), 0)
-				Text{Font: th.Display, Size: size, Color: th.Accent, Align: Center, Glow: 0.4}.Draw(p, s, r.X+r.W/2, r.Y)
+				Text{Font: th.Display, Size: c.Size(0.3), Color: th.Accent, Align: Center, Glow: 0.4}.
+					Fit(title, r.W, r.H).Draw(p, title, r.X+r.W/2, r.Y)
 			})
 			sc.Place("box", box, func(p *Pixels, r Rect) {
 				fill := th.Panel
@@ -1207,8 +1209,9 @@ func slideTransition(title string, tr Transition, n int) Slide {
 		View: func(c Ctx, sc *Scene) {
 			th := c.Theme
 			sc.Px.VGradient(0, sc.Px.H-1, Mix(th.Background, th.Accent2, 0.1*float64(n%4)), Mix(th.Panel, th.Accent, 0.06*float64(1+n%5)))
-			size, s := th.Display.Fit(title, c.X(0.8), c.Y(0.3), c.Size(0.3), 0)
-			Text{Font: th.Display, Size: size, Color: th.Text, Align: Center, Glow: 0.3, FX: FadeUp(c.StepT, 0.4, size)}.Draw(sc.Px, s, c.X(0.5), c.Y(0.3))
+			t := Text{Font: th.Display, Size: c.Size(0.3), Color: th.Text, Align: Center, Glow: 0.3}.Fit(title, c.X(0.8), c.Y(0.3))
+			t.FX = FadeUp(c.StepT, 0.4, t.Size)
+			t.Draw(sc.Px, title, c.X(0.5), c.Y(0.3))
 			x, y := c.X(0.5), c.Y(0.72)
 			sc.Px.Disc(x, y, c.Unit(0.06), th.Good, 1)
 			sc.Px.Disc(x+c.Unit(0.1)*math.Sin(c.T), y, c.Unit(0.03), th.Warn, 1)
@@ -1353,9 +1356,7 @@ func slideRich() Slide {
 			bx, by, bw, bh := c.X(0.55), c.Y(0.38), c.X(0.42), c.Y(0.5)
 			p.RoundRect(bx, by, bw, bh, 2, 1, th.Faint, 1)
 			fit := ParseSpans("Fit finds the *largest size* at which a {accent:rich} block, wrapped to its box, still fits.", th)
-			fr := Rich{Font: th.Display, Color: th.Text, Leading: 1.05}
-			fr.Size, fr.MaxW = fr.Fit(fit, bw, bh, c.Size(0.3)), bw
-			fr.Draw(p, fit, bx, by)
+			Rich{Font: th.Display, Size: c.Size(0.3), Color: th.Text, Leading: 1.05}.Fit(fit, bw, bh).Draw(p, fit, bx, by)
 		}}
 }
 
