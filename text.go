@@ -38,6 +38,13 @@ func leadingOr(l float64) float64 {
 	return l
 }
 
+// linesHeight is the height of n lines at size and leading, multiplied in
+// that order. Text.Draw and Text.Measure take size×leading first, which can
+// differ in the last bit, so the two orders are not interchangeable.
+func linesHeight(n, size int, leading float64) float64 {
+	return float64(n) * float64(size) * leading
+}
+
 // Text draws a block of raster type with a Font; sizes below 4 pixels are drawn
 // at 4.
 type Text struct {
@@ -91,8 +98,8 @@ func (t Text) midTop(f *Font, size int, top, bot, cy float64) float64 {
 // drawCentered draws s with the block centered vertically on cy (x as for
 // Draw): one line by its ink, as DrawMid does, and more by their line boxes.
 func (t Text) drawCentered(p *Pixels, s string, x, cy float64) {
-	if n := float64(strings.Count(s, "\n") + 1); n > 1 {
-		t.Draw(p, s, x, cy-n*float64(t.Size)*leadingOr(t.Leading)/2)
+	if n := strings.Count(s, "\n") + 1; n > 1 {
+		t.Draw(p, s, x, cy-linesHeight(n, t.Size, leadingOr(t.Leading))/2)
 	} else {
 		t.DrawMid(p, s, x, cy)
 	}

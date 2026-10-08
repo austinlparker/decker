@@ -135,7 +135,7 @@ func (f *Font) fit(parts []string, maxW, maxH float64, maxSize int, leading floa
 	var lines []string
 	size := largestSize(max(maxSize, minFitSize), minFitSize, func(size int) bool {
 		lines = wrap(size)
-		return fits(lines, maxW, func(l string) float64 { return f.Measure(l, size) }) && float64(len(lines))*float64(size)*leading <= maxH
+		return fits(lines, maxW, func(l string) float64 { return f.Measure(l, size) }) && linesHeight(len(lines), size, leading) <= maxH
 	})
 	return size, lines
 }

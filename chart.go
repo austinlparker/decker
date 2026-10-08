@@ -407,7 +407,7 @@ func layoutCatsAt(f *Font, labels []string, maxW, maxH float64, base, stride int
 				out.w = max(out.w, m)
 				ok = ok && m <= maxW
 			}
-			h := float64(len(out.lines[i])) * float64(size) * DefaultLeading
+			h := linesHeight(len(out.lines[i]), size, DefaultLeading)
 			out.h = max(out.h, h)
 			ok = ok && h <= maxH
 		}
@@ -593,7 +593,7 @@ func (b BarChart) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 	}
 	if b.Horizontal {
 		for i := 0; i < n && i < len(cats.text); i++ {
-			lh := float64(len(cats.lines[i])) * float64(cats.size) * DefaultLeading
+			lh := linesHeight(len(cats.lines[i]), cats.size, DefaultLeading)
 			chartText(c, p, cats.text[i], cats.size, th.Muted, Right, catRight, plot.Y+(float64(i)+0.5)*slot-lh/2, frame)
 		}
 	} else {
@@ -810,7 +810,7 @@ func layoutLegend(f *Font, labels []string, avail, room float64, maxSize, minSiz
 			for i, l := range labels {
 				out.lines[i] = f.Wrap(l, size, labelW)
 				out.w = max(out.w, f.widest(out.lines[i], size))
-				out.h += float64(len(out.lines[i])) * fs * DefaultLeading
+				out.h += linesHeight(len(out.lines[i]), size, DefaultLeading)
 			}
 			out.h += float64(max(len(labels)-1, 0)) * fs * 0.45
 			out.w += fs*0.7*2 + fs*0.9 + pct
@@ -948,7 +948,7 @@ func (d DonutChart) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 		y := cy - lay.h/2
 		for i := range n {
 			a := Ease(since-chartLead-0.08*float64(i), chartFade)
-			lh := float64(len(lay.lines[i])) * fs * DefaultLeading
+			lh := linesHeight(len(lay.lines[i]), size, DefaultLeading)
 			chartSwatch(c, p, i, lay.text[i], size, th.Text, lx, y, 1.7, a)
 			if lay.pct > 0 {
 				share := "0%"
@@ -1117,7 +1117,7 @@ func (s Stat) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 	labelH := 0.0
 	if s.Label != "" {
 		labelLines = th.Body.wrapped(s.Label, ls, r.W)
-		labelH = float64(len(labelLines))*float64(ls)*DefaultLeading + gap
+		labelH = linesHeight(len(labelLines), ls, DefaultLeading) + gap
 	}
 	final := s.text(Settled)
 	size := statSize(th.Display, final, r.W, max(r.H-labelH, 0), c.Size(0.5))

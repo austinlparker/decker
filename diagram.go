@@ -107,11 +107,11 @@ func (t Timeline) fit(c Ctx, textW, textH float64) (ls, ds int, labelH, detailH,
 	ds = fitEach(c, th.Body, t.Items, func(it TimelineItem) (string, bool) { return it.Detail, it.Detail != "" }, textW, dh, c.Size(0.07))
 	for _, it := range t.Items {
 		lines := th.Display.wrapped(it.Label, ls, textW)
-		labelH = max(labelH, float64(len(lines))*float64(ls)*DefaultLeading)
+		labelH = max(labelH, linesHeight(len(lines), ls, DefaultLeading))
 		widest = max(widest, th.Display.widest(lines, ls))
 		lines = th.Body.wrapped(it.Detail, ds, textW)
 		if it.Detail != "" {
-			detailH = max(detailH, float64(len(lines))*float64(ds)*DefaultLeading)
+			detailH = max(detailH, linesHeight(len(lines), ds, DefaultLeading))
 		}
 		widest = max(widest, th.Body.widest(lines, ds))
 	}
@@ -163,7 +163,7 @@ func (pr Process) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 			lines := th.Body.wrapped(s, size, textW)
 			x := r.X + float64(i)*(cw-tip+gap)
 			c.Fits(quoteText("Process step", s), Rect{x + tip, r.Y + (h-textH)/2, textW, textH},
-				th.Body.widest(lines, size), float64(len(lines))*float64(size)*DefaultLeading)
+				th.Body.widest(lines, size), linesHeight(len(lines), size, DefaultLeading))
 		}
 	}
 

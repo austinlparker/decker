@@ -197,7 +197,7 @@ func (t Table) fit(c Ctx, r Rect) *tableLayout {
 	height := func(lines [][][]string, size, limit int) float64 {
 		h := 0.0
 		for _, cells := range lines {
-			h += float64(min(rowLines(cells), limit))*float64(size)*DefaultLeading + 2*l.padY
+			h += linesHeight(min(rowLines(cells), limit), size, DefaultLeading) + 2*l.padY
 		}
 		return h
 	}
@@ -221,7 +221,7 @@ func (t Table) fit(c Ctx, r Rect) *tableLayout {
 	l.size = size
 	y := 0.0
 	for row, cells := range lines {
-		rh := float64(min(rowLines(cells), limit))*float64(size)*DefaultLeading + 2*l.padY
+		rh := linesHeight(min(rowLines(cells), limit), size, DefaultLeading) + 2*l.padY
 		if y+rh > r.H+1e-9 {
 			break
 		}
@@ -429,7 +429,7 @@ func (t Table) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 			default:
 				x += l.padX
 			}
-			block := float64(len(ls)) * size * DefaultLeading
+			block := linesHeight(len(ls), l.size, DefaultLeading)
 			y := r.Y + l.rowY[row] + l.padY + (l.rowH[row]-2*l.padY-block)/2
 			// The rise can't leave the row: the fit budgets only the settled
 			// text, and nothing clips the glyphs, so a bigger rise would paint

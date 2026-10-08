@@ -323,7 +323,7 @@ var codeFits = memo[codeFitKey, int]{max: 256}
 func fitCode(f *Font, cols, lines int, w, h float64, minSize, maxSize int) int {
 	return codeFits.get(codeFitKey{f, cols, lines, w, h, minSize, maxSize}, func() int {
 		return largestSize(max(maxSize, minSize), minSize, func(size int) bool {
-			return float64(cols)*f.Measure("0", size) <= w && float64(lines)*float64(size)*codeLeading <= h
+			return float64(cols)*f.Measure("0", size) <= w && linesHeight(lines, size, codeLeading) <= h
 		})
 	})
 }
