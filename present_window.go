@@ -50,7 +50,8 @@ func presentationArgs(fs *flag.FlagSet) []string {
 	fs.Visit(func(f *flag.Flag) {
 		switch f.Name {
 		case "presenter", "length", "presentation-font-size", "previews",
-			"slide", "step", "socket", "list", "snapshot", "sheet", "video", "png":
+			"slide", "step", "socket", "list", "snapshot", "sheet", "video", "png",
+			"review", "handout":
 			return
 		}
 		args = append(args, "-"+f.Name+"="+f.Value.String())

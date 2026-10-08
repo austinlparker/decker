@@ -19,12 +19,12 @@ func TestPresentationArgs(t *testing.T) {
 	for _, name := range []string{"presenter", "dev", "snapshot", "list"} {
 		fs.Bool(name, false, "")
 	}
-	for _, name := range []string{"length", "presentation-font-size", "previews", "socket", "slide", "step", "sheet", "video", "png", "fps", "theme"} {
+	for _, name := range []string{"length", "presentation-font-size", "previews", "socket", "slide", "step", "sheet", "video", "png", "review", "handout", "fps", "theme"} {
 		fs.String(name, "", "")
 	}
 	err := fs.Parse([]string{"-presenter", "-dev", "-snapshot", "-list", "-length=45m", "-presentation-font-size=4.5",
 		"-previews=image", "-socket=relative.sock", "-slide=3", "-step=2", "-sheet=out.png", "-video=out.mp4", "-png=frame.png",
-		"-fps=30", "-theme=a theme's name", "talk-data.json"})
+		"-review=review", "-handout=handout", "-fps=30", "-theme=a theme's name", "talk-data.json"})
 	if err != nil {
 		t.Fatal(err)
 	}

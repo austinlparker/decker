@@ -39,9 +39,10 @@ func Slides(t *testing.T, d decker.Deck) {
 	}
 }
 
-// view draws one frame straight from the slide, as the engine does (View,
-// then the elements it placed, then the theme's overlay), so a panic in any
-// of them fails the test instead of being drawn.
+// view draws one frame straight from the slide (its View, the theme's
+// overlay, then the elements it placed) so a panic in any of them fails the
+// test instead of being drawn. The engine draws the overlay last, but
+// Scene.Render, which draws the placed elements, also releases the scene.
 func view(t *testing.T, s decker.Slide, c decker.Ctx) {
 	t.Helper()
 	if part, r := drawFrame(s, c); r != nil {
