@@ -342,9 +342,11 @@ func mySlide() decker.Slide {
 
 			// Big text: size is a fraction of screen height. Fit shrinks it
 			// (and wraps it) until it fits the box you give it.
-			size, text := c.Theme.Display.Fit("A short, punchy line", c.X(0.84), c.Y(0.3), c.Size(0.14), 0)
-			decker.Text{Font: c.Theme.Display, Size: size, Color: c.Theme.Accent, Glow: 0.4,
-				FX: decker.RiseIn(c.T, 0.02, size)}.Draw(p, text, c.X(0.08), top)
+			const line = "A short, punchy line"
+			big := decker.Text{Font: c.Theme.Display, Size: c.Size(0.14), Color: c.Theme.Accent, Glow: 0.4}.
+				Fit(line, c.X(0.84), c.Y(0.3))
+			big.FX = decker.RiseIn(c.T, 0.02, big.Size)
+			big.Draw(p, line, c.X(0.08), top)
 
 			if c.Reached(1) { // appears on the second step
 				r := c.Unit(0.05) * decker.EaseOutBack(decker.Progress(c.Since(1), 0, 0.4))
@@ -392,8 +394,8 @@ than the other transitions' 0.45s; `TransitionMorph.Over(1.2)` changes it.
 
 ```go
 sc.Place("headline", head, func(p *decker.Pixels, r decker.Rect) {
-	size, s := c.Theme.Display.Fit("Agents", r.W, r.H, c.Size(0.3), 0)
-	decker.Text{Font: c.Theme.Display, Size: size, Color: c.Theme.Accent}.Draw(p, s, r.X, r.Y)
+	decker.Text{Font: c.Theme.Display, Size: c.Size(0.3), Color: c.Theme.Accent}.
+		Fit("Agents", r.W, r.H).Draw(p, "Agents", r.X, r.Y)
 })
 ```
 
@@ -447,8 +449,8 @@ Everything here is in package `decker`.
 | Transitions | `Slide.Transition`: `TransitionPush` (default), `Cover`, `Uncover`, `Wipe`, `Split`, `Fade`, `FadeThrough`, `Dissolve`, `Iris`, `Zoom`, `Pixelate`, `Glitch`, `Morph`, `None`. `.Over(secs)` sets the time; `.From(DirLeft / DirRight / DirUp / DirDown)` sets the side of Push, Cover, Uncover and Wipe (and the axis of Split); going back plays from the opposite side. Vertical moves go in whole cell rows |
 | Magic move | `sc.Place(key, rect, draw)` on both slides, `Transition: TransitionMorph` on the second; see [Magic move](#magic-move) |
 | Big type | `Text{Font, Size, Color, To (gradient), Glow, Shine, FX, MaxW}.Draw(p, s, x, y)` with `Align`; returns width and height. `DrawMid` centers a line's ink on a y, which suits one label in a box; a row of labels (a legend, column heads) should `Draw` at one top so they share a baseline |
-| Mixed styles in a line | `Rich{Font, Size, Color, Glow, FX, MaxW}.Draw(p, spans, x, y)` with `[]Span{Text, Font, Color, Underline, Strike, Mark}`: bold a word, color a keyword, highlight, inline code, one baseline, wrapping across spans; ``ParseSpans("*bold* _muted_ `code` {accent:word}", theme)`` builds spans from light markup (see [Rich text](#rich-text)); `rich.Fit(spans, w, h, maxSize)` sizes them to a box |
-| Sizing text to a box | `font.Fit(...)`, `FitAll(...)` for several lines at one size; `Text{...}.Measure(s)` and `rich.Measure(spans)` return the size `Draw` would, without drawing, to size a plate or center a block first |
+| Mixed styles in a line | `Rich{Font, Size, Color, Glow, FX, MaxW}.Draw(p, spans, x, y)` with `[]Span{Text, Font, Color, Underline, Strike, Mark}`: bold a word, color a keyword, highlight, inline code, one baseline, wrapping across spans; ``ParseSpans("*bold* _muted_ `code` {accent:word}", theme)`` builds spans from light markup (see [Rich text](#rich-text)); `rich.Fit(spans, w, h)` sizes them to a box, as `Text.Fit` does |
+| Sizing text to a box | `Text{Font, Size, ...}.Fit(s, w, h)` returns the `Text` with `Size` shrunk to the largest, at most `Size`, at which `s` fits the box, and `MaxW` set to `w`, so `.Draw(p, s, x, y)` draws it wrapped as it was fitted; `"\n"` breaks fit several lines at one size. `Rich.Fit(spans, w, h)` does the same for spans. `Text{...}.Measure(s)` and `rich.Measure(spans)` return the size `Draw` would, without drawing, to size a plate or center a block first |
 | Checking what fits | `c.Fits(what, rect, w, h)` reports a block that doesn't fit its rect to the review; `Code.Measure(c, rect)` says what a code block shows before drawing it. See [Reviewing a deck](#reviewing-a-deck) |
 | Scales and axes | `NiceScale(lo, hi, maxTicks, from, to)` maps data onto pixels with round ticks, for axes you draw yourself (a waterfall's milliseconds): `s.At(v)` places a value, `s.Ticks()` lists the tick values and `s.Label(v)` writes one, as the charts' axes do. Set `s.Min`/`s.Max` back afterwards to keep the data's own ends |
 | Small labels | `c.SmallText(font)`: the smallest readable size; `Label`, `Chip`, `LineLabel` (text sitting on an arrow) |
@@ -476,13 +478,11 @@ Everything here is in package `decker`.
 
 ### Rich text
 
-`Text` draws one font and color. `Rich` takes `[]Span` and lets each span differ, on a shared baseline; it wraps at spaces across span boundaries and counts `FX` glyph indexes as `Text` does. `Rich.Fit` finds the largest size at which spans fill a box, remembered between frames like `Font.Fit`.
+`Text` draws one font and color. `Rich` takes `[]Span` and lets each span differ, on a shared baseline; it wraps at spaces across span boundaries and counts `FX` glyph indexes as `Text` does. `Rich.Fit` finds the largest size at which spans fill a box, remembered between frames like `Text.Fit`.
 
 ```go
 spans := decker.ParseSpans("Call *Draw* with `[]Span`, {accent:not} a string.", c.Theme)
-r := decker.Rich{Font: c.Theme.Body, Color: c.Theme.Text}
-r.Size, r.MaxW = r.Fit(spans, w, h, c.Size(0.2)), w
-r.Draw(p, spans, x, y)
+decker.Rich{Font: c.Theme.Body, Size: c.Size(0.2), Color: c.Theme.Text}.Fit(spans, w, h).Draw(p, spans, x, y)
 ```
 
 `ParseSpans` markup, with the theme supplying fonts and colors:

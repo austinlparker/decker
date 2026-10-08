@@ -66,8 +66,8 @@
 //     a native character layer; that layer is omitted from video exports.
 //     [Scene.Place] hands the engine a keyed element to draw instead, which
 //     [TransitionMorph] can move from one slide to the next.
-//   - [Text], [Font]: smooth antialiased type, fitted and wrapped to a box,
-//     and measured before drawing ([Text.Measure]).
+//   - [Text], [Font]: smooth antialiased type, wrapped and fitted to a box
+//     ([Text.Fit]) and measured before drawing ([Text.Measure]).
 //   - [Rich], [Span]: the same type with mixed fonts, colors and decorations
 //     inside a line ([ParseSpans] reads a light markup).
 //   - [Block], [FigletFont]: FIGlet block letters scaled to fill a box ([FitBlock]);

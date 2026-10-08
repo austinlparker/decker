@@ -52,11 +52,7 @@ func (p *Pixels) Polygon(pts []float64, c RGB, a float64) {
 	if n < 3 || a <= 0 {
 		return
 	}
-	minX, minY, maxX, maxY := pts[0], pts[1], pts[0], pts[1]
-	for i := 1; i < n; i++ {
-		minX, maxX = min(minX, pts[2*i]), max(maxX, pts[2*i])
-		minY, maxY = min(minY, pts[2*i+1]), max(maxY, pts[2*i+1])
-	}
+	minX, minY, maxX, maxY := pathBounds(pts)
 	x0, y0, x1, y1 := p.Box(minX-1, minY-1, maxX+1, maxY+1)
 	// Only edges within half a pixel of a row can change its pixels, whether
 	// by distance or by crossing the row, so each row works from that short list.
@@ -99,6 +95,17 @@ func (p *Pixels) Polygon(pts []float64, c RGB, a float64) {
 			p.Blend(px, py, c, a*Coverage(d))
 		}
 	}
+}
+
+// pathBounds is the box around the points of pts, x0, y0, x1, y1 and so on;
+// there must be at least one.
+func pathBounds(pts []float64) (minX, minY, maxX, maxY float64) {
+	minX, minY, maxX, maxY = pts[0], pts[1], pts[0], pts[1]
+	for i := 1; i < len(pts)/2; i++ {
+		minX, maxX = min(minX, pts[2*i]), max(maxX, pts[2*i])
+		minY, maxY = min(minY, pts[2*i+1]), max(maxY, pts[2*i+1])
+	}
+	return minX, minY, maxX, maxY
 }
 
 // segDist2 is the squared distance from (px, py) to the segment a-b.
@@ -161,11 +168,7 @@ func (p *Pixels) stroke(pts []float64, width float64, c RGB, a float64) {
 		return
 	}
 	half := width / 2
-	minX, minY, maxX, maxY := pts[0], pts[1], pts[0], pts[1]
-	for i := 1; i < n; i++ {
-		minX, maxX = min(minX, pts[2*i]), max(maxX, pts[2*i])
-		minY, maxY = min(minY, pts[2*i+1]), max(maxY, pts[2*i+1])
-	}
+	minX, minY, maxX, maxY := pathBounds(pts)
 	x0, y0, x1, y1 := p.Box(minX-half-1, minY-half-1, maxX+half+1, maxY+half+1)
 	mw, mh := x1-x0+1, y1-y0+1
 	if mw <= 0 || mh <= 0 {

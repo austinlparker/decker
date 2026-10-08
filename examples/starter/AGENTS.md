@@ -9,7 +9,7 @@ once; this file is the short version.
 
 - **Use the stock components for routine content:** `Code` (highlighting,
   `Focus`, `Diff`, `Overflow`, `Excerpt`), `Table`, `BarChart`/`LineChart`/
-  `DonutChart`/`Stat`, `Connector`, `Font.Fit`/`Text`/`Rich`, `FitBlock`/
+  `DonutChart`/`Stat`, `Connector`, `Text.Fit`/`Rich.Fit`, `FitBlock`/
   `Block`, the element animations and the transitions. Don't write your own.
 - **Build the visual that makes the point yourself**, for this talk, from
   primitives: `Rect` cuts, `Text.Measure`, `NiceScale`, `Pixels` shapes,

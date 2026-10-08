@@ -25,9 +25,11 @@ func talk() decker.Deck {
 			Title: "Hello, decker", Steps: 2,
 			Notes: "Press space to reveal the second line. Press q to quit.",
 			View: func(c decker.Ctx, sc *decker.Scene) {
-				size, title := c.Theme.Display.Fit("Hello, decker", c.X(0.84), c.Y(0.3), c.Size(0.18), 0)
-				decker.Text{Font: c.Theme.Display, Size: size, Color: c.Theme.Accent,
-					FX: decker.RiseIn(c.T, 0.02, size)}.Draw(sc.Px, title, c.X(0.08), c.Y(0.2))
+				const title = "Hello, decker"
+				t := decker.Text{Font: c.Theme.Display, Size: c.Size(0.18), Color: c.Theme.Accent}.
+					Fit(title, c.X(0.84), c.Y(0.3))
+				t.FX = decker.RiseIn(c.T, 0.02, t.Size)
+				t.Draw(sc.Px, title, c.X(0.08), c.Y(0.2))
 				if c.Reached(1) {
 					decker.Text{Font: c.Theme.Body, Size: c.SmallText(c.Theme.Body), Color: c.Theme.Text,
 						FX: decker.FadeUp(c.Since(1), 0.4, c.SmallText(c.Theme.Body))}.

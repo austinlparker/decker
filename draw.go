@@ -22,13 +22,9 @@ func Panel(c Ctx, p *Pixels, x, y, w, h float64, label string, fill, edge, text 
 		p.RoundRect(x, y, w, h, r, max(c.Unit(0.008), 1), edge, alpha)
 	}
 	if label != "" {
-		s, t := c.Theme.Body.Fit(label, w-c.Unit(0.04), h-c.Unit(0.02), c.Size(0.1), 0)
-		tx := Text{Font: c.Theme.Body, Size: s, Align: Center, Color: Mix(fill, text, alpha)}
-		if lines := float64(strings.Count(t, "\n") + 1); lines > 1 {
-			tx.Draw(p, t, x+w/2, y+h/2-lines*float64(s)*DefaultLeading/2)
-		} else {
-			tx.DrawMid(p, t, x+w/2, y+h/2)
-		}
+		t := Text{Font: c.Theme.Body, Size: c.Size(0.1), Align: Center, Color: Mix(fill, text, alpha)}.
+			Fit(label, w-c.Unit(0.04), h-c.Unit(0.02))
+		t.drawCentered(p, t.wrapText(label), x+w/2, y+h/2)
 	}
 }
 
@@ -109,7 +105,7 @@ func plateText(p *Pixels, f *Font, size int, s string, cx, cy float64, fg, bg RG
 }
 
 func wrappedHeight(f *Font, s string, size int, maxW float64) float64 {
-	return float64(len(f.Wrap(s, size, maxW))) * float64(size) * DefaultLeading
+	return linesHeight(len(f.wrapped(s, size, maxW)), size, DefaultLeading)
 }
 
 // CycleDiagram is a ring of numbered stations with a legend, one station per
@@ -246,15 +242,17 @@ func (d CycleDiagram) drawLegend(c Ctx, p *Pixels, g cycleGeom, top float64, loo
 		}
 		return h + float64(g.n-1)*float64(s)*0.25
 	}
-	ls := c.Theme.Body.Drawn(c.Size(0.08))
-	for ls > c.SmallText(c.Theme.Body) && height(ls) > room {
-		ls = c.Theme.Body.Drawn(ls - 1)
-	}
+	var legendH float64
+	// Not legendH <= room: a NaN room shrinks nothing.
+	ls := largestSize(c.Theme.Body.Drawn(c.Size(0.08)), c.SmallText(c.Theme.Body), func(s int) bool {
+		legendH = height(s)
+		return !(legendH > room)
+	})
 	if c.review != nil {
-		c.Fits("CycleDiagram legend", Rect{g.legendX, top, g.legendW, room}, g.legendW, height(ls))
+		c.Fits("CycleDiagram legend", Rect{g.legendX, top, g.legendW, room}, g.legendW, legendH)
 	}
 	labelW := g.legendW - numW(ls)
-	y := top + max(0, (room-height(ls))/2)
+	y := top + max(0, (room-legendH)/2)
 	for i, l := range d.Labels {
 		step := d.Step0 + i
 		if !c.Reached(step) {
@@ -278,19 +276,16 @@ func BulletList(c Ctx, p *Pixels, lines []string, x, y, w, h float64, firstStep 
 	// The mark is 0.32 of the text size wide; the gap after it grows with the
 	// text.
 	indent := func(size int) float64 { return max(c.Unit(0.05), float64(size)*0.6) }
-	size := c.Size(0.17)
-	for {
-		total := 0.0
+	var total float64
+	size := largestSize(c.Size(0.17), c.SmallText(c.Theme.Body), func(size int) bool {
+		total = 0.0
 		for _, l := range lines {
 			total += wrappedHeight(c.Theme.Body, l, size, w-indent(size))
 		}
 		total += float64(len(lines)-1) * float64(size) * 0.45
-		if total <= h || size <= c.SmallText(c.Theme.Body) {
-			c.Fits("BulletList", Rect{x, y, w, h}, w, total)
-			break
-		}
-		size--
-	}
+		return total <= h
+	})
+	c.Fits("BulletList", Rect{x, y, w, h}, w, total)
 	size = c.Theme.Body.Drawn(size)
 	for i, l := range lines {
 		step := i + firstStep
@@ -330,7 +325,7 @@ func PlaceholderBox(c Ctx, p *Pixels, x, y, w, h float64, what string) {
 	edge(x, y+h, x, y)
 	s := c.SmallText(c.Theme.Body)
 	Text{Font: c.Theme.Body, Size: s, Align: Center, Color: c.Theme.Warn, MaxW: w - c.Unit(0.06)}.
-		Draw(p, "PLACEHOLDER\n"+what, x+w/2, y+h/2-float64(s)*DefaultLeading)
+		drawCentered(p, "PLACEHOLDER\n"+what, x+w/2, y+h/2)
 }
 
 // IllustrativeTag labels a chart with made-up data to replace before the talk;

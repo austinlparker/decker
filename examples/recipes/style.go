@@ -47,9 +47,9 @@ func heading(c decker.Ctx, p *decker.Pixels, title string) decker.Rect {
 	page := c.Frame().Inset(c.X(0.04), c.Y(0.05))
 	_, page = page.CutBottom(c.Y(0.07)) // the footer row
 	head, body := page.CutTop(c.Y(0.11))
-	size, s := th.Display.Fit(title, head.W, head.H, c.Size(0.095), 0)
-	_, h := decker.Text{Font: th.Display, Size: size, Color: th.Text,
-		FX: decker.RiseIn(c.T, 0.02, size)}.Draw(p, s, head.X, head.Y)
+	t := decker.Text{Font: th.Display, Size: c.Size(0.095), Color: th.Text}.Fit(title, head.W, head.H)
+	t.FX = decker.RiseIn(c.T, 0.02, t.Size)
+	_, h := t.Draw(p, title, head.X, head.Y)
 	rule := c.X(0.05) * decker.EaseOutExpo(decker.Progress(c.T, 0.1, 0.6))
 	p.Rect(head.X, head.Y+h+c.Unit(0.006), rule, c.Unit(0.008), th.Accent, 1)
 	_, body = body.CutTop(c.Y(0.03))

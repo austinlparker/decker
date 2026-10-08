@@ -80,6 +80,11 @@ func TypeOn(t, cps float64) GlyphEffect {
 	}
 }
 
+// fadeFX shows every glyph at alpha a: a whole block fading as one.
+func fadeFX(a float64) GlyphEffect {
+	return func(int) GlyphFX { return GlyphFX{Alpha: a} }
+}
+
 // FadeUp fades the block in over dur seconds while sliding up 0.4×size.
 func FadeUp(t, dur float64, size int) GlyphEffect {
 	p := Ease(t, dur)

@@ -73,7 +73,7 @@ func FuzzLayoutPartitions(f *testing.F) {
 	})
 }
 
-func FuzzFitAllCache(f *testing.F) {
+func FuzzTextFitCache(f *testing.F) {
 	for _, p := range [][2]string{{"", ""}, {"a", "b"}, {"a\x00", "b"}, {"界", "e\u0301"}} {
 		f.Add(p[0], p[1])
 	}
@@ -81,19 +81,16 @@ func FuzzFitAllCache(f *testing.F) {
 		if len(a) > 64 || len(b) > 64 {
 			return
 		}
-		font := testTheme.Body
-		for _, parts := range [][]string{{a + "\x00" + b}, {a, b}, nil, {""}, {a + "\x00", b}, {a, "\x00" + b}} {
-			wantSize, wantLines := font.fit(parts, 80, 60, 12, DefaultLeading)
-			gotSize, gotLines := FitAll(font, parts, 80, 60, 12)
-			if gotSize != wantSize || !reflect.DeepEqual(gotLines, wantLines) {
-				t.Fatalf("FitAll(%q) = (%d,%q), uncached = (%d,%q)", parts, gotSize, gotLines, wantSize, wantLines)
-			}
-			if len(gotLines) > 0 {
-				gotLines[0] = "caller mutation"
-				_, again := FitAll(font, parts, 80, 60, 12)
-				if !reflect.DeepEqual(again, wantLines) {
-					t.Fatal("caller corrupted fit cache")
-				}
+		tx := Text{Font: testTheme.Body, Size: 12}
+		for _, s := range []string{a + "\x00" + b, a + "\n" + b, a, b, "", a + "\x00", "\x00" + b} {
+			want := largestSize(12, minFitSize, func(size int) bool {
+				m := tx
+				m.Size, m.MaxW = size, 80
+				w, h := m.Measure(s)
+				return w <= 80 && h <= 60
+			})
+			if got := tx.Fit(s, 80, 60); got.Size != want || got.MaxW != 80 {
+				t.Fatalf("Fit(%q) = size %d, MaxW %v; uncached = size %d", s, got.Size, got.MaxW, want)
 			}
 		}
 	})

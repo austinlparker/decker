@@ -38,6 +38,13 @@ func leadingOr(l float64) float64 {
 	return l
 }
 
+// linesHeight is the height of n lines at size and leading, multiplied in
+// that order. Text.Draw and Text.Measure take size×leading first, which can
+// differ in the last bit, so the two orders are not interchangeable.
+func linesHeight(n, size int, leading float64) float64 {
+	return float64(n) * float64(size) * leading
+}
+
 // Text draws a block of raster type with a Font; sizes below 4 pixels are drawn
 // at 4.
 type Text struct {
@@ -74,11 +81,34 @@ func (t Text) resolved() (*Font, int) {
 func (t Text) DrawMid(p *Pixels, s string, x, cy float64) (w, h float64) {
 	f, size := t.resolved()
 	top, bot := f.Ink(s, size)
+	return t.Draw(p, s, x, t.midTop(f, size, top, bot, cy))
+}
+
+// midTop is the top edge to draw a line at so that its ink, reaching from top
+// to bot about the baseline, is centered on cy, the baseline on a whole pixel.
+// A line with no ink (top == bot) centers the cap height instead.
+func (t Text) midTop(f *Font, size int, top, bot, cy float64) float64 {
 	if top == bot {
 		top, bot = -f.CapHeight(size), 0
 	}
 	baseline := math.Round(cy - (top+bot)/2)
-	return t.Draw(p, s, x, baseline-t.baseOff(f, size))
+	return baseline - t.baseOff(f, size)
+}
+
+// drawCentered draws s with the block centered vertically on cy (x as for
+// Draw): one line by its ink, as DrawMid does, and more by their line boxes,
+// counted as Draw lays them out, wrapped to MaxW if it is set.
+func (t Text) drawCentered(p *Pixels, s string, x, cy float64) {
+	f, size := t.resolved()
+	n := strings.Count(s, "\n") + 1
+	if t.MaxW > 0 {
+		n = len(f.wrapped(s, size, t.MaxW))
+	}
+	if n > 1 {
+		t.Draw(p, s, x, cy-linesHeight(n, size, leadingOr(t.Leading))/2)
+	} else {
+		t.DrawMid(p, s, x, cy)
+	}
 }
 
 // Baseline is the distance from the top of a line to its baseline, as Draw lays
@@ -99,9 +129,11 @@ func (t Text) baseOff(f *Font, size int) float64 {
 // spaces included, plus one per line break.
 func (t Text) Draw(p *Pixels, s string, x, y float64) (w, h float64) {
 	f, size := t.resolved()
-	lines := strings.Split(s, "\n")
+	var lines []string
 	if t.MaxW > 0 {
-		lines = f.Wrap(s, size, t.MaxW)
+		lines = f.wrapped(s, size, t.MaxW)
+	} else {
+		lines = strings.Split(s, "\n")
 	}
 	lineH := float64(size) * leadingOr(t.Leading)
 	widths := make([]float64, len(lines))
@@ -112,10 +144,7 @@ func (t Text) Draw(p *Pixels, s string, x, y float64) (w, h float64) {
 	h = lineH * float64(len(lines))
 	blockX := x + t.Align.shift(w)
 
-	// The coverage buffer is padded by size on every side for glow and effect
-	// motion.
-	pad := float64(size)
-	cov := newCoverage(int(math.Floor(blockX-pad)), int(math.Floor(y-pad)), int(math.Ceil(w+2*pad))+1, int(math.Ceil(h+2*pad))+1)
+	cov := newCoverage(inkBox(blockX, y, w, h, size))
 	t.stamp(cov, f, size, lines, widths, x, y, lineH)
 
 	if t.Glow > 0 {
@@ -127,11 +156,8 @@ func (t Text) Draw(p *Pixels, s string, x, y float64) (w, h float64) {
 	}
 	t.paint(p, cov, blockX, w)
 	if p.review != nil {
-		boxes := make([]Rect, len(lines))
-		for i := range lines {
-			boxes[i] = Rect{x + t.Align.shift(widths[i]), y + float64(i)*lineH, widths[i], lineH}
-		}
-		checkInk(p, []coverage{cov}, f, size, s, quoteText("Text", s), Rect{blockX, y, w, h}, boxes)
+		checkInk(p, []coverage{cov}, f, size, s, quoteText("Text", s), Rect{blockX, y, w, h},
+			lineBoxes(t.Align, widths, x, y, lineH))
 	}
 	return w, h
 }
@@ -146,10 +172,7 @@ func (t Text) Measure(s string) (w, h float64) {
 	n := 0
 	if t.MaxW > 0 {
 		lines := f.wrapped(s, size, t.MaxW)
-		for _, l := range lines {
-			w = max(w, f.Measure(l, size))
-		}
-		n = len(lines)
+		w, n = f.widest(lines, size), len(lines)
 	} else {
 		for l := range strings.SplitSeq(s, "\n") {
 			w = max(w, f.Measure(l, size))
@@ -157,6 +180,39 @@ func (t Text) Measure(s string) (w, h float64) {
 		}
 	}
 	return w, lineH * float64(n)
+}
+
+// Fit returns t with MaxW set to w and Size set to the largest size, at most
+// t.Size, at which s wrapped to w fits w×h as Measure measures it, so
+//
+//	t.Fit(s, w, h).Draw(p, s, x, y)
+//
+// draws s as big as the box allows. Set Size to the largest you want: Fit
+// only shrinks. It stops at 6px, wrapped to w, when nothing fits, since
+// running taller beats running off the side of the screen, and a Size below
+// 6, zero included, comes back as 6. Results are remembered, so a View can
+// call it every frame; a repeat allocates nothing.
+func (t Text) Fit(s string, w, h float64) Text {
+	t.resolved() // panics without a Font
+	t.MaxW = w
+	t.Size = fitted.get(fitKey{t.Font, s, w, h, t.Size, leadingOr(t.Leading)}, func() int {
+		try := t
+		return largestSize(max(t.Size, minFitSize), minFitSize, func(size int) bool {
+			try.Size = size
+			mw, mh := try.Measure(s)
+			return mw <= w && mh <= h
+		})
+	})
+	return t
+}
+
+// wrapText is s with its lines as Draw lays them out, joined by "\n".
+func (t Text) wrapText(s string) string {
+	if t.MaxW <= 0 {
+		return s
+	}
+	f, size := t.resolved()
+	return strings.Join(f.wrapped(s, size, t.MaxW), "\n")
 }
 
 func (t Text) stamp(cov coverage, f *Font, size int, lines []string, widths []float64, x, y, lineH float64) {
@@ -175,16 +231,7 @@ func (t Text) stamp(cov coverage, f *Font, size int, lines []string, widths []fl
 				fx = t.FX(gi)
 			}
 			g := f.glyph(r, size)
-			gx := lx + pen + fx.DX - float64(cov.x0)
-			show := r
-			if fx.Rune != 0 && r != ' ' {
-				// Center the stand-in glyph in the real glyph's advance.
-				show = fx.Rune
-				gx += (g.adv - f.glyph(show, size).adv) / 2
-			}
-			ix := math.Floor(gx)
-			q := int((gx - ix) * subpixel)
-			cov.stamp(f.glyphAt(show, size, q), ix, base+fx.DY-float64(cov.y0), fx.Alpha)
+			cov.stampGlyph(f, size, r, g.adv, lx+pen+fx.DX-float64(cov.x0), base+fx.DY-float64(cov.y0), fx)
 			pen += g.adv
 			prev = r
 			gi++
@@ -205,6 +252,10 @@ func (t Text) colorAt(u float64) RGB {
 }
 
 func (t Text) paint(p *Pixels, cov coverage, blockX, w float64) {
+	if t.To == nil && t.Shine == nil {
+		cov.paintFlat(p, t.Color)
+		return
+	}
 	for y := 0; y < cov.h; y++ {
 		for x := 0; x < cov.w; x++ {
 			a := cov.a[y*cov.w+x]

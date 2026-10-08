@@ -19,7 +19,7 @@ yourself:
 | Syntax highlighting, line focus, diffs | `Code` |
 | Tables that fit their box | `Table` |
 | Bar, line and donut charts, counting stats | `BarChart`, `LineChart`, `DonutChart`, `Stat` |
-| Text fitted and wrapped to a box | `Font.Fit`, `Text`, `Rich` |
+| Text fitted and wrapped to a box | `Text.Fit`, `Rich.Fit` |
 | Block-letter titles | `FitBlock`, `Block` |
 | Lines and arrows between boxes | `Connector` |
 | Fades, flies, pops and wipes | `AppearAt` and the element animations |
@@ -33,7 +33,7 @@ primitives, so it shows exactly the point you're making and builds up in the
 order you'll say it. A generic "diagram component" can't know either.
 
 The primitives for that are layout (`Rect` cuts, `Rows`, `Cols`, `Grid`,
-`Anchor`), measurement (`Text.Measure`, `Font.Fit`,
+`Anchor`), measurement (`Text.Measure`, `Text.Fit`,
 `Code.Measure`, the sizes every component's `Draw` returns), scales
 (`NiceScale` for an axis of your own), shapes (`Pixels.Rect`, `RoundRect`,
 `Polygon`, `Bezier`, `Line`, gradients), and time (`c.Reached`, `c.Since`,
