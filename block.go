@@ -74,6 +74,19 @@ func (b Block) Draw(p *Pixels, s string, x, y float64) (w, h float64) {
 	for _, c := range placed {
 		drawBlockRunePx(p, c.r, c.x, c.y, k, c.c, c.a)
 	}
+	if p.review != nil {
+		var past [4]int
+		for _, c := range placed {
+			if c.a < 0.5 {
+				continue
+			}
+			past[0] = max(past[0], int(math.Round(-c.x)))
+			past[1] = max(past[1], int(math.Round(-c.y)))
+			past[2] = max(past[2], int(math.Round(c.x+k))-p.W)
+			past[3] = max(past[3], int(math.Round(c.y+2*k))-p.H)
+		}
+		reportPast(p, past, int(2*k), quoteText("Block", s), Rect{left, y, w, h})
+	}
 	return w, h
 }
 

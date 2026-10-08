@@ -23,6 +23,7 @@ invariants, the golden tests, and a recipe for each kind of addition.
 | `layer.go`, `animate.go` | `Composite`: draw a group on a layer and fade, move, scale and clip it; the element animations (`FadeIn`, `FlyIn`, `Pop`, `WipeOut`, `Shake`, `AppearAt`...) built on it |
 | `scene.go`, `grid.go`, `pool.go` | combine the pixel canvas and character layer into terminal cells; reused frame buffers |
 | `render.go` | a slide's frame: the scene `View` draws on, then placed elements and the overlay, panics caught |
+| `review.go`, `reviewreport.go` | `Deck.Review`: every build checked at several sizes while it draws, with what components report (`Ctx.Fits`, `Ctx.Report`, text off the canvas or too small); the `-review` report as text, Markdown and JSON |
 | `transition.go`, `transfx.go`, `morph.go`, `direction.go` | slide transitions: each mixes two scenes, for the terminal and video alike. `transition.go` has the kinds and directions and the ones that move or sweep frames (push, cover, uncover, split, wipe, dissolve); `transfx.go` the ones that rework pixels (fades, iris, zoom, pixelate, glitch); the morph moves placed elements |
 | `model.go`, `keys.go`, `termout.go`, `dev.go` | the app: navigation, the key table, writing frames, dev reload |
 | `presenter.go`, `link.go`, `preview.go` | the presenter view, the socket link to the deck, slide previews |

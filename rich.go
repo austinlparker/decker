@@ -338,6 +338,17 @@ func (r Rich) Draw(p *Pixels, spans []Span, x, y float64) (w, h float64) {
 	for _, in := range inks {
 		paintFlat(p, in.cov, in.col)
 	}
+	if p.review != nil {
+		covs := make([]coverage, len(inks))
+		var text strings.Builder
+		for i, in := range inks {
+			covs[i] = in.cov
+		}
+		for _, sp := range spans {
+			text.WriteString(sp.Text)
+		}
+		checkInk(p, covs, f, size, quoteText("Rich", text.String()), Rect{blockX, y, w, h})
+	}
 	return w, h
 }
 

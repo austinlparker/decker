@@ -1,8 +1,11 @@
 // Package decktest is the test suite every deck wants: every slide renders at
-// every step, size and moment without panicking; golden hashes catch
-// unintended changes; and a per-slide benchmark measures frame time. A talk's test file is a few lines:
+// every step, size and moment without panicking; every build shows all it
+// means to (nothing clipped, dropped or off the canvas); golden hashes catch
+// unintended changes; and a per-slide benchmark measures frame time. A
+// talk's test file is a few lines:
 //
 //	func TestSlides(t *testing.T)      { decktest.Slides(t, talk()) }
+//	func TestReview(t *testing.T)      { decktest.Review(t, talk()) }
 //	func TestGolden(t *testing.T)      { decktest.Golden(t, talk(), "testdata/golden.txt") }
 //	func BenchmarkFrames(b *testing.B) { decktest.Frames(b, talk()) }
 package decktest
@@ -36,19 +39,52 @@ func Slides(t *testing.T, d decker.Deck) {
 	}
 }
 
-// view draws one frame straight from the slide so a panic fails the test
-// instead of being drawn.
+// view draws one frame straight from the slide, as the engine does (View,
+// then the elements it placed, then the theme's overlay), so a panic in any
+// of them fails the test instead of being drawn.
 func view(t *testing.T, s decker.Slide, c decker.Ctx) {
 	t.Helper()
+	if part, r := drawFrame(s, c); r != nil {
+		t.Fatalf("slide %q: %s panicked at %dx%d step %d t=%v: %v", s.Title, part, c.W, c.H, c.Step, c.T, r)
+	}
+}
+
+// drawFrame draws one frame and returns what panicked, if anything: "View",
+// "a placed element" or "Theme.Overlay". The scene is off-screen, so a panic
+// reaches here rather than being drawn.
+func drawFrame(s decker.Slide, c decker.Ctx) (part string, r any) {
 	sc := decker.NewScene(c.W, c.H, c.Theme)
-	defer sc.Release()
 	defer func() {
-		if r := recover(); r != nil {
-			t.Fatalf("slide %q panicked at %dx%d step %d t=%v: %v", s.Title, c.W, c.H, c.Step, c.T, r)
+		if r = recover(); r != nil {
+			sc.Release()
 		}
 	}()
+	part = "View"
 	if s.View != nil {
 		s.View(c, sc)
+	}
+	part = "Theme.Overlay"
+	if c.Theme.Overlay != nil {
+		c.Theme.Overlay(c, sc.Px)
+	}
+	part = "a placed element"
+	sc.Render()
+	return "", nil
+}
+
+// Review fails t for every error a review of the deck finds: a build that
+// loses content at 240×67, 320×90 or 682×171 (Code lines clipped, Table rows
+// dropped, text off the canvas, a slide's own Ctx.Fits failing) or panics.
+// Warnings and notes, such as text below the readable size, are logged. A
+// slide that means to have an issue lists its code in Slide.Allow.
+func Review(t *testing.T, d decker.Deck) {
+	t.Helper()
+	for _, is := range d.Review(decker.ReviewOptions{}) {
+		if is.Severity == decker.SeverityError {
+			t.Error(is)
+		} else {
+			t.Log(is)
+		}
 	}
 }
 

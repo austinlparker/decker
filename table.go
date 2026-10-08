@@ -1,7 +1,9 @@
 package decker
 
 import (
+	"fmt"
 	"math"
+	"slices"
 	"strings"
 )
 
@@ -65,6 +67,9 @@ type tableLayout struct {
 	lines      [][][]string // [row][col] wrapped lines, in step with rowY
 	padX, padY float64
 	h          float64 // bottom of the last row
+
+	// For review: rows left out because they don't fit, and cells cut short.
+	dropped, cut int
 }
 
 type tableKey struct {
@@ -222,14 +227,35 @@ func (t Table) fit(c Ctx, r Rect) *tableLayout {
 			break
 		}
 		for j := range cells {
-			cells[j] = clipLines(font(row), cells[j], size, inner(j), limit)
+			clipped := clipLines(font(row), cells[j], size, inner(j), limit)
+			if !slices.Equal(clipped, cells[j]) {
+				l.cut++
+			}
+			cells[j] = clipped
 		}
 		l.rowY, l.rowH = append(l.rowY, y), append(l.rowH, rh)
 		l.lines = append(l.lines, cells)
 		y += rh
 	}
 	l.h = y
+	l.dropped = len(lines) - len(l.lines)
 	return l
+}
+
+// report records the rows a review finds left out and the cells cut short.
+func (t Table) report(c Ctx, r Rect, l *tableLayout) {
+	name := fmt.Sprintf("Table (%d rows)", len(t.Rows))
+	if len(t.Header) > 0 {
+		name = quoteText("Table", t.Header[0])
+	}
+	if l.dropped > 0 {
+		c.review.add(SeverityError, "table-rows-dropped", r,
+			fmt.Sprintf("%s: %d of %d rows don't fit in %.0fpx at %dpx text", name, min(l.dropped, len(t.Rows)), len(t.Rows), r.H, l.size))
+	}
+	if l.cut > 0 {
+		c.review.add(SeverityWarning, "table-cell-cut", r,
+			fmt.Sprintf("%s: %d cells cut short at %dpx text", name, l.cut, l.size))
+	}
 }
 
 // clipLines keeps at most limit lines of ls and ellipsizes any that are wider
@@ -303,9 +329,13 @@ func (t Table) since(c Ctx, i, j int) float64 {
 // The table is laid out the same every frame, so rows that haven't appeared
 // yet still hold their place.
 func (t Table) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
+	defer c.within("Table")()
 	l := t.layout(c, r)
 	if len(l.colW) == 0 {
 		return 0, 0
+	}
+	if c.review != nil {
+		t.report(c, r, l)
 	}
 	if !c.Reached(t.FirstStep) {
 		return r.W, l.h

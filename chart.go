@@ -406,6 +406,7 @@ func (b BarChart) series() [][]float64 {
 
 // Draw renders the chart into r and returns the size it drew, which is r's.
 func (b BarChart) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
+	defer c.within("BarChart")()
 	since := c.Since(b.Step)
 	if since < 0 || r.W <= 0 || r.H <= 0 {
 		return 0, 0
@@ -637,6 +638,7 @@ type LineChart struct {
 
 // Draw renders the chart into r and returns the size it drew, which is r's.
 func (l LineChart) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
+	defer c.within("LineChart")()
 	since := c.Since(l.Step)
 	if since < 0 || r.W <= 0 || r.H <= 0 {
 		return 0, 0
@@ -827,6 +829,7 @@ func layoutDonut(f *Font, labels []string, w, h, gap float64, maxSize, minSize i
 // Draw renders the chart into r and returns the size it drew: the ring and its
 // legend, centered in r.
 func (d DonutChart) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
+	defer c.within("DonutChart")()
 	since := c.Since(d.Step)
 	if since < 0 || r.W <= 0 || r.H <= 0 {
 		return 0, 0
@@ -1064,6 +1067,7 @@ func statSize(f *Font, text string, maxW, maxH float64, maxSize int) int {
 
 // Draw renders the stat centered in r and returns the size it drew.
 func (s Stat) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
+	defer c.within("Stat")()
 	since := c.Since(s.Step)
 	if since < 0 || r.W <= 0 || r.H <= 0 {
 		return 0, 0

@@ -19,7 +19,8 @@ quick start, and `docs/architecture.md` for the file map.
   character layer. Styled strings are
   parsed only for the engine's own chrome (footer, panels, help box).
 - **Goldens pin every byte.** `gallery_test.go` (`testdata/gallery.golden`) hashes
-  every pixel and cell of a deck that exercises each exported drawing API.
+  every pixel and cell of a deck that exercises each exported drawing API, and
+  `testdata/gallery-review.golden` lists what `Deck.Review` finds in it.
   `golden_internal_test.go` (`testdata/internal.golden`) hashes what the gallery
   can't reach: transitions in cells and video, PNG export, the live model's screen,
   the terminal writer's escape sequences, the presenter view.
@@ -28,7 +29,7 @@ quick start, and `docs/architecture.md` for the file map.
   fails goldens. A refactor must leave every hash unchanged.
 - **Never re-record goldens to make a test pass.** Re-record only when the
   output is meant to change, and say in the commit which keys changed and why.
-  `UPDATE_GOLDEN=1 go test ./...` rewrites both files; review `git diff testdata`
+  `UPDATE_GOLDEN=1 go test ./...` rewrites them all; review `git diff testdata`
   and confirm only the intended keys moved. A pure refactor has an empty diff.
 - **Perf budget.** Per-frame paths are hot: a 682x171 frame is ~117k cells and
   ~2.8MB of pixels, made 60 times a second. Don't allocate per frame; reuse
@@ -57,6 +58,7 @@ go test -short ./...                # skips the slow golden tests
 go vet ./...
 gofmt -l .                          # must print nothing
 go test -run '^$' -bench Live       # the engine's share of a live frame
+go run ./examples/showcase -review /tmp/review  # what a review reports, on a real deck
 UPDATE_GOLDEN=1 go test ./...       # re-record goldens: only for intended output changes
 ```
 
@@ -109,8 +111,12 @@ take `(c Ctx, p *Pixels, ...)` with pixel coordinates, size from `c.Unit` and
 `c.SmallText`, take colors and fonts from `c.Theme`, reveal builds with
 `c.Reached` and `c.Since`, return the size drawn. Many options means a struct
 with a `Draw` method, like `CycleDiagram`. Draw into `p`, not into a new
-`Scene`. Add it to the "Components" slide in `gallery_test.go` and to the guide
-Toolbox.
+`Scene`. Start `Draw` with `defer c.within("Name")()` so the text it draws
+reports to a review as part of it, and report what it can't fit: `c.Fits`
+for a block bigger than its rect, `c.review.add` (behind `c.review != nil`)
+for anything with its own code, like `Code`'s "code-clipped". Never clip or
+drop content silently. Add it to the "Components" slide in `gallery_test.go`
+and to the guide Toolbox, and check `testdata/gallery-review.golden`.
 
 **Add a key binding** (`keys.go`, `model.go`). Add one row to `bindings`: the
 space-separated key names (as `tea.KeyPressMsg.String` reports them), an action

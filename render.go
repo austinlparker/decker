@@ -17,6 +17,7 @@ func renderSlide(s Slide, c Ctx) *Scene {
 func drawSlide(s Slide, c Ctx) *Scene {
 	sc := NewScene(c.W, c.H, c.Theme)
 	sc.slide, sc.ctx, sc.title = true, c, s.Title
+	sc.Px.review = c.review
 	if s.View != nil {
 		sc.safely(func() { s.View(c, sc) })
 	}
@@ -40,6 +41,10 @@ func (s *Scene) finish() {
 
 func (s *Scene) overlay() {
 	if s.slide && s.ctx.Theme.Overlay != nil {
+		if l := s.Px.review; l != nil {
+			l.overlay = true
+			defer func() { l.overlay = false }()
+		}
 		s.ctx.Theme.Overlay(s.ctx, s.Px)
 	}
 }
@@ -64,6 +69,10 @@ func (s *Scene) showPanic(r any) {
 	s.clear(s.ctx.Theme)
 	s.finished = true
 	c := s.ctx
+	if l := s.Px.review; l != nil {
+		l.overlay, l.scope = false, ""
+		l.add(SeverityError, "panic", Rect{}, fmt.Sprint(r))
+	}
 	f := c.Theme.Mono
 	Text{Font: f, Size: c.SmallText(f), Color: c.Theme.Warn, MaxW: c.X(0.9)}.
 		Draw(s.Px, fmt.Sprintf("slide %q panicked:\n\n%v", s.title, r), c.X(0.05), c.Y(0.05))

@@ -139,6 +139,7 @@ These commands run from your talk's directory:
 go run . -dev                         # rebuild on save; keep your slide and step
 go run . -presenter -length 45m        # notes, timer and previews; p opens the deck
 go run . -list                        # titles, step counts and sections
+go run . -review review               # every build at three sizes: what's clipped or unreadable
 go run . -snapshot -step 2 -w 160 -h 45 -png frame.png
 go run . -sheet sheet.png             # all slides at their final step
 go run . -video talk.mp4 -fps 30       # silent video; needs ffmpeg
@@ -178,6 +179,7 @@ presenter-only timer controls.
 | Build a theme and your own slide templates | [Anatomy of a deck](docs/guide.md#anatomy-of-a-deck) |
 | Find text, charts, shapes, code blocks and diagrams | [Toolbox](docs/guide.md#toolbox) and [API reference](https://pkg.go.dev/github.com/austinlparker/decker) |
 | Animate builds and move elements between slides | [Element animations](docs/guide.md#element-animations) and [magic move](docs/guide.md#magic-move) |
+| Find clipped code, dropped rows and text off the screen | [Reviewing a deck](docs/guide.md#reviewing-a-deck) |
 | Test your talk and pin its rendered output | [Deck tests](docs/guide.md#tests) |
 | Resolve setup, presenter or export problems | [Troubleshooting](docs/troubleshooting.md) |
 | Change the engine | [Contributing](CONTRIBUTING.md), [invariants](AGENTS.md) and [file map](docs/architecture.md) |

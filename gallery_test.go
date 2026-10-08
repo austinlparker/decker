@@ -35,6 +35,42 @@ func TestGalleryGolden(t *testing.T) {
 
 func TestGallerySlides(t *testing.T) { decktest.Slides(t, gallery()) }
 
+// TestGalleryReview pins what a review finds in the gallery: its slides
+// exercise every stock component, clipping and tiny text included, so this
+// is where a change to what review reports shows up. Record with
+// UPDATE_GOLDEN=1 go test -run TestGalleryReview.
+func TestGalleryReview(t *testing.T) {
+	d := gallery()
+	var b strings.Builder
+	b.WriteString("# What Deck.Review finds in the gallery. Regenerate with UPDATE_GOLDEN=1 go test -run TestGalleryReview.\n")
+	for _, is := range d.Review(ReviewOptions{}) {
+		b.WriteString(is.String() + "\n")
+	}
+	const path = "testdata/gallery-review.golden"
+	if os.Getenv("UPDATE_GOLDEN") != "" {
+		if err := os.WriteFile(path, []byte(b.String()), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		return
+	}
+	want, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("%v (record it with UPDATE_GOLDEN=1)", err)
+	}
+	got, wantLines := strings.Split(b.String(), "\n"), strings.Split(string(want), "\n")
+	line := func(ls []string, i int) string {
+		if i < len(ls) {
+			return ls[i]
+		}
+		return "(nothing)"
+	}
+	for i := range max(len(got), len(wantLines)) {
+		if g, w := line(got, i), line(wantLines, i); g != w {
+			t.Fatalf("%s line %d:\n got  %s\n want %s", path, i+1, g, w)
+		}
+	}
+}
+
 // decktest.Hashes and decktest.Hash are API: talks diff them in CI.
 var (
 	_ = decktest.Hashes

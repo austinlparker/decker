@@ -126,6 +126,9 @@ func (t Text) Draw(p *Pixels, s string, x, y float64) (w, h float64) {
 		cov.addGlow(p, max(size/6, 2), gc, t.Glow*0.9)
 	}
 	t.paint(p, cov, blockX, w)
+	if p.review != nil {
+		checkInk(p, []coverage{cov}, f, size, quoteText("Text", s), Rect{blockX, y, w, h})
+	}
 	return w, h
 }
 

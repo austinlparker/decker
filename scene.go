@@ -85,6 +85,7 @@ func (s *Scene) Release() {
 	clear(s.placed)
 	s.placed = s.placed[:0]
 	s.slide, s.finished, s.ctx, s.title = false, false, Ctx{}, ""
+	s.Px.review = nil
 	scenes.put(s)
 }
 

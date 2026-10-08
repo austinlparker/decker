@@ -126,6 +126,7 @@ go run . -dev                # rebuild and reload on every save, staying on the 
 go run . -presenter          # the presenter view, in a second window
 go run . -presenter -presentation-font-size 5 # p opens the deck at 5pt in Ghostty
 go run . -list               # slide titles, step counts and sections
+go run . -review review      # check every build at three sizes for clipped or lost content
 go run . -snapshot -slide 6 -step 4 -t 2.5 -w 240 -h 67 -png frame.png
 go run . -sheet sheet.png -w 682 -h 171 -shrink 8
 go run . -video talk.mp4 -fps 30
@@ -143,6 +144,12 @@ seconds since the slide appeared; the default is `decker.Settled` (1000), which 
 the selected step fully settled. Omitting `-step` selects the first step;
 to capture the completed slide, pass its final step explicitly. `-step` and `-slide` are 1-based. `-sheet` renders
 every slide at its last step, four across.
+
+`-review DIR` checks every build of every slide, settled, at 240×67, 320×90
+and 682×171, and lists what is lost or hard to read: Code lines clipped,
+Table rows dropped, text off the canvas or below the readable size, a
+panic. It writes `DIR/index.md` and `DIR/report.json`, and exits non-zero
+when it finds an error. See [Reviewing a deck](#reviewing-a-deck).
 
 `-video` renders the whole deck with its animations and transitions. Each
 build step stays on screen for `-hold` seconds (a slide can ask for longer
@@ -435,6 +442,7 @@ Everything here is in package `decker`.
 | Big type | `Text{Font, Size, Color, To (gradient), Glow, Shine, FX, MaxW}.Draw(p, s, x, y)` with `Align`; returns width and height. `DrawMid` centers a line's ink on a y |
 | Mixed styles in a line | `Rich{Font, Size, Color, Glow, FX, MaxW}.Draw(p, spans, x, y)` with `[]Span{Text, Font, Color, Underline, Strike, Mark}`: bold a word, color a keyword, highlight, inline code, one baseline, wrapping across spans; ``ParseSpans("*bold* _muted_ `code` {accent:word}", theme)`` builds spans from light markup (see [Rich text](#rich-text)); `rich.Fit(spans, w, h, maxSize)` sizes them to a box |
 | Sizing text to a box | `font.Fit(...)`, `FitAll(...)` for several lines at one size |
+| Checking what fits | `c.Fits(what, rect, w, h)` reports a block that doesn't fit its rect to the review; `c.Report(severity, code, rect, msg)` any other problem; `c.Reviewing()` guards costly checks; `Code.Measure(c, rect)` says what a code block shows before drawing it. See [Reviewing a deck](#reviewing-a-deck) |
 | Small labels | `c.SmallText(font)`: the smallest readable size; `Label`, `Chip`, `LineLabel` (text sitting on an arrow) |
 | Block letters | `f, lines, scale := FitBlock(s, maxW, maxH, maxLines, gap, fonts...)` picks a font and scale for a pixel box; `Block{Font, Scale, Color, To, Shadow, Drop, Align, Glow, FX}.Draw(p, s, x, y)`; `BlockEffect`s for `Block.FX`: `BlockDecrypt`, `BlockRain`, `BlockBeam`, `BlockSlide`, `BlockType`, `BlockGlitch`, `BlockFade`, combined with `BlockChain` |
 | Diagrams | `Panel`, `Arrow`, `CycleDiagram` (numbered ring with a legend), `BulletList`, `SpeechBubble`; `Timeline{Items, FirstStep, Vertical}.Draw(c, p, rect)` (milestones on a line, one per step) and `Process{Steps, FirstStep}.Draw(c, p, rect)` (a row of chevrons, one per step) |
@@ -497,17 +505,77 @@ import (
 )
 
 func TestSlides(t *testing.T)      { decktest.Slides(t, talk()) }
+func TestReview(t *testing.T)      { decktest.Review(t, talk()) }
 func TestGolden(t *testing.T)      { decktest.Golden(t, talk(), "testdata/golden.txt") }
 func BenchmarkFrames(b *testing.B) { decktest.Frames(b, talk()) }
 ```
 
 `Slides` renders every slide at every build step, at three sizes and four
-moments, and fails on panics. `Golden` hashes every frame of every step at eight moments and
+moments, and fails on panics in a View, a placed element or the overlay.
+`Review` fails on every error `-review` would report (see below), so a slide
+that starts clipping fails the build. `Golden` hashes every frame of every step at eight moments and
 three sizes, and fails if any of them changed: after changing a slide on
 purpose, record it with `UPDATE_GOLDEN=1 go test -run Golden`. That makes
 the engine safe to change: an engine change that moves one pixel of any
 talk fails that talk's test.
 
+
+### Reviewing a deck
+
+A slide that compiles and renders can still lose half its content: a code
+block taller than its rect, a table with more rows than fit, a line of text
+running off the bottom. Each only shows up at some sizes, and often only at
+an intermediate build. The review finds them:
+
+```sh
+go run . -review review
+```
+
+```
+11.2  Collector config  320x90  error    code-clipped  Code "otel.yaml": 5 of 10 lines visible (needs 236px tall, has 118px) at 12px, the smallest readable size
+7.3   Waterfall         240x67  warning  text-small    BarChart: 4 texts at 7px, such as Text "db.query"; the smallest readable size here is 9px
+1 error and 1 warning in 41 builds of 12 slides at 240x67, 320x90, 682x171.
+```
+
+It draws every build of every slide, settled, at each size, and listens
+while the frames are drawn (the frames are the ones the deck shows). Each
+issue has a severity, a stable code, the rect it is about and a message with
+the numbers:
+
+| Code | Severity | Means |
+| --- | --- | --- |
+| `code-clipped` | error | a `Code` block shows only some of its lines or columns |
+| `table-rows-dropped` | error | a `Table` left out rows that don't fit, even at the smallest readable size |
+| `text-offcanvas` | error, or a warning for the tail of a letter | `Text`, `Rich` or `Block` ink runs past an edge of the canvas |
+| `overflow` | error | a block needs more room than its rect: a `Timeline`, `Process` step, `BulletList`, cycle legend, or a slide's own `c.Fits` |
+| `panic` | error | the View, a placed element or the overlay panicked |
+| `text-small` | warning | text below the smallest readable size (`c.SmallText`); a component's text counts once for the component |
+| `table-cell-cut` | warning | `Table` cells shortened with "..." |
+| `code-title-hidden`, `code-title-cut` | warning, note | a `Code` block's title tab has no room, or was shortened |
+
+`-sizes 240x67,682x171` changes the sizes, `-slide` and `-until` limit the
+slides, and `-strict` fails on warnings too. The report is also written to
+`review/index.md` (by slide and build) and `review/report.json`, whose
+slides and builds are 1-based like the command line.
+
+A slide that means to have an issue says so: `Allow: []string{"text-offcanvas"}`
+on a headline that bleeds off the edge on purpose.
+
+Drawing of your own reports the same way. `c.Fits(what, rect, w, h)` returns
+whether a `w`×`h` block fits `rect`, and when it doesn't, records an
+`overflow` error naming `what`; `c.Report` records anything else. Both do
+nothing while presenting.
+
+```go
+lay := layoutWaterfall(spans, r) // your own layout: pure, from the rect
+if !c.Fits("waterfall", r, lay.W, lay.H) {
+	lay = layoutWaterfall(spans[:8], r) // drop the tail rather than clip it
+}
+```
+
+`Code.Measure(c, rect)` returns how a code block fits before it draws:
+the size its text is set at, the plate, the lines and columns that show
+(`Shown`, `ShownCols`), and the plate it would need (`NeedW`, `NeedH`).
 
 [Bubble Tea]: https://github.com/charmbracelet/bubbletea
 [Lip Gloss]: https://github.com/charmbracelet/lipgloss

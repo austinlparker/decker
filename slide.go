@@ -32,6 +32,11 @@ type Slide struct {
 	// and the presenter view show it.
 	Section string
 
+	// Allow lists review issue codes this slide means to have, which
+	// Deck.Review then leaves out: "text-offcanvas" for a headline that
+	// bleeds off the edge on purpose, say.
+	Allow []string
+
 	// HideChrome hides the dev-mode footer on this slide. Theme.Overlay still
 	// draws, and presenter notes and previews remain available.
 	HideChrome bool

@@ -28,6 +28,8 @@ type options struct {
 	video, size          string
 	hold                 float64
 	until                int
+	review, sizes        string
+	strict               bool
 }
 
 // Main runs a deck from the command line: live in the terminal by default, or
@@ -53,6 +55,8 @@ func run(d *Deck) error {
 	case o.list:
 		listSlides(d)
 		return nil
+	case o.review != "":
+		return runReview(d, o)
 	case o.sheet != "":
 		return runSheet(d, o)
 	case o.snapshot:
@@ -83,7 +87,10 @@ func parseFlags(name string) options {
 	flag.StringVar(&o.video, "video", "", "render the deck to this video file (MP4, needs ffmpeg) and exit; starts at -slide")
 	flag.StringVar(&o.size, "size", "1920x1080", "with -video: the video's size in pixels")
 	flag.Float64Var(&o.hold, "hold", 4, "with -video: seconds each build step stays on screen")
-	flag.IntVar(&o.until, "until", 0, "with -video: the last slide to include (default: the end)")
+	flag.IntVar(&o.until, "until", 0, "with -video or -review: the last slide to include (default: the end)")
+	flag.StringVar(&o.review, "review", "", "check every build of every slide at several sizes, write the issues to DIR/index.md and DIR/report.json, and exit; fails if it finds errors")
+	flag.StringVar(&o.sizes, "sizes", "240x67,320x90,682x171", "with -review: frame sizes in cells, comma-separated")
+	flag.BoolVar(&o.strict, "strict", false, "with -review: fail on warnings too")
 	flag.Parse()
 	o.fps = max(o.fps, 1)
 	return o
@@ -125,6 +132,34 @@ func runSheet(d *Deck, o options) error {
 		frames = append(frames, stillFrame(d, i, s.steps()-1, o.at, o.width, o.height))
 	}
 	return writeSheet(frames, o.shrink, o.sheet)
+}
+
+func runReview(d *Deck, o options) error {
+	sizes, err := parseSizes(o.sizes)
+	if err != nil {
+		return err
+	}
+	last := len(d.Slides)
+	if o.until > 0 {
+		last = min(o.until, last)
+	}
+	if o.slide < 1 || o.slide > last {
+		return fmt.Errorf("-slide %d: the deck has slides 1 to %d", o.slide, last)
+	}
+	var slides []int
+	for i := o.slide - 1; i < last; i++ {
+		slides = append(slides, i)
+	}
+	r := reviewDeck(d, sizes, slides)
+	r.writeText(os.Stdout)
+	if err := r.save(o.review); err != nil {
+		return err
+	}
+	fmt.Printf("Report: %s\n", filepath.Join(o.review, "index.md"))
+	if e, w, _ := r.count(); e > 0 || o.strict && w > 0 {
+		return fmt.Errorf("review found %s and %s", plural(e, "error", "errors"), plural(w, "warning", "warnings"))
+	}
+	return nil
 }
 
 func runSnapshot(d *Deck, o options) error {

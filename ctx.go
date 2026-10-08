@@ -21,6 +21,10 @@ type Ctx struct {
 
 	// Theme is the deck's theme; never nil inside View.
 	Theme *Theme
+
+	// review collects what this frame reports under Deck.Review; nil while
+	// presenting.
+	review *reviewLog
 }
 
 // at returns c positioned at slide i of slides.

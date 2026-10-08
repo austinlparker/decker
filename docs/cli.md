@@ -13,6 +13,7 @@ go run . -presenter -length 45m
 go run . -presenter -presentation-font-size 5 -previews image
 go run . -list
 go run . -snapshot -slide 1 -step 2 -t 1.5 -w 240 -h 67 -png frame.png
+go run . -review review -sizes 240x67,682x171
 go run . -sheet sheet.png -w 682 -h 171 -shrink 8
 go run . -video talk.mp4 -slide 1 -until 3 -size 1280x720 -fps 30 -hold 4
 ```
@@ -25,19 +26,20 @@ go run . -video talk.mp4 -slide 1 -until 3 -size 1280x720 -fps 30 -hold 4
 | `-dev` | Present and rebuild on Go source/module changes; preserve slide and step after a successful build |
 | `-presenter` | Show notes, timer and previews; `p` opens the deck in a new Ghostty window on macOS |
 | `-list` | Print slide titles, build counts and sections, then exit |
+| `-review DIR` | Check every build of every slide at several sizes for clipped, dropped, off-canvas or unreadable content; print the issues, write `DIR/index.md` and `DIR/report.json`, and exit non-zero on errors |
 | `-snapshot` | Render the selected slide and step as ANSI text to stdout, or PNG with `-png` |
 | `-sheet FILE` | Write a four-column PNG contact sheet of all slides at their final step |
 | `-video FILE` | Export animation and transitions as a silent H.264 video |
 
 Choose one output mode. If flags are combined, precedence is video,
-presenter, list, sheet, snapshot, then live presentation. `-dev` only applies
+presenter, list, review, sheet, snapshot, then live presentation. `-dev` only applies
 to live presentation, including a deck opened with `p` from the presenter.
 
 ## Flags and defaults
 
 | Flag | Default | Applies to / meaning |
 | --- | --- | --- |
-| `-slide N` | `1` | Live, presenter launch, snapshot, video: starting slide, **1-based** |
+| `-slide N` | `1` | Live, presenter launch, snapshot, review, video: starting slide, **1-based** |
 | `-step N` | `1` | Live, presenter launch, snapshot: starting build step, **1-based** |
 | `-fps N` | `60` | Live, video: frames per second; clamped to at least 1 |
 | `-t SECONDS` | `1000` (`decker.Settled`) | Snapshot, sheet: time since slide and selected step began |
@@ -51,7 +53,9 @@ to live presentation, including a deck opened with `p` from the presenter.
 | `-previews MODE` | `auto` | Presenter: `auto` selects images in Ghostty/kitty outside tmux/zellij; `image` forces images; `cells` forces half-block previews |
 | `-size WIDTHxHEIGHT` | `1920x1080` | Video: output dimensions in **pixels** |
 | `-hold SECONDS` | `4` | Video: time per build step, overridden by positive `Slide.Hold` |
-| `-until N` | `0` (end) | Video: last included slide, **1-based** |
+| `-until N` | `0` (end) | Video, review: last included slide, **1-based** |
+| `-sizes LIST` | `240x67,320x90,682x171` | Review: frame sizes in **cells**, comma-separated |
+| `-strict` | `false` | Review: exit non-zero on warnings as well as errors |
 
 `-sheet`, `-video` and `-png` take filenames. Width/height must be positive;
 use even video dimensions for the `yuv420p` H.264 encoder. Register a talk's
@@ -95,6 +99,18 @@ and writes rebuilt binaries to `.slides/DECK_NAME` under the working directory.
 A Go workspace can include a local decker checkout for engine edits.
 Edits to embedded images or fonts alone do not trigger a rebuild; save a
 watched Go file after changing those assets.
+
+## Review
+
+`-review DIR` draws every build of each slide in range, settled (as it
+looks once its animations finish), at every `-sizes` size, and prints one
+line per issue: slide and build (1-based), title, the sizes it happens at,
+severity, code and message. Then it writes the same issues by slide and
+build to `DIR/index.md`, and as JSON to `DIR/report.json` (slides and builds
+1-based; `rect` is `[x, y, w, h]` in canvas pixels at that size). It exits
+with status 1 when it finds an error, or with `-strict` a warning. Codes a
+slide lists in `Slide.Allow` are left out. The guide's
+[Reviewing a deck](guide.md#reviewing-a-deck) lists the codes.
 
 ## Export behavior
 

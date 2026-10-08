@@ -3,8 +3,9 @@
 //
 // A [Deck] holds a [Theme] and a list of slides. Each [Slide] has a View, a
 // function that draws one frame from a [Ctx] onto a [Scene], and [Main] gives
-// the deck its command line: present, presenter view, dev reload, snapshots,
-// contact sheets and video.
+// the deck its command line: present, presenter view, dev reload, a review of
+// every build for clipped or unreadable content, snapshots, contact sheets
+// and video.
 // The presenter can open a deck window in Ghostty on macOS with its own
 // terminal font size; Ghostty and kitty also support full-resolution previews.
 //
@@ -83,6 +84,10 @@
 //     ([Transition.From]).
 //   - [Connector]: a line, elbow or curve joining two [Rect]s, with arrowheads
 //     that sit on the edges and a [Connector.Prog] that draws it on.
+//   - [Issue]: a problem [Deck.Review] finds in a build: Code lines clipped,
+//     Table rows dropped, text off the canvas or too small to read. Stock
+//     components report what they can't fit; a slide's own drawing reports
+//     through [Ctx.Fits] and [Ctx.Report]. The -review flag prints them.
 //
 // Shapes beyond the basics ([Pixels.Polygon], [Pixels.Ellipse],
 // [Pixels.Polyline], [Pixels.Bezier], [Pixels.DashedLine]) are in shapes.go.

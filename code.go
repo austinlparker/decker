@@ -1,6 +1,7 @@
 package decker
 
 import (
+	"fmt"
 	"math"
 	"strconv"
 	"strings"
@@ -357,42 +358,109 @@ func (f focusState) bar() (y0, y1, alpha float64) {
 	return 0, 0, 0
 }
 
+// CodeLayout is how a [Code] block fits a rect: the size its text is set at,
+// the plate it draws and how much of the source shows. [Code.Measure]
+// returns it without drawing, so a slide can pick a bigger rect, a smaller
+// excerpt or a split across builds before anything is lost.
+type CodeLayout struct {
+	Size int     // the Mono size in pixels: Code.Size, or the size fitted to the rect
+	W, H float64 // the plate, which is never larger than the rect
+
+	// NeedW and NeedH are the plate that would show every line and column
+	// at Size.
+	NeedW, NeedH float64
+
+	// Head is the plate's height above the first line: padding, plus the
+	// filename tab when there is a Title.
+	Head float64
+
+	Lines, Shown    int // lines in the source; lines drawn in full
+	Cols, ShownCols int // columns of the widest line, gutter included; columns drawn
+}
+
+// Fits reports whether every line and column of the source shows.
+func (l CodeLayout) Fits() bool { return l.Shown >= l.Lines && l.ShownCols >= l.Cols }
+
+// codeGeom is a CodeLayout with what Draw needs to place the text.
+type codeGeom struct {
+	CodeLayout
+	lx                        *lexedCode
+	rf                        *Font
+	pad, adv, lineH           float64
+	tabSize                   int
+	numCols, markCol, codeCol int
+}
+
+// Measure returns how the block fits r, as Draw would draw it there.
+func (k Code) Measure(c Ctx, r Rect) CodeLayout {
+	if r.W <= 0 || r.H <= 0 {
+		g := k.geom(c, r)
+		g.W, g.H, g.Shown, g.ShownCols = 0, 0, 0, 0
+		return g.CodeLayout
+	}
+	return k.geom(c, r).CodeLayout
+}
+
+func (k Code) geom(c Ctx, r Rect) codeGeom {
+	f := c.Theme.Mono
+	g := codeGeom{lx: lexCode(k.Source, k.Lang, k.Diff)}
+	g.pad = c.Unit(0.025)
+	g.tabSize = c.SmallText(f)
+	g.Head = g.pad // space above the code
+	if k.Title != "" {
+		g.Head = g.pad*0.6 + float64(g.tabSize)*1.8 + g.pad*0.8
+	}
+
+	size := k.Size
+	if size <= 0 {
+		size = k.fitCode(f, g.lx, r.W-2*g.pad, r.H-g.Head-g.pad, g.tabSize, c.Size(0.1))
+	}
+	g.rf, g.Size = f.resolve(size)
+	g.adv = g.rf.Measure("0", g.Size)
+	g.lineH = float64(g.Size) * codeLeading
+	g.numCols, g.markCol, g.codeCol = g.lx.gutter(k.LineNumbers, k.Diff)
+
+	g.NeedW = float64(g.codeCol+g.lx.maxCols)*g.adv + 2*g.pad
+	if k.Title != "" {
+		g.NeedW = max(g.NeedW, f.Measure(k.Title, g.tabSize)+float64(g.tabSize)*1.4+2*g.pad)
+	}
+	g.NeedH = g.Head + float64(len(g.lx.lines))*g.lineH + g.pad
+	g.W, g.H = min(g.NeedW, r.W), min(g.NeedH, r.H)
+
+	// The same tests Draw makes line by line and glyph by glyph.
+	g.Lines, g.Cols = len(g.lx.lines), g.codeCol+g.lx.maxCols
+	top, bottom := r.Y+g.Head, r.Y+g.H-g.pad*0.3
+	for g.Shown < g.Lines && top+float64(g.Shown)*g.lineH+g.lineH <= bottom {
+		g.Shown++
+	}
+	left, right := r.X+g.pad, r.X+g.W-g.pad*0.3
+	for g.ShownCols < g.Cols && left+float64(g.ShownCols)*g.adv+g.adv <= right {
+		g.ShownCols++
+	}
+	return g
+}
+
 // Draw renders the block inside r, anchored at its top-left, and returns the
 // size of the plate. The plate hugs the code, and is never larger than r.
+// Under review, lines or columns that don't fit are a "code-clipped" error.
 func (k Code) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 	if r.W <= 0 || r.H <= 0 {
 		return 0, 0
 	}
 	th := c.Theme
-	f := th.Mono
-	lx := lexCode(k.Source, k.Lang, k.Diff)
+	g := k.geom(c, r)
+	if c.review != nil && !g.Fits() {
+		k.report(c, r, g)
+	}
+	lx, rf, rs, adv, lineH := g.lx, g.rf, g.Size, g.adv, g.lineH
+	numCols, markCol, codeCol := g.numCols, g.markCol, g.codeCol
+	pad, head := g.pad, g.Head
+	w, h = g.W, g.H
 	pal := th.syntaxColors()
-
-	pad := c.Unit(0.025)
-	tabSize := c.SmallText(f)
-	head := pad // space above the code
-	if k.Title != "" {
-		head = pad*0.6 + float64(tabSize)*1.8 + pad*0.8
-	}
-
-	size := k.Size
-	if size <= 0 {
-		size = k.fitCode(f, lx, r.W-2*pad, r.H-head-pad, tabSize, c.Size(0.1))
-	}
-	rf, rs := f.resolve(size)
-	adv := rf.Measure("0", rs)
-	lineH := float64(rs) * codeLeading
-	numCols, markCol, codeCol := lx.gutter(k.LineNumbers, k.Diff)
-
-	w = min(float64(codeCol+lx.maxCols)*adv+2*pad, r.W)
-	if k.Title != "" {
-		w = min(max(w, f.Measure(k.Title, tabSize)+float64(tabSize)*1.4+2*pad), r.W)
-	}
-	h = min(head+float64(len(lx.lines))*lineH+pad, r.H)
 
 	fillPlate(p, r.X, r.Y, w, h, min(c.Unit(0.03), w/3, h/3), th.Panel)
 	if k.Title != "" {
-		k.drawTab(c, p, r.X+pad, r.Y+pad*0.6, float64(tabSize), r.X+w-pad, r.Y+h-pad*0.3)
+		k.drawTab(c, p, r.X+pad, r.Y+pad*0.6, float64(g.tabSize), r.X+w-pad, r.Y+h-pad*0.3)
 	}
 
 	left, top := r.X+pad, r.Y+head
@@ -453,6 +521,36 @@ func (k Code) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 	return w, h
 }
 
+// name is how a review message refers to the block.
+func (k Code) name(lines int) string {
+	switch {
+	case k.Title != "":
+		return quoteText("Code", k.Title)
+	case k.Lang != "":
+		return fmt.Sprintf("Code (%s, %d lines)", k.Lang, lines)
+	}
+	return fmt.Sprintf("Code (%d lines)", lines)
+}
+
+// report records what of the block r cannot show.
+func (k Code) report(c Ctx, r Rect, g codeGeom) {
+	var parts []string
+	if g.Shown < g.Lines {
+		parts = append(parts, fmt.Sprintf("%d of %d lines visible (needs %.0fpx tall, has %.0fpx)", g.Shown, g.Lines, g.NeedH, r.H))
+	}
+	if g.ShownCols < g.Cols {
+		parts = append(parts, fmt.Sprintf("%d of %d columns visible (needs %.0fpx wide, has %.0fpx)", g.ShownCols, g.Cols, g.NeedW, r.W))
+	}
+	at := fmt.Sprintf("at %dpx", g.Size)
+	switch {
+	case k.Size > 0:
+		at += " (Code.Size)"
+	case g.Size <= g.tabSize:
+		at += ", the smallest readable size"
+	}
+	c.review.add(SeverityError, "code-clipped", Rect{r.X, r.Y, g.W, g.H}, k.name(g.Lines)+": "+strings.Join(parts, "; ")+" "+at)
+}
+
 // color returns the palette color for role, or plain for no role.
 func (s SyntaxColors) color(role codeRole, plain RGB) RGB {
 	switch role {
@@ -487,6 +585,7 @@ func (k Code) drawTab(c Ctx, p *Pixels, x, y, size, maxX, maxY float64) {
 	h := size * 1.8
 	room := int((maxX - x - 2*pad) / adv) // columns of title the tab can hold
 	if room < 2 || y+h > maxY {
+		c.Report(SeverityWarning, "code-title-hidden", Rect{x, y, maxX - x, h}, quoteText("Code", k.Title)+": no room for the title tab")
 		return
 	}
 	title, cols, cut := k.Title, utf8.RuneCountInString(k.Title), false
@@ -497,6 +596,10 @@ func (k Code) drawTab(c Ctx, p *Pixels, x, y, size, maxX, maxY float64) {
 			i += sz
 		}
 		title, cols, cut = title[:i], room, true
+		if c.review != nil {
+			c.review.add(SeverityInfo, "code-title-cut", Rect{x, y, maxX - x, h},
+				fmt.Sprintf("%s: title cut to %d of %d characters", quoteText("Code", k.Title), room-1, utf8.RuneCountInString(k.Title)))
+		}
 	}
 	w := float64(cols)*adv + 2*pad
 	line := max(c.Unit(0.005), 1.5)

@@ -10,6 +10,10 @@ type Pixels struct {
 	W, H int
 	Pix  []RGB
 	BG   RGB // the color the canvas was cleared to
+
+	// review is the slide's reviewLog while Deck.Review draws it, for
+	// drawing that has no Ctx (Text, Rich, Block); nil otherwise.
+	review *reviewLog
 }
 
 // NewPixels returns a w×h framebuffer filled with bg.

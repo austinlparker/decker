@@ -23,6 +23,7 @@ type Timeline struct {
 // the size of the whole timeline once built: it fills the length of r along
 // the line and takes as much across it as its text needs.
 func (t Timeline) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
+	defer c.within("Timeline")()
 	n := len(t.Items)
 	if n == 0 {
 		return 0, 0
@@ -82,9 +83,18 @@ func (t Timeline) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 		}
 	}
 	if t.Vertical {
-		return textX - r.X + widest, float64(n-1)*slotH + float64(ls)*0.55 + labelH + detailH
+		w, h = textX-r.X+widest, float64(n-1)*slotH+float64(ls)*0.55+labelH+detailH
+	} else {
+		w, h = r.W, dotR*2+gap/2+labelH+float64(ds)*0.2+detailH
 	}
-	return r.W, dotR*2 + gap/2 + labelH + float64(ds)*0.2 + detailH
+	if c.review != nil {
+		needW := w
+		if !t.Vertical && widest > textW { // a word wider than its slot
+			needW = float64(n) * (widest + gap)
+		}
+		c.Fits("Timeline", r, needW, h)
+	}
+	return w, h
 }
 
 // fit finds the label and detail sizes that make every item's text fit
@@ -135,6 +145,7 @@ type Process struct {
 // Draw renders the row at the top of r, built out to the current step, and
 // returns its size once built: the width of r and a chevron's height.
 func (pr Process) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
+	defer c.within("Process")()
 	n := len(pr.Steps)
 	if n == 0 {
 		return 0, 0
@@ -153,6 +164,18 @@ func (pr Process) Draw(c Ctx, p *Pixels, r Rect) (w, h float64) {
 		size = min(size, fs)
 	}
 	size = max(th.Body.Drawn(size), c.SmallText(th.Body))
+	if c.review != nil {
+		for i, s := range pr.Steps {
+			lines := th.Body.Wrap(s, size, textW)
+			needW := 0.0
+			for _, l := range lines {
+				needW = max(needW, th.Body.Measure(l, size))
+			}
+			x := r.X + float64(i)*(cw-tip+gap)
+			c.Fits(quoteText("Process step", s), Rect{x + tip, r.Y + (h-textH)/2, textW, textH},
+				needW, float64(len(lines))*float64(size)*DefaultLeading)
+		}
+	}
 
 	for i, s := range pr.Steps {
 		step := pr.FirstStep + i

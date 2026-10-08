@@ -15,6 +15,7 @@ import (
 // callers lay out around it. Option-heavy components are structs with a Draw
 // method.
 func Panel(c Ctx, p *Pixels, x, y, w, h float64, label string, fill, edge, text RGB, alpha float64) {
+	defer c.within("Panel")()
 	r := min(c.Unit(0.03), w/3, h/3)
 	p.RoundRect(x, y, w, h, r, 0, fill, alpha)
 	if edge != (RGB{}) {
@@ -138,6 +139,7 @@ func (g cycleGeom) at(a float64) (float64, float64) {
 // circling, its angle (0 = top, clockwise), the active station (-1 if none),
 // and the legend's x.
 func (d CycleDiagram) Draw(c Ctx, p *Pixels, top float64) (looping bool, theta float64, active int, legendX float64) {
+	defer c.within("CycleDiagram")()
 	g := d.geometry(c, top)
 	last := d.Step0 + g.n - 1
 	d.drawRing(c, p, g)
@@ -248,6 +250,9 @@ func (d CycleDiagram) drawLegend(c Ctx, p *Pixels, g cycleGeom, top float64, loo
 	for ls > c.SmallText(c.Theme.Body) && height(ls) > room {
 		ls = c.Theme.Body.Drawn(ls - 1)
 	}
+	if c.review != nil {
+		c.Fits("CycleDiagram legend", Rect{g.legendX, top, g.legendW, room}, g.legendW, height(ls))
+	}
 	labelW := g.legendW - numW(ls)
 	y := top + max(0, (room-height(ls))/2)
 	for i, l := range d.Labels {
@@ -269,6 +274,7 @@ func (d CycleDiagram) drawLegend(c Ctx, p *Pixels, g cycleGeom, top float64, loo
 // BulletList draws lines as bullets, line i revealed at step i+firstStep, at
 // one size that fits the box.
 func BulletList(c Ctx, p *Pixels, lines []string, x, y, w, h float64, firstStep int) {
+	defer c.within("BulletList")()
 	// The mark is 0.32 of the text size wide; the gap after it grows with the
 	// text.
 	indent := func(size int) float64 { return max(c.Unit(0.05), float64(size)*0.6) }
@@ -280,6 +286,7 @@ func BulletList(c Ctx, p *Pixels, lines []string, x, y, w, h float64, firstStep 
 		}
 		total += float64(len(lines)-1) * float64(size) * 0.45
 		if total <= h || size <= c.SmallText(c.Theme.Body) {
+			c.Fits("BulletList", Rect{x, y, w, h}, w, total)
 			break
 		}
 		size--
