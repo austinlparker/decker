@@ -20,6 +20,48 @@ func TestFitBlockFitsTheBox(t *testing.T) {
 	}
 }
 
+// At the smallest scale, a wrap that fits must beat a longer one that
+// doesn't: snapScale lifts both to 0.5, and fewer lines used to win the tie,
+// running the text off the screen when a wrap that fit was right there.
+func TestFitBlockWrapsRatherThanOverflowsAtSmallestScale(t *testing.T) {
+	const s = "Better MCPs through fast feedback"
+	f := BlockSolid
+	two := f.widest(f.Wrap(s, f.Width(s)*6/10))
+	maxW := float64(two)*0.5 + 1 // two lines fit at 0.5; one line needs about 0.27
+	const maxH = 1000.0
+	if one := float64(f.Width(s)) * 0.5; one <= maxW {
+		t.Fatalf("one line is %.0f px at 0.5, want wider than the %.0f px box for this test", one, maxW)
+	}
+	_, lines, scale := FitBlock(s, maxW, maxH, 2, 1, f)
+	if w, h := (Block{Font: f, Scale: scale, Gap: 1}).Size(strings.Join(lines, "\n")); w > maxW || h > maxH {
+		t.Errorf("%q at scale %.1f is %.0f×%.0f px, want within %.0f×%.0f", lines, scale, w, h, maxW, maxH)
+	}
+}
+
+// When no wrap fits even at the smallest scale, FitBlock still picks the one
+// that overflows least.
+func TestFitBlockOverflowsLeastWhenNothingFits(t *testing.T) {
+	_, lines, scale := FitBlock("Better MCPs through fast feedback", 10, 1000, 2, 1, BlockSolid)
+	if scale != 0.5 || len(lines) != 2 {
+		t.Errorf("got %q at scale %.1f, want two lines at 0.5", lines, scale)
+	}
+}
+
+// A preferred font that only gets its size by overflowing must lose to a
+// later one that fits.
+func TestFitBlockPrefersAFontThatFits(t *testing.T) {
+	const s = "FEEDBACK"
+	small, huge := BlockSmall, BlockHuge
+	maxW := float64(small.Width(s))*0.5 + 1
+	if float64(huge.Width(s))*0.5 <= maxW {
+		t.Fatalf("%s is no wider than %s for this test", huge.Name, small.Name)
+	}
+	f, lines, scale := FitBlock(s, maxW, 1000, 1, 0, huge, small)
+	if w, _ := (Block{Font: f, Scale: scale}).Size(strings.Join(lines, "\n")); w > maxW {
+		t.Errorf("%s at scale %.1f is %.0f px wide, want within %.0f", f.Name, scale, w, maxW)
+	}
+}
+
 func TestFitBlockResultIsACopy(t *testing.T) {
 	_, a, _ := FitBlock("ONE TWO", 400, 100, 2, 1, BlockSolid)
 	a[0] = "scribble"
