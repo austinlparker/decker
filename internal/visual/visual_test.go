@@ -1,6 +1,7 @@
 package visual
 
 import (
+	"fmt"
 	"image"
 	"os"
 	"path/filepath"
@@ -88,4 +89,46 @@ func TestRecordAndCheck(t *testing.T) {
 	t.Setenv("UPDATE_GOLDEN", "")
 	CheckSheet(t, path, []Tile{{"one", nudged}, {"two", flat(6, 4, 200)}})
 	text.Check(t, textPath)
+}
+
+// errors is a testing.TB that keeps what's reported as an error.
+type errors struct {
+	testing.TB
+	got []string
+}
+
+func (e *errors) Helper() {}
+func (e *errors) Errorf(format string, args ...any) {
+	e.got = append(e.got, fmt.Sprintf(format, args...))
+}
+
+// TestSheetHoldsEachTile changes one tile of three faintly over 1% of its
+// pixels: twice the share a tile may have, but a third of that across the
+// sheet. The check fails it, names it, and recording rewrites it.
+func TestSheetHoldsEachTile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "sheet.png")
+	tiles := func(faint bool) []Tile {
+		one := flat(100, 100, 100)
+		if faint {
+			for i := range 100 {
+				one.Pix[one.PixOffset(i%10, i/10)] += SmallDelta + 1
+			}
+		}
+		return []Tile{{"one", one}, {"two", flat(100, 100, 100)}, {"three", flat(100, 100, 100)}}
+	}
+	t.Setenv("UPDATE_GOLDEN", "1")
+	CheckSheet(t, path, tiles(false))
+	t.Setenv("UPDATE_GOLDEN", "")
+	if problem, _ := Compare(Sheet(tiles(true)), Sheet(tiles(false))); problem != "" {
+		t.Fatalf("the sheet as a whole should pass, to test anything: %s", problem)
+	}
+	e := &errors{TB: t}
+	CheckSheet(e, path, tiles(true))
+	if len(e.got) != 1 || !strings.Contains(e.got[0], "one: 1.00% of pixels") || strings.Contains(e.got[0], "two") {
+		t.Errorf("reported %q", e.got)
+	}
+	t.Setenv("UPDATE_GOLDEN", "1")
+	CheckSheet(t, path, tiles(true))
+	t.Setenv("UPDATE_GOLDEN", "")
+	CheckSheet(t, path, tiles(true))
 }

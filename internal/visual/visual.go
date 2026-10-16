@@ -125,27 +125,30 @@ func absDiff(a, b uint8) int {
 func CheckImage(t testing.TB, path string, img *image.RGBA) {
 	t.Helper()
 	want, err := readPNG(path)
-	if Updating() {
-		if err == nil {
-			if problem, _ := Compare(img, want); problem == "" {
-				return
-			}
-		}
-		if err := writePNG(path, img); err != nil {
+	var problem string
+	var diff *image.RGBA
+	if err == nil {
+		problem, diff = Compare(img, want)
+	}
+	settle(t, path, img, err, problem, diff)
+}
+
+// settle records got at path if the run is recording and the reference
+// is missing (readErr) or doesn't match (problem), or else reports either.
+func settle(t testing.TB, path string, got *image.RGBA, readErr error, problem string, diff *image.RGBA) {
+	t.Helper()
+	switch {
+	case readErr == nil && problem == "":
+	case Updating():
+		if err := writePNG(path, got); err != nil {
 			t.Fatal(err)
 		}
 		t.Logf("recorded %s", path)
-		return
+	case readErr != nil:
+		t.Errorf("%v (record it with UPDATE_GOLDEN=1)", readErr)
+	default:
+		t.Errorf("%s:\n\t%s%s", path, problem, saveFailure(path, got, diff))
 	}
-	if err != nil {
-		t.Errorf("%v (record it with UPDATE_GOLDEN=1)", err)
-		return
-	}
-	problem, diff := Compare(img, want)
-	if problem == "" {
-		return
-	}
-	t.Errorf("%s: %s%s", path, problem, saveFailure(path, img, diff))
 }
 
 // saveFailure keeps a failed image and its diff where a person can look at
@@ -203,15 +206,17 @@ type Tile struct {
 	Img  *image.RGBA
 }
 
+// sheetGap is the strip of background between a sheet's tiles.
+const sheetGap = 2
+
 // Sheet lays tiles out in a column, each below the last on a strip of
 // background, so a group of small frames is one file to keep and to look
 // at. Tiles may differ in size.
 func Sheet(tiles []Tile) *image.RGBA {
-	const gap = 2
 	w, h := 0, 0
 	for _, t := range tiles {
 		w = max(w, t.Img.Rect.Dx())
-		h += t.Img.Rect.Dy() + gap
+		h += t.Img.Rect.Dy() + sheetGap
 	}
 	sheet := image.NewRGBA(image.Rect(0, 0, w, h))
 	y := 0
@@ -219,7 +224,7 @@ func Sheet(tiles []Tile) *image.RGBA {
 		for row := range t.Img.Rect.Dy() {
 			copy(sheet.Pix[sheet.PixOffset(0, y+row):], t.Img.Pix[t.Img.PixOffset(0, row):t.Img.PixOffset(t.Img.Rect.Dx(), row)])
 		}
-		y += t.Img.Rect.Dy() + gap
+		y += t.Img.Rect.Dy() + sheetGap
 	}
 	for i := 3; i < len(sheet.Pix); i += 4 {
 		sheet.Pix[i] = 255
@@ -227,35 +232,38 @@ func Sheet(tiles []Tile) *image.RGBA {
 	return sheet
 }
 
-// CheckSheet is CheckImage for a sheet of tiles. It names the tiles that
-// moved, which the sheet as a whole can't.
+// CheckSheet is CheckImage for a sheet of tiles. Each tile is held to the
+// tolerance on its own: a faint change over one frame is as much of a
+// change beside others that didn't move. A failure names the tiles that
+// moved.
 func CheckSheet(t testing.TB, path string, tiles []Tile) {
 	t.Helper()
 	got := Sheet(tiles)
 	want, err := readPNG(path)
-	if err != nil || Updating() {
-		CheckImage(t, path, got)
-		return
+	var problem string
+	var diff *image.RGBA
+	if err == nil {
+		problem, diff = compareSheet(got, want, tiles)
 	}
-	problem, diff := Compare(got, want)
-	if problem == "" {
-		return
+	settle(t, path, got, err, problem, diff)
+}
+
+// compareSheet is Compare for a sheet laid out from tiles, tile by tile.
+func compareSheet(got, want *image.RGBA, tiles []Tile) (problem string, diff *image.RGBA) {
+	whole, diff := Compare(got, want)
+	if diff == nil {
+		return whole, nil // a different size: the tiles don't line up
 	}
 	var bad []string
-	if got.Rect.Size() == want.Rect.Size() {
-		y := 0
-		for _, tile := range tiles {
-			r := image.Rect(0, y, tile.Img.Rect.Dx(), y+tile.Img.Rect.Dy())
-			if p, _ := Compare(sub(got, r), sub(want, r)); p != "" {
-				bad = append(bad, tile.Name+": "+p)
-			}
-			y += tile.Img.Rect.Dy() + 2
+	y := 0
+	for _, tile := range tiles {
+		r := image.Rect(0, y, tile.Img.Rect.Dx(), y+tile.Img.Rect.Dy())
+		if p, _ := Compare(sub(got, r), sub(want, r)); p != "" {
+			bad = append(bad, tile.Name+": "+p)
 		}
+		y += tile.Img.Rect.Dy() + sheetGap
 	}
-	if len(bad) > 0 {
-		problem = strings.Join(bad, "\n\t")
-	}
-	t.Errorf("%s:\n\t%s%s", path, problem, saveFailure(path, got, diff))
+	return strings.Join(bad, "\n\t"), diff
 }
 
 func sub(img *image.RGBA, r image.Rectangle) *image.RGBA {

@@ -27,8 +27,8 @@ jobs:
           for m in . bsky examples/showcase; do (cd $m && go mod tidy); done
           git diff --exit-code -- ':(glob)**/go.mod' ':(glob)**/go.sum'
       - run: go vet ./...
-      # The goldens hash every pixel, so this also catches any change to
-      # rendered output.
+      # Includes the reference images, so this also catches a change to
+      # rendered output that anyone could see.
       - run: go test ./...
       # bsky and the showcase are modules of their own, which ./... from the
       # root leaves out.
