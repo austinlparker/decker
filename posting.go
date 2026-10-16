@@ -3,6 +3,7 @@ package decker
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -32,10 +33,13 @@ type posting struct {
 	home    string // this talk's directory
 	openURL func(string) error
 
-	account  string // as the speaker typed it, kept between runs
-	signedIn string // the account the Publisher is signed in as
-	cont     bool   // carry on the last thread rather than start one
+	account  string  // as the speaker typed it, kept between runs
+	signedIn string  // the account session is signed in as, as typed
+	session  Session // nil until signed in
+	cont     bool    // carry on the last thread rather than start one
 	last     lastThread
+
+	keys map[int][]string // postKeys
 
 	// rendered are the posts with their media drawn, by slide (-1 opens
 	// the thread). They're kept for every start after the first: the
@@ -101,6 +105,7 @@ type (
 	signedInMsg struct {
 		st      *start
 		account string
+		session Session
 		err     error
 	}
 	signInVisitMsg struct {
@@ -113,11 +118,12 @@ type (
 		posts []Post
 		err   error
 	}
-	// postsPreparedMsg ends a start: the thread it opens, or why it can't,
-	// and what the Publisher's check found.
+	// postsPreparedMsg ends a start: the thread it opens and what posts
+	// to it, or why it can't, and what the Publisher's check found.
 	postsPreparedMsg struct {
 		st       *start
-		thread   *thread
+		thread   *threadLog
+		pub      Thread
 		err      error
 		checkErr error
 	}
@@ -150,8 +156,9 @@ func newPosting(d *Deck, root string, lock sync.Locker) *posting {
 	if name == "." || name == ".." {
 		name = strings.Repeat("-", len(name)) // either would name a directory above the talk's
 	}
-	ps := &posting{deck: d, notes: dn, lock: lock, root: root, home: filepath.Join(root, "talks", name), openURL: openURL,
-		rendered: map[int][]Post{-1: openerPosts(dn.opener)}}
+	keys := postKeys(dn, d.Slides)
+	ps := &posting{deck: d, notes: dn, keys: keys, lock: lock, root: root, home: filepath.Join(root, "talks", name), openURL: openURL,
+		rendered: map[int][]Post{-1: openerPosts(dn.opener, keys[-1])}}
 	ps.account = loadAccount(root)
 	ps.last = findLastThread(filepath.Join(ps.home, "threads"))
 	return ps
@@ -256,7 +263,7 @@ func (ps *posting) begin(kind startKind) tea.Cmd {
 		st.dir = filepath.Join(ps.home, "threads", time.Now().Format("2006-01-02-150405"))
 	}
 	ps.start, ps.msg, ps.failed = st, nil, false
-	if kind == startLive && ps.signedIn != ps.account {
+	if kind == startLive && (ps.session == nil || ps.signedIn != ps.account) {
 		return ps.signIn()
 	}
 	return ps.renderNext()
@@ -271,14 +278,14 @@ func (ps *posting) signIn() tea.Cmd {
 	urls := make(chan string, 1)
 	signIn := func() tea.Msg {
 		defer close(urls)
-		err := pub.SignIn(ctx, account, func(u string) {
+		sess, err := pub.SignIn(ctx, account, func(u string) {
 			select {
 			case urls <- u:
 			default:
 			}
 			_ = open(u) // the dialog shows the address for when no browser opens
 		})
-		return signedInMsg{st, account, err}
+		return signedInMsg{st, account, sess, err}
 	}
 	wait := func() tea.Msg {
 		if u, ok := <-urls; ok {
@@ -307,10 +314,10 @@ func (ps *posting) renderNext() tea.Cmd {
 		ps.renders++
 		st.media = filepath.Join(ps.home, "media", strconv.Itoa(ps.renders))
 	}
-	i, dir, lock, notes := st.slide, st.media, ps.lock, slides[st.slide].posts
+	i, dir, lock, notes, keys := st.slide, st.media, ps.lock, slides[st.slide].posts, ps.keys[st.slide]
 	st.job = jobRender
 	return func() tea.Msg {
-		posts, err := slidePosts(d, i, notes, dir, lock)
+		posts, err := slidePosts(d, i, notes, keys, dir, lock)
 		return postsRenderedMsg{st, i, posts, err}
 	}
 }
@@ -323,22 +330,31 @@ func (ps *posting) allPosts() []Post {
 	return all
 }
 
-// prepare readies the thread's file, and has the Publisher check every
-// post. A rehearsal checks too, if the talk has a Publisher, so it shows
-// what posting for real would stop on.
+// prepare readies the thread's file, claimed for the account signed in,
+// and opens the posts on the Session, which checks them. A rehearsal has
+// the Publisher check them too, if the talk has one, signed in or not, so
+// it shows what posting for real would stop on.
 func (ps *posting) prepare() tea.Cmd {
-	st, pub, all := ps.start, ps.deck.Publisher, ps.allPosts()
+	st, pub, sess, as, all := ps.start, ps.deck.Publisher, ps.session, ps.signedIn, ps.allPosts()
 	st.job = jobCheck
-	ctx, dir, rehearsal := st.ctx, st.dir, st.kind == startRehearsal
+	ctx, dir := st.ctx, st.dir
+	if st.kind == startRehearsal {
+		return func() tea.Msg {
+			msg := postsPreparedMsg{st: st, err: emptyFile(filepath.Join(dir, "dry-run.md"))}
+			if msg.err == nil && pub != nil {
+				msg.checkErr = pub.Check(ctx, all)
+			}
+			return msg
+		}
+	}
 	return func() tea.Msg {
 		msg := postsPreparedMsg{st: st}
-		if rehearsal {
-			msg.err = emptyFile(filepath.Join(dir, "dry-run.md"))
-		} else {
-			msg.thread, msg.err = loadThread(filepath.Join(dir, "thread.json"))
+		msg.thread, msg.err = loadThread(filepath.Join(dir, "thread.json"))
+		if msg.err == nil {
+			msg.err = msg.thread.postAs(sess.Account(), as)
 		}
-		if msg.err == nil && pub != nil {
-			msg.checkErr = pub.Prepare(ctx, all)
+		if msg.err == nil {
+			msg.pub, msg.checkErr = sess.Open(ctx, all)
 		}
 		return msg
 	}
@@ -355,16 +371,20 @@ func emptyFile(path string) error {
 // opened opens the thread the start led to, with posting on.
 func (ps *posting) opened(msg postsPreparedMsg) {
 	st := msg.st
-	pb := &publishing{pub: ps.deck.Publisher, posts: ps.rendered, titles: ps.deck.titles(), thread: msg.thread, on: true}
+	pb := &publishing{pub: msg.pub, posts: ps.rendered, titles: ps.deck.titles(), thread: msg.thread, on: true}
 	ps.msg = nil
 	if st.kind == startRehearsal {
-		pb.dry, pb.thread, pb.file = true, &thread{}, filepath.Join(st.dir, "dry-run.md")
+		pb.dry, pb.thread, pb.file = true, &threadLog{}, filepath.Join(st.dir, "dry-run.md")
 		pb.pub = &dryRun{path: pb.file}
 		if msg.checkErr != nil {
 			ps.say(msgLine{text: "▲ Posting for real would stop here:", tone: toneWarn},
 				msgLine{text: msg.checkErr.Error(), detail: true},
 				msgLine{text: "The rehearsal goes on regardless."})
 		}
+	}
+	if !pb.resume() {
+		ps.say(msgLine{text: "▲ A post was going out when posting last stopped, and the notes no longer have it:", tone: toneWarn},
+			msgLine{text: "it may be in the thread without the thread file knowing; look before you go on.", detail: true})
 	}
 	ps.pub = pb
 	ps.end()
@@ -390,7 +410,7 @@ func (p presenter) postingMsg(msg tea.Msg) (_ presenter, cmd tea.Cmd, ok bool) {
 			ps.fail(fmt.Sprintf("Couldn't sign in as %s:", msg.account), msg.err)
 			break
 		}
-		ps.signedIn = msg.account
+		ps.signedIn, ps.session = msg.account, msg.session
 		return p, ps.renderNext(), true
 	case postsRenderedMsg:
 		if msg.st != ps.start {
@@ -406,6 +426,8 @@ func (p presenter) postingMsg(msg tea.Msg) (_ presenter, cmd tea.Cmd, ok bool) {
 	case postsPreparedMsg:
 		switch {
 		case msg.st != ps.start:
+		case errors.As(msg.err, new(otherAccountError)):
+			ps.fail("Can't carry on this thread:", msg.err)
 		case msg.err != nil:
 			ps.fail("Couldn't set up the thread's file:", msg.err)
 		case msg.checkErr != nil && msg.st.kind == startLive:

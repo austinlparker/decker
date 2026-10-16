@@ -89,7 +89,7 @@ func mentionAt(text string, start, end int) (syntax.Handle, int) {
 	return h.Normalize(), start + 1 + len(raw)
 }
 
-// mentionHandles are the handles text mentions, for Prepare to resolve.
+// mentionHandles are the handles text mentions, for Check to resolve.
 func mentionHandles(text string) []syntax.Handle {
 	var hs []syntax.Handle
 	for _, m := range mentionRe.FindAllStringSubmatchIndex(text, -1) {

@@ -83,10 +83,10 @@ func Review(t *testing.T, d decker.Deck) {
 }
 
 // Posts renders every post the deck's notes make (Deck.Posts) and has the
-// deck's Publisher check them (Publisher.Prepare), as starting to post
-// does, so a post its service would turn away fails the test instead of
-// the talk. Nothing signs in or posts, so a check that needs the account,
-// like how many clips it may still upload today, waits for the talk. It
+// deck's Publisher check them (Publisher.Check), as a rehearsal does, so
+// a post its service would turn away fails the test instead of the talk.
+// Nothing signs in or posts, so a check that needs the account, like how
+// many clips it may still upload today, waits for the talk. It
 // returns the posts, their media in a directory the test removes, for a
 // talk's own checks. Posts skips if a post is a clip and ffmpeg isn't
 // installed.
@@ -100,7 +100,7 @@ func Posts(t *testing.T, d decker.Deck) []decker.Post {
 		t.Fatal(err)
 	}
 	if d.Publisher != nil {
-		if err := d.Publisher.Prepare(t.Context(), posts); err != nil {
+		if err := d.Publisher.Check(t.Context(), posts); err != nil {
 			t.Fatal(err)
 		}
 	}

@@ -53,8 +53,10 @@
 //
 //   - [Deck], [Slide]: the talk with its speaker notes in Markdown, and one
 //     slide with its steps, [Source] citations and [Transition].
-//   - [Publisher], [Post], [Media]: posting the talk as a thread as it's
-//     given, from the post blocks in its notes.
+//   - [Publisher], [Session], [Thread], [Delivery], [Post], [Media]:
+//     posting the talk as a thread as it's given, from the post blocks in
+//     its notes: a Publisher checks posts and signs in, its Session opens
+//     a talk's posts, and the Thread posts them.
 //   - [Ctx]: what changes between frames (T, Step, StepT), the slide's position
 //     (Index, Count, Section), plus layout helpers.
 //   - [Rect]: a box on the canvas; layout cuts and splits rects

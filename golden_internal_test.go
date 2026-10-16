@@ -1070,8 +1070,8 @@ func postingStates(d *Deck, w, h int, previews map[previewKey]string) []namedPre
 	}
 	open := func(p *presenter, ps *posting) *posting { p.dialog = dialogPosting; return ps }
 	live := func(ps *posting, dry bool) *publishing {
-		pb := &publishing{pub: dp.Publisher, dry: dry, on: true, thread: &thread{}, titles: dp.titles(),
-			posts: map[int][]Post{-1: {{Slide: -1}}, 1: {{Slide: 1}}}}
+		pb := &publishing{pub: &fakePublisher{}, dry: dry, on: true, thread: &threadLog{}, titles: dp.titles(),
+			posts: map[int][]Post{-1: {{Slide: -1, key: "o"}}, 1: {{Slide: 1, key: "b"}}}}
 		ps.pub, ps.account, ps.signedIn = pb, account, account
 		return pb
 	}
@@ -1108,7 +1108,7 @@ func postingStates(d *Deck, w, h int, previews map[previewKey]string) []namedPre
 	at("live-dialog", 1, func(p *presenter, ps *posting) { live(open(p, ps), false) })
 	at("sent", 2, func(p *presenter, ps *posting) {
 		pb := live(ps, false)
-		pb.thread.Posts = []threadPost{{Slide: -1}, {Slide: 1}}
+		pb.thread.Posts = []threadPost{{Key: "o", Slide: -1}, {Key: "b", Slide: 1}}
 		pb.slide = 2
 	})
 	retrying := func(p *presenter, ps *posting) {

@@ -116,14 +116,15 @@ func TestReviewPassesACleanDeck(t *testing.T) {
 	}
 }
 
-// prepared is a Publisher that keeps what Prepare is given and turns away a
-// post that says "too long".
-type prepared struct{ posts []decker.Post }
+// checked is a Publisher that keeps what Check is given and turns away a
+// post that says "too long". It can't sign in: Posts mustn't.
+type checked struct{ posts []decker.Post }
 
-func (*prepared) SignIn(context.Context, string, func(string)) error { return nil }
-func (*prepared) Upload(context.Context, decker.Post) error          { return nil }
+func (*checked) SignIn(context.Context, string, func(string)) (decker.Session, error) {
+	return nil, errors.New("Posts signed in")
+}
 
-func (p *prepared) Prepare(_ context.Context, posts []decker.Post) error {
+func (p *checked) Check(_ context.Context, posts []decker.Post) error {
 	p.posts = posts
 	for _, post := range posts {
 		if post.Text == "too long" {
@@ -133,14 +134,10 @@ func (p *prepared) Prepare(_ context.Context, posts []decker.Post) error {
 	return nil
 }
 
-func (*prepared) Post(context.Context, decker.Post, string, string) (string, error) {
-	return "", errors.New("Posts posted")
-}
-
 // TestPosts checks Posts renders every post and hands them all to the
 // Publisher, and, in a child test process, fails when it turns one away.
 func TestPosts(t *testing.T) {
-	pub := &prepared{}
+	pub := &checked{}
 	d := boomDeck("")
 	d.Publisher = pub
 	d.Notes = "```post\nopening\n```\n## Boom\n```post\nthe slide\n```\n"
@@ -152,7 +149,7 @@ func TestPosts(t *testing.T) {
 	posts := Posts(t, d)
 	if len(posts) != 2 || len(pub.posts) != 2 || posts[0].Text != "opening" || len(posts[0].Media) != 0 ||
 		posts[1].Slide != 0 || len(posts[1].Media) != 1 {
-		t.Fatalf("posts %+v, prepared %+v", posts, pub.posts)
+		t.Fatalf("posts %+v, checked %+v", posts, pub.posts)
 	}
 	if _, err := os.Stat(posts[1].Media[0].Path); err != nil {
 		t.Errorf("the slide's image: %v", err)

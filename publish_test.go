@@ -65,8 +65,8 @@ func TestPostTriggerLastSlide(t *testing.T) {
 }
 
 func TestPostQueue(t *testing.T) {
-	pb := &publishing{on: true, thread: &thread{}, titles: []string{"a", "b", "c"},
-		posts: map[int][]Post{-1: {{Slide: -1}}, 0: {{Slide: 0}, {Slide: 0}}, 2: {{Slide: 2}}}}
+	pb := &publishing{on: true, thread: &threadLog{}, titles: []string{"a", "b", "c"},
+		posts: keyed(map[int][]Post{-1: {{Slide: -1}}, 0: {{Slide: 0}, {Slide: 0}}, 2: {{Slide: 2}}})}
 	pb.enqueue(1) // no posts
 	if len(pb.queue) != 0 {
 		t.Fatalf("a slide without posts queued %v", pb.queue)
@@ -87,41 +87,82 @@ func TestPostQueue(t *testing.T) {
 	}
 }
 
-// fakePublisher records posts and fails the ones it's told to.
+// keyed gives each post a key, as postKeys would: "slide.n".
+func keyed(posts map[int][]Post) map[int][]Post {
+	for slide, ps := range posts {
+		for n := range ps {
+			ps[n].key = fmt.Sprintf("%d.%d", slide, n)
+		}
+	}
+	return posts
+}
+
+// fakePublisher is a Publisher, its Session and its Thread in one. It
+// keeps each post by its Delivery key, as a service would, so a retry
+// finds one that went out; and fails, or loses the answer to, the posts
+// it's told to.
 type fakePublisher struct {
-	posts      []string // "text root parent"
-	fail       int      // fail this many calls first
-	prepared   int      // posts Prepare was given
-	prepareErr error
+	posts      []string          // "text root parent"
+	byKey      map[string]string // each post's ref, by Delivery.Key
+	deliveries []Delivery
+	fail       int // fail this many calls first
+	lose       int // then lose the answer to this many posts that went out
+	checked    int // posts Check was given
+	opened     int // posts Open was given
+	checkErr   error
 	signedIn   []string // accounts, in order
 	visit      string   // a page SignIn sends the speaker to, if set
 	uploaded   []string // the texts of posts whose media Upload was given
+	onPost     func()   // if set, runs as each post goes out
 }
 
-func (f *fakePublisher) SignIn(_ context.Context, account string, visit func(string)) error {
+func (f *fakePublisher) Check(_ context.Context, posts []Post) error {
+	f.checked += len(posts)
+	return f.checkErr
+}
+
+func (f *fakePublisher) SignIn(_ context.Context, account string, visit func(string)) (Session, error) {
 	if f.visit != "" {
 		visit(f.visit)
 	}
 	f.signedIn = append(f.signedIn, account)
-	return nil
+	return f, nil
 }
 
-func (f *fakePublisher) Prepare(_ context.Context, posts []Post) error {
-	f.prepared += len(posts)
-	return f.prepareErr
+func (f *fakePublisher) Account() string { return "id:" + f.signedIn[len(f.signedIn)-1] }
+
+func (f *fakePublisher) Open(_ context.Context, posts []Post) (Thread, error) {
+	f.opened += len(posts)
+	return f, f.checkErr
 }
+
 func (f *fakePublisher) Upload(_ context.Context, p Post) error {
 	f.uploaded = append(f.uploaded, p.Text)
 	return nil
 }
 
-func (f *fakePublisher) Post(_ context.Context, p Post, root, parent string) (string, error) {
+func (f *fakePublisher) Post(_ context.Context, p Post, d Delivery) (string, error) {
+	f.deliveries = append(f.deliveries, d)
+	if ref, ok := f.byKey[d.Key]; ok && d.Retry {
+		return ref, nil
+	}
 	if f.fail > 0 {
 		f.fail--
 		return "", errors.New("network down")
 	}
+	if f.onPost != nil {
+		f.onPost()
+	}
 	ref := fmt.Sprintf("ref%d", len(f.posts))
-	f.posts = append(f.posts, fmt.Sprintf("%s root=%s parent=%s", p.Text, root, parent))
+	f.posts = append(f.posts, fmt.Sprintf("%s root=%s parent=%s", p.Text, d.Root, d.Parent))
+	if f.byKey == nil {
+		f.byKey = map[string]string{}
+	}
+	f.byKey[d.Key] = ref
+	if f.lose > 0 {
+		f.lose--
+		return "", errors.New("no answer")
+	}
 	return ref, nil
 }
 
@@ -136,7 +177,7 @@ func TestPostThreading(t *testing.T) {
 	}
 	fake := &fakePublisher{fail: 2}
 	pb := &publishing{pub: fake, on: true, thread: th, titles: []string{"a", "b"},
-		posts: map[int][]Post{-1: {{Slide: -1, Text: "open"}}, 0: {{Slide: 0, Text: "a1"}, {Slide: 0, Text: "a2"}}, 1: {{Slide: 1, Text: "b"}}}}
+		posts: keyed(map[int][]Post{-1: {{Slide: -1, Text: "open"}}, 0: {{Slide: 0, Text: "a1"}, {Slide: 0, Text: "a2"}}, 1: {{Slide: 1, Text: "b"}}})}
 	pb.enqueue(0)
 	var backoff []time.Duration
 	for range 10 {
@@ -303,8 +344,8 @@ func TestPostingDialog(t *testing.T) {
 	if !slices.Equal(fake.signedIn, []string{"me.ex"}) || ps.signedIn != "me.ex" || !slices.Equal(dr.opened, []string{fake.visit}) {
 		t.Fatalf("signed in %q, dialog %q, opened %q", fake.signedIn, ps.signedIn, dr.opened)
 	}
-	if !ps.live() || !ps.pub.on || fake.prepared != 2 || dr.open() {
-		t.Fatalf("after typing the account: live %v, prepared %d, open %v, says %q", ps.live(), fake.prepared, dr.open(), dr.dialogSays())
+	if !ps.live() || !ps.pub.on || fake.opened != 2 || fake.checked != 0 || dr.open() {
+		t.Fatalf("after typing the account: live %v, opened %d, checked %d, open %v, says %q", ps.live(), fake.opened, fake.checked, dr.open(), dr.dialogSays())
 	}
 	if v := dr.view(); !strings.Contains(v, "● POSTING as @me.ex · 0/2 sent") || !strings.Contains(v, "post  sends when you move on") {
 		t.Errorf("posting:\n%s", v)
@@ -405,9 +446,9 @@ func TestPostingCountsSkipped(t *testing.T) {
 // on the browser does.
 type blockingPublisher struct{ fakePublisher }
 
-func (b *blockingPublisher) SignIn(ctx context.Context, _ string, _ func(string)) error {
+func (b *blockingPublisher) SignIn(ctx context.Context, _ string, _ func(string)) (Session, error) {
 	<-ctx.Done()
-	return ctx.Err()
+	return nil, ctx.Err()
 }
 
 // TestPostingCancel checks closing the dialog leaves a sign-in running,
@@ -437,6 +478,135 @@ func TestPostingCancel(t *testing.T) {
 	}
 }
 
+// oldThread saves a thread for d under root, as an earlier run posting as
+// account would leave it: its opener posted.
+func oldThread(t *testing.T, root string, d *Deck, account string) *threadLog {
+	t.Helper()
+	th, err := loadThread(filepath.Join(root, "talks", d.Name, "threads", "2026-01-01-000000", "thread.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := th.postAs("id:"+account, account); err != nil {
+		t.Fatal(err)
+	}
+	opener := postKeys(d.notes(), d.Slides)[-1][0]
+	th.Posts = []threadPost{{Key: opener, Slide: -1, Ref: "ref-old", At: time.Now()}}
+	if err := th.save(); err != nil {
+		t.Fatal(err)
+	}
+	return th
+}
+
+// TestPostingRefusesAnotherAccount carries on a thread signed in as an
+// account other than the one that posted it: nothing posts.
+func TestPostingRefusesAnotherAccount(t *testing.T) {
+	fake := &fakePublisher{}
+	d, root := postingDeck(fake), t.TempDir()
+	if err := saveAccount(root, "me.ex"); err != nil {
+		t.Fatal(err)
+	}
+	oldThread(t, root, d, "you.ex")
+	dr := newDriver(t, d, root)
+	dr.keys("P", "up", "up", "space", "tab", "tab", "enter")
+	ps := dr.p().post
+	if says := dr.dialogSays(); ps.pub != nil || fake.opened != 0 || !strings.Contains(says, "Can't carry on this thread:\nthis thread was posted as @you.ex") {
+		t.Errorf("pub %v, opened %d, says %q", ps.pub, fake.opened, says)
+	}
+}
+
+// TestPostRestartFindsAnUnrecordedPost has a post go out and the presenter
+// view stop before recording it: after a restart, the post is tried again
+// first, as the same post, and found rather than posted twice. A post
+// whose answer is lost is found the same way without a restart.
+func TestPostRestartFindsAnUnrecordedPost(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "thread.json")
+	th, err := loadThread(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fake := &fakePublisher{lose: 1}
+	posts := func() map[int][]Post {
+		return keyed(map[int][]Post{-1: {{Slide: -1, Text: "open"}}, 0: {{Slide: 0, Text: "a"}}, 1: {{Slide: 1, Text: "b"}}})
+	}
+	pb := &publishing{pub: fake, on: true, thread: th, titles: []string{"a", "b"}, posts: posts()}
+	pb.enqueue(0)
+	pb.done(pb.next()().(postDoneMsg), time.Unix(0, 0)) // the opener's answer is lost
+	pb.retryAt = time.Time{}
+	pb.done(pb.next()().(postDoneMsg), time.Unix(0, 0))
+	if len(fake.posts) != 1 || len(pb.thread.Posts) != 1 || !fake.deliveries[1].Retry || fake.deliveries[1].Key != fake.deliveries[0].Key {
+		t.Fatalf("a lost answer: posted %q, recorded %d, deliveries %+v", fake.posts, len(pb.thread.Posts), fake.deliveries)
+	}
+
+	// a goes out, and the presenter view stops before it's recorded: the
+	// file is left as it was when the post went.
+	var atPost []byte
+	fake.onPost = func() { atPost, _ = os.ReadFile(path) }
+	pb.next()()
+	fake.onPost = nil
+	if err := os.WriteFile(path, atPost, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	sent := fake.deliveries[2]
+	th, err = loadThread(path)
+	if err != nil || th.Pending == nil || len(th.Posts) != 1 {
+		t.Fatalf("reloaded %+v, %v", th, err)
+	}
+	pb = &publishing{pub: fake, on: true, thread: th, titles: []string{"a", "b"}, posts: posts()}
+	if !pb.resume() || !slices.Equal(pb.queue, []queuedPost{{0, 0}}) {
+		t.Fatalf("resumed: queue %v", pb.queue)
+	}
+	pb.enqueue(1)
+	for f := pb.next(); f != nil; f = pb.next() {
+		pb.done(f().(postDoneMsg), time.Unix(0, 0))
+	}
+	retried := fake.deliveries[3]
+	if !retried.Retry || retried.Key != sent.Key || !retried.First.Equal(sent.First) {
+		t.Errorf("after restart, a was tried as %+v; first sent as %+v", retried, sent)
+	}
+	if want := []string{"open root= parent=", "a root=ref0 parent=ref0", "b root=ref0 parent=ref1"}; !slices.Equal(fake.posts, want) {
+		t.Errorf("posted %q, want %q", fake.posts, want)
+	}
+	if th, _ := loadThread(path); len(th.Posts) != 3 || th.Pending != nil {
+		t.Errorf("thread file %+v", th)
+	}
+
+	// A thread whose pending post the notes no longer have can't retry it.
+	th.Pending = &pendingPost{Key: "gone", First: time.Now()}
+	pb = &publishing{pub: fake, on: true, thread: th, posts: posts()}
+	if pb.resume() {
+		t.Error("resumed a post the notes don't have")
+	}
+}
+
+// TestPostKeys checks a post keeps its key wherever its slide moves, and
+// gets a new one when it changes.
+func TestPostKeys(t *testing.T) {
+	keys := func(notes string) map[int][]string {
+		d := testDeck()
+		d.Notes = notes
+		dn, err := parseNotes(d.Notes, d.Slides)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return postKeys(dn, d.Slides)
+	}
+	post := "```post media=none\nhello\n```\n"
+	a := keys("## Block letters\n" + post + post)
+	if a[0][0] == a[0][1] {
+		t.Errorf("two posts alike share a key: %q", a[0])
+	}
+	if b := keys("## Block letters\n" + post + post); !slices.Equal(a[0], b[0]) {
+		t.Errorf("keys changed between runs: %q, %q", a[0], b[0])
+	}
+	edited := keys("## Block letters\n```post media=none\nhello!\n```\n" + post)
+	if edited[0][0] == a[0][0] || edited[0][1] != a[0][0] {
+		t.Errorf("edited the first of two: %q, before %q", edited[0], a[0])
+	}
+	if media := keys("## Block letters\n```post\nhello\n```\n"); media[0][0] == a[0][0] {
+		t.Error("a post with media has the key of one without")
+	}
+}
+
 // TestPostingCarriesOn picks the last thread back up: its posts aren't
 // posted again, and the next replies to the last.
 func TestPostingCarriesOn(t *testing.T) {
@@ -445,10 +615,7 @@ func TestPostingCarriesOn(t *testing.T) {
 	if err := saveAccount(root, "me.ex"); err != nil {
 		t.Fatal(err)
 	}
-	old := &thread{path: filepath.Join(root, "talks", d.Name, "threads", "2026-01-01-000000", "thread.json")}
-	if err := saveThread(old.path, nil, threadPost{Slide: -1, Ref: "ref-old", At: time.Now()}); err != nil {
-		t.Fatal(err)
-	}
+	old := oldThread(t, root, d, "me.ex")
 	dr := newDriver(t, d, root)
 	dr.keys("P", "up", "up", "space")
 	if v := dr.view(); !dr.p().post.cont || !strings.Contains(v, "(•) Carry on ") {
@@ -474,13 +641,13 @@ func TestPostingCarriesOn(t *testing.T) {
 // whose checks still run, a failure only a warning, which keeps the
 // dialog open. Stopping goes back to setting up.
 func TestPostingRehearsal(t *testing.T) {
-	fake := &fakePublisher{prepareErr: errors.New("offline")}
+	fake := &fakePublisher{checkErr: errors.New("offline")}
 	d, root := postingDeck(fake), t.TempDir()
 	dr := newDriver(t, d, root)
 	dr.keys("P", "tab", "enter")
 	ps := dr.p().post
-	if says := dr.dialogSays(); !ps.rehearsing() || fake.prepared != 2 || !dr.open() || !strings.Contains(says, "Posting for real would stop here:\noffline\n") {
-		t.Fatalf("rehearsing %v, prepared %d, open %v, says %q", ps.rehearsing(), fake.prepared, dr.open(), says)
+	if says := dr.dialogSays(); !ps.rehearsing() || fake.checked != 2 || len(fake.signedIn) != 0 || !dr.open() || !strings.Contains(says, "Posting for real would stop here:\noffline\n") {
+		t.Fatalf("rehearsing %v, checked %d, signed in %q, open %v, says %q", ps.rehearsing(), fake.checked, fake.signedIn, dr.open(), says)
 	}
 	if v := dr.view(); !strings.Contains(v, "● REHEARSING · 0/2 written") || !strings.Contains(v, "Rehearsing posts") || !strings.Contains(v, "[ Stop rehearsing ]") {
 		t.Errorf("rehearsing:\n%s", v)
@@ -673,9 +840,10 @@ func TestSlidePosts(t *testing.T) {
 	}
 	dir := t.TempDir()
 	dn := d.notes()
-	posts := map[int][]Post{-1: openerPosts(dn.opener)}
+	keys := postKeys(dn, d.Slides)
+	posts := map[int][]Post{-1: openerPosts(dn.opener, keys[-1])}
 	for i := range d.Slides {
-		ps, err := slidePosts(d, i, dn.slides[i].posts, dir, &sync.Mutex{})
+		ps, err := slidePosts(d, i, dn.slides[i].posts, keys[i], dir, &sync.Mutex{})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -700,7 +868,7 @@ func TestSlidePosts(t *testing.T) {
 		}
 	}
 
-	pb := &publishing{pub: &dryRun{path: filepath.Join(dir, "dry-run.md")}, dry: true, on: true, posts: posts, titles: d.titles(), thread: &thread{}}
+	pb := &publishing{pub: &dryRun{path: filepath.Join(dir, "dry-run.md")}, dry: true, on: true, posts: posts, titles: d.titles(), thread: &threadLog{}}
 	for _, s := range []int{0, 1, 2, 3} {
 		pb.enqueue(s)
 	}

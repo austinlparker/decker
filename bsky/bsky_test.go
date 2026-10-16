@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/base32"
 	"encoding/json"
+	"fmt"
 	"image"
 	"image/color"
 	"image/png"
@@ -19,6 +20,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/austinlparker/decker"
 	"github.com/bluesky-social/indigo/atproto/atclient"
@@ -273,26 +275,37 @@ func newFakeHost(t *testing.T) *fakeHost {
 	return h
 }
 
-// publisher is a Publisher signed in to h, as signIn would leave it.
-func (h *fakeHost) publisher() *Publisher {
+// session is a session signed in to h, as signIn would leave it.
+func (h *fakeHost) session() *session {
 	did := syntax.DID("did:plc:me")
-	return &Publisher{
-		Langs: []string{"en"},
-		sess: &session{
-			api:    &atclient.APIClient{Client: h.srv.Client(), Host: h.srv.URL, AccountDID: &did},
-			did:    did,
-			pds:    h.srv.URL,
-			scopes: scopes,
-			video:  h.srv.URL,
-		},
-		dir: identity.NewMockDirectory(),
+	return &session{
+		pub:    &Publisher{Langs: []string{"en"}, dir: identity.NewMockDirectory()},
+		api:    &atclient.APIClient{Client: h.srv.Client(), Host: h.srv.URL, AccountDID: &did},
+		did:    did,
+		pds:    h.srv.URL,
+		scopes: scopes,
+		video:  h.srv.URL,
 	}
+}
+
+// open opens posts on s, as starting to post does.
+func open(t *testing.T, s *session, posts ...decker.Post) *thread {
+	t.Helper()
+	th, err := s.Open(context.Background(), posts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return th.(*thread)
+}
+
+// first is a Delivery for a thread's first post, first tried now.
+func first(key string) decker.Delivery {
+	return decker.Delivery{Key: key, First: time.Now()}
 }
 
 func TestPostThread(t *testing.T) {
 	pollEvery = 0
 	h := newFakeHost(t)
-	p := h.publisher()
 	dir := t.TempDir()
 	clip := filepath.Join(dir, "clip.mp4")
 	if err := os.WriteFile(clip, []byte("mp4"), 0o644); err != nil {
@@ -307,16 +320,14 @@ func TestPostThread(t *testing.T) {
 		{Slide: 1, Text: "Moving", Media: []decker.Media{{Path: clip, Video: true, Alt: "a clip", W: 1280, H: 720}}},
 	}
 	ctx := context.Background()
-	if err := p.Prepare(ctx, posts); err != nil {
-		t.Fatal(err)
-	}
+	th := open(t, h.session(), posts...)
 	var refs []string
-	for _, post := range posts {
-		root, parent := "", ""
+	for i, post := range posts {
+		d := first(fmt.Sprint(i))
 		if len(refs) > 0 {
-			root, parent = refs[0], refs[len(refs)-1]
+			d.Root, d.Parent = refs[0], refs[len(refs)-1]
 		}
-		ref, err := p.Post(ctx, post, root, parent)
+		ref, err := th.Post(ctx, post, d)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -379,52 +390,84 @@ func TestPostThread(t *testing.T) {
 }
 
 // TestPostRetry loses the answer to a post that went through: the retry
-// finds it rather than posting it again, and doesn't upload its media again.
+// finds it rather than posting it again, and doesn't upload its media
+// again. So does a retry from a session and thread of their own, as after
+// a restart, which never saw the first try.
 func TestPostRetry(t *testing.T) {
 	h := newFakeHost(t)
 	h.failPosts = 1
-	p := h.publisher()
 	post := decker.Post{Slide: 0, Text: "once", Media: []decker.Media{{Path: writePNG(t, t.TempDir(), "a.png", 16, false), W: 16, H: 16}}}
 	ctx := context.Background()
-	if err := p.Prepare(ctx, []decker.Post{post}); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := p.Post(ctx, post, "", ""); err == nil {
+	th := open(t, h.session(), post)
+	d := first("t1/a")
+	if _, err := th.Post(ctx, post, d); err == nil {
 		t.Fatal("a failed post: no error")
 	}
-	ref, err := p.Post(ctx, post, "", "")
+	d.Retry = true
+	ref, err := th.Post(ctx, post, d)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(h.records) != 1 || len(h.uploads) != 1 || !strings.HasPrefix(ref, "at://did:plc:me/app.bsky.feed.post/") {
+	if len(h.records) != 1 || len(h.uploads) != 1 || ref != "at://did:plc:me/app.bsky.feed.post/"+recordKey(d).String()+" cid-"+recordKey(d).String() {
 		t.Errorf("%d records, %d uploads, ref %q", len(h.records), len(h.uploads), ref)
 	}
-	other := decker.Post{Slide: 1, Text: "twice"}
-	if _, err := p.Post(ctx, other, "", ""); err != nil {
+	again, err := open(t, h.session(), post).Post(ctx, post, d)
+	if err != nil || again != ref || len(h.records) != 1 || len(h.uploads) != 1 {
+		t.Errorf("after a restart: ref %q, %v; %d records, %d uploads", again, err, len(h.records), len(h.uploads))
+	}
+
+	// The same text, first tried at the same moment, is another post under
+	// another key.
+	other := d
+	other.Key, other.Retry = "t1/b", false
+	if _, err := th.Post(ctx, post, other); err != nil {
 		t.Fatal(err)
 	}
-	if len(h.records) != 2 {
-		t.Errorf("a second post: %d records", len(h.records))
-	}
-	if _, err := p.Post(ctx, other, ref, ref); err != nil {
-		t.Fatal(err)
-	}
-	if len(h.records) != 3 {
-		t.Errorf("the same text in reply: %d records, want a new post", len(h.records))
-	}
-	if err := p.Prepare(ctx, []decker.Post{post}); err != nil {
-		t.Fatal(err)
-	}
-	opened, err := p.Post(ctx, post, "", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(h.records) != 4 || opened == ref {
-		t.Errorf("a new thread's first post: %d records, ref %q, want a new post", len(h.records), opened)
+	if len(h.records) != 2 || recordKey(other) == recordKey(d) {
+		t.Errorf("another key: %d records, record keys %s and %s", len(h.records), recordKey(other), recordKey(d))
 	}
 }
 
-func TestPrepareRejects(t *testing.T) {
+func TestRecordKey(t *testing.T) {
+	at := time.Date(2026, 10, 16, 9, 30, 0, 123456789, time.UTC)
+	d := decker.Delivery{Key: "t1/a", First: at}
+	k := recordKey(d)
+	if _, err := syntax.ParseTID(k.String()); err != nil {
+		t.Fatal(err)
+	}
+	if !k.Time().Equal(at.Truncate(time.Microsecond)) {
+		t.Errorf("record key time %v, want %v", k.Time(), at)
+	}
+	reloaded := d
+	reloaded.First = at.Local()
+	if recordKey(reloaded) != k {
+		t.Error("the same Delivery in another zone made another record key")
+	}
+}
+
+// TestCheckRejects checks what Check turns away, signed in or not, and
+// TestOpenRejects what only a signed-in account can say.
+func TestCheckRejects(t *testing.T) {
+	for name, tc := range map[string]struct {
+		langs []string
+		posts []decker.Post
+		want  string
+	}{
+		"too many langs": {[]string{"en", "de", "fr", "ja"}, nil, "4 Langs"},
+		"long post": {nil, []decker.Post{{Slide: 4, Text: strings.Repeat("x", 301)}},
+			`slide 5's post "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…": 301 characters`},
+		"unknown mention": {nil, []decker.Post{{Slide: -1, Text: "with @nobody.example"}},
+			"the opening post (\"with @nobody.example\") mentions @nobody.example, which doesn't resolve"},
+	} {
+		p := &Publisher{Langs: tc.langs, dir: identity.NewMockDirectory()}
+		err := p.Check(context.Background(), tc.posts)
+		if err == nil || !strings.Contains(err.Error(), tc.want) {
+			t.Errorf("%s: got %v, want %q", name, err, tc.want)
+		}
+	}
+}
+
+func TestOpenRejects(t *testing.T) {
 	h := newFakeHost(t)
 	clip := filepath.Join(t.TempDir(), "clip.mp4")
 	if err := os.WriteFile(clip, []byte("mp4"), 0o644); err != nil {
@@ -432,35 +475,35 @@ func TestPrepareRejects(t *testing.T) {
 	}
 	withClip := []decker.Post{{Slide: 2, Text: "a clip", Media: []decker.Media{{Path: clip, Video: true}}}}
 	for name, tc := range map[string]struct {
-		setup func(*Publisher)
+		setup func(*session)
 		posts []decker.Post
 		want  string
 	}{
-		"too many langs": {func(p *Publisher) { p.Langs = []string{"en", "de", "fr", "ja"} }, nil, "4 Langs"},
-		"long post": {nil, []decker.Post{{Slide: 4, Text: strings.Repeat("x", 301)}},
-			`slide 5's post "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…": 301 characters`},
-		"unknown mention": {nil, []decker.Post{{Slide: -1, Text: "with @nobody.example"}},
-			"the opening post (\"with @nobody.example\") mentions @nobody.example, which doesn't resolve"},
-		"no video scope": {func(p *Publisher) { p.sess.scopes = scopes[:4] }, withClip, "didn't grant \"rpc:com.atproto.repo.uploadBlob?aud=*\""},
-		"unverified": {func(*Publisher) { h.limits = `{"canUpload":false,"message":"verify your email"}` }, withClip,
+		"a Check failure": {nil, []decker.Post{{Slide: 4, Text: strings.Repeat("x", 301)}}, "301 characters"},
+		"no video scope":  {func(s *session) { s.scopes = scopes[:4] }, withClip, "didn't grant \"rpc:com.atproto.repo.uploadBlob?aud=*\""},
+		"unverified": {func(*session) { h.limits = `{"canUpload":false,"message":"verify your email"}` }, withClip,
 			"can't upload video now: verify your email"},
-		"over the limit": {func(*Publisher) { h.limits = `{"canUpload":true,"remainingDailyVideos":0}` }, withClip,
+		"over the limit": {func(*session) { h.limits = `{"canUpload":true,"remainingDailyVideos":0}` }, withClip,
 			"1 clips, but the account can upload 0 more videos today"},
 	} {
-		p := h.publisher()
+		s := h.session()
 		if tc.setup != nil {
-			tc.setup(p)
+			tc.setup(s)
 		}
-		err := p.Prepare(context.Background(), tc.posts)
+		_, err := s.Open(context.Background(), tc.posts)
 		if err == nil || !strings.Contains(err.Error(), tc.want) {
 			t.Errorf("%s: got %v, want %q", name, err, tc.want)
 		}
 	}
+	// Check alone doesn't ask the account, so the clip passes it.
+	if err := h.session().pub.Check(context.Background(), withClip); err != nil {
+		t.Errorf("Check: %v", err)
+	}
 }
 
 func TestPostRejectsAForeignRef(t *testing.T) {
-	p := newFakeHost(t).publisher()
-	_, err := p.Post(context.Background(), decker.Post{Text: "x"}, "dry:1", "dry:1")
+	th := open(t, newFakeHost(t).session())
+	_, err := th.Post(context.Background(), decker.Post{Text: "x"}, decker.Delivery{Root: "dry:1", Parent: "dry:1", Key: "k", First: time.Now()})
 	if err == nil || !strings.Contains(err.Error(), "dry run") {
 		t.Errorf("got %v", err)
 	}
@@ -509,14 +552,10 @@ func TestAwaitCallback(t *testing.T) {
 
 func TestGallery(t *testing.T) {
 	h := newFakeHost(t)
-	p := h.publisher()
 	img := decker.Media{Path: writePNG(t, t.TempDir(), "a.png", 16, false), Alt: "a", W: 16, H: 9}
 	six := decker.Post{Slide: 0, Text: "six", Media: slices.Repeat([]decker.Media{img}, 6)}
 	ctx := context.Background()
-	if err := p.Prepare(ctx, []decker.Post{six}); err != nil {
-		t.Fatal(err)
-	}
-	ref, err := p.Post(ctx, six, "", "")
+	ref, err := open(t, h.session(), six).Post(ctx, six, first("six"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -545,7 +584,7 @@ func TestGallery(t *testing.T) {
 		t.Errorf("%d uploads", len(h.uploads))
 	}
 	eleven := decker.Post{Slide: 0, Text: "eleven", Media: slices.Repeat([]decker.Media{img}, 11)}
-	if err := p.Prepare(ctx, []decker.Post{eleven}); err == nil || !strings.Contains(err.Error(), "11 images, but a post takes up to 10") {
+	if _, err := h.session().Open(ctx, []decker.Post{eleven}); err == nil || !strings.Contains(err.Error(), "11 images, but a post takes up to 10") {
 		t.Errorf("eleven images: %v", err)
 	}
 }

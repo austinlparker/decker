@@ -11,6 +11,7 @@ import (
 	"github.com/austinlparker/decker"
 	"github.com/bluesky-social/indigo/atproto/atcrypto"
 	"github.com/bluesky-social/indigo/atproto/auth/oauth"
+	"github.com/bluesky-social/indigo/atproto/identity"
 	"github.com/zalando/go-keyring"
 )
 
@@ -81,11 +82,13 @@ func TestResume(t *testing.T) {
 	if err := s.SaveSession(context.Background(), keptFor(t, h)); err != nil {
 		t.Fatal(err)
 	}
-	p := &Publisher{video: h.srv.URL, client: h.srv.Client()}
+	p := &Publisher{video: h.srv.URL, client: h.srv.Client(), dir: identity.NewMockDirectory()}
 	ctx := context.Background()
-	if err := p.SignIn(ctx, "@Me.bsky.social", func(u string) { t.Errorf("a kept session sent the speaker to %s", u) }); err != nil {
+	signedIn, err := p.SignIn(ctx, "@Me.bsky.social", func(u string) { t.Errorf("a kept session sent the speaker to %s", u) })
+	if err != nil {
 		t.Fatal(err)
 	}
+	sess := signedIn.(*session)
 	if len(h.refreshes) != 2 {
 		t.Fatalf("%d token requests, want a nonce and a refresh", len(h.refreshes))
 	}
@@ -97,10 +100,10 @@ func TestResume(t *testing.T) {
 	if ks := readKept(t, "me.bsky.social"); ks.Session.RefreshToken != "rt2" {
 		t.Errorf("kept refresh token %q, want the new one", ks.Session.RefreshToken)
 	}
-	if p.sess.api.Host != h.srv.URL || p.sess.did != "did:plc:me" {
-		t.Errorf("api %s, did %s", p.sess.api.Host, p.sess.did)
+	if sess.api.Host != h.srv.URL || sess.Account() != "did:plc:me" {
+		t.Errorf("api %s, account %s", sess.api.Host, sess.Account())
 	}
-	if _, err := p.Post(ctx, decker.Post{Text: "resumed"}, "", ""); err != nil {
+	if _, err := open(t, sess).Post(ctx, decker.Post{Text: "resumed"}, first("resumed")); err != nil {
 		t.Fatal(err)
 	}
 	if len(h.records) != 1 {

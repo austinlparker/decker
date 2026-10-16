@@ -1312,8 +1312,8 @@
                           ╭─ Posting as @me.bsky.social ─────────────────────────────────────╮
                           │                                                                  │
                           │  0 of 2 sent · a new thread                                      │
-                          │  ▲ Posted, but the thread file wasn't saved, so a restart would  │
-                          │  post it again:                                                  │
+                          │  ▲ Posted, but the thread file wasn't saved; the next post       │
+                          │  saves it, or won't go out:                                      │
                           │    rename thread.json.tmp thread.json: permission denied         │
                           │                                                                  │
                           │  Posting carries on: the status line shows how it goes, and P    │

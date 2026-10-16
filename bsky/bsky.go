@@ -11,7 +11,9 @@
 // Then in the presenter view, P opens the posting dialog: type the
 // account and start posting, which signs in through the browser, checks
 // every post in the deck's Notes and posts each slide's as you move on
-// from it. A slide's images or clip upload while it's up, so its posts go
+// from it. A post is created under a record key made from what the
+// thread file keeps of it, so one tried again, after a restart too, is
+// found if it went out rather than posted twice. A slide's images or clip upload while it's up, so its posts go
 // out without waiting on them. The session is kept in the system keychain,
 // so later runs pick it up without the browser, until the account's host
 // ends it: within two weeks of signing in, for a client like this one.
@@ -22,6 +24,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"net/http"
 	"slices"
 	"strings"
@@ -39,36 +42,41 @@ import (
 )
 
 // Publisher posts a talk to Bluesky, from the account the presenter view
-// signs it in to. Its zero value is ready to use, and its methods may be
-// called at once: Upload runs alongside Post and other Uploads.
+// signs it in to. Its zero value is ready to use.
 type Publisher struct {
 	// Langs are the posts' languages, as BCP 47 tags such as "en", up to
 	// three. None leaves them for readers' apps to guess.
 	Langs []string
 
-	client *http.Client // for OAuth; nil keeps indigo's, which refuses private addresses
-	video  string       // the video service; "" is Bluesky's
-
-	// mu guards the rest. It's never held across a call to the network:
-	// a clip can take minutes to upload, and a post shouldn't wait on it
-	// for anything but the clip.
-	mu       sync.Mutex
-	sess     *session // nil until SignIn
-	dir      identity.Directory
-	mentions map[syntax.Handle]syntax.DID // the posts' @mentions, resolved
-	images   map[string]string            // a rendered image too big to post, to the smaller copy that goes instead
-	blobs    map[string]*upload           // each file uploaded or uploading, so no file goes up twice
-	rkeys    map[postID]syntax.TID        // each post's record key, from its first try
+	client *http.Client       // for OAuth; nil keeps indigo's, which refuses private addresses
+	video  string             // the video service; "" is Bluesky's
+	dir    identity.Directory // for @mentions; nil is the network's
 }
 
-// session is a signed-in account, as each call takes it when it starts:
-// SignIn may replace it while the call goes on.
+// session is a signed-in account, from SignIn.
 type session struct {
+	pub    *Publisher
 	api    *atclient.APIClient
 	did    syntax.DID
 	pds    string   // the account's host, the audience of a video upload's token
 	scopes []string // what the account granted
 	video  string   // the video service
+}
+
+// thread posts the posts a session opened it with, and holds what opening
+// worked out for them. Its methods may be called at once: Upload runs
+// alongside Post and other Uploads.
+type thread struct {
+	s        *session
+	langs    []string
+	mentions map[syntax.Handle]syntax.DID // the posts' @mentions, resolved
+	images   map[string]string            // a rendered image too big to post, to the smaller copy that goes instead
+
+	// mu guards blobs. It's never held across a call to the network: a
+	// clip can take minutes to upload, and a post shouldn't wait on it for
+	// anything but the clip.
+	mu    sync.Mutex
+	blobs map[string]*upload // each file uploaded or uploading, so no file goes up twice
 }
 
 // upload is a file's upload, once started: done closes when it ends, with
@@ -80,7 +88,11 @@ type upload struct {
 	err  error
 }
 
-var _ decker.Publisher = (*Publisher)(nil)
+var (
+	_ decker.Publisher = (*Publisher)(nil)
+	_ decker.Session   = (*session)(nil)
+	_ decker.Thread    = (*thread)(nil)
+)
 
 // Bluesky's limits, from the app.bsky lexicons. A gallery's schema takes 20
 // items, but asks authoring clients to hold to 10 for now.
@@ -103,58 +115,66 @@ const (
 // once.
 const parallel = 4
 
-// Prepare checks every post against Bluesky's limits and resolves its
-// @mentions, and, signed in, checks the account may post its clips: that
-// it granted what they need and may upload that much video today. A
-// rehearsal prepares before signing in, and gets every check but those. An
-// image too big to post is re-encoded smaller beside the rendered one.
-func (p *Publisher) Prepare(ctx context.Context, posts []decker.Post) error {
+// checked is what checking a talk's posts finds: what Open needs to post
+// them.
+type checked struct {
+	images     map[string]string
+	mentions   map[syntax.Handle]syntax.DID
+	videos     int
+	videoBytes int64
+}
+
+// Check holds every post to Bluesky's limits and resolves its @mentions.
+// An image too big to post is re-encoded smaller beside the rendered one.
+func (p *Publisher) Check(ctx context.Context, posts []decker.Post) error {
+	_, err := p.check(ctx, posts)
+	return err
+}
+
+func (p *Publisher) check(ctx context.Context, posts []decker.Post) (checked, error) {
+	c := checked{images: map[string]string{}}
 	if len(p.Langs) > maxLangs {
-		return fmt.Errorf("bsky: %d Langs, but a post takes up to %d", len(p.Langs), maxLangs)
+		return c, fmt.Errorf("bsky: %d Langs, but a post takes up to %d", len(p.Langs), maxLangs)
 	}
-	images := map[string]string{}
-	var videos int
-	var videoBytes int64
 	for _, post := range posts {
-		n, size, err := check(post, images)
+		n, size, err := check(post, c.images)
 		if err != nil {
-			return fmt.Errorf("bsky: %s: %w", about(post), err)
+			return c, fmt.Errorf("bsky: %s: %w", about(post), err)
 		}
-		videos, videoBytes = videos+n, videoBytes+size
+		c.videos, c.videoBytes = c.videos+n, c.videoBytes+size
 	}
-	p.mu.Lock()
-	p.images = images
-	// A thread's first post has no root or parent to tell it from the last
-	// thread's, so a new start mustn't take that one for its retry.
-	for id := range p.rkeys {
-		if id.root == "" {
-			delete(p.rkeys, id)
-		}
+	dir := p.dir
+	if dir == nil {
+		dir = identity.DefaultDirectory()
 	}
-	if p.dir == nil {
-		p.dir = identity.DefaultDirectory()
-	}
-	dir, s := p.dir, p.sess
-	p.mu.Unlock()
-	mentions, err := resolveMentions(ctx, dir, posts)
+	var err error
+	c.mentions, err = resolveMentions(ctx, dir, posts)
+	return c, err
+}
+
+// Account is the account's DID: its handle can change.
+func (s *session) Account() string { return s.did.String() }
+
+// Open checks posts as Check does, and that the account may post their
+// clips: that it granted what they need and may upload that much video
+// today.
+func (s *session) Open(ctx context.Context, posts []decker.Post) (decker.Thread, error) {
+	c, err := s.pub.check(ctx, posts)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	p.mu.Lock()
-	p.mentions = mentions
-	p.mu.Unlock()
-	if videos > 0 && s != nil {
+	if c.videos > 0 {
 		for _, scope := range []string{scopeVideoUpload, scopeVideoLimits} {
 			if !slices.Contains(s.scopes, scope) {
-				return fmt.Errorf("bsky: the account didn't grant %q, which posting clips needs; "+
+				return nil, fmt.Errorf("bsky: the account didn't grant %q, which posting clips needs; "+
 					"its host may not support it, so use media=final or builds instead", scope)
 			}
 		}
-		if err := s.checkVideoLimits(ctx, videos, videoBytes); err != nil {
-			return fmt.Errorf("bsky: %w", err)
+		if err := s.checkVideoLimits(ctx, c.videos, c.videoBytes); err != nil {
+			return nil, fmt.Errorf("bsky: %w", err)
 		}
 	}
-	return nil
+	return &thread{s: s, langs: slices.Clone(s.pub.Langs), mentions: c.mentions, images: c.images}, nil
 }
 
 // check holds post to Bluesky's limits, and returns the video it uploads.
@@ -255,87 +275,67 @@ func resolveMentions(ctx context.Context, dir identity.Directory, posts []decker
 	return mentions, nil
 }
 
-// signedIn is the session calls post with.
-func (p *Publisher) signedIn() (*session, error) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	if p.sess == nil {
-		return nil, errors.New("bsky: not signed in")
-	}
-	return p.sess, nil
-}
-
 // Upload uploads post's media ahead of Post, which then finds it uploaded,
 // or waits for it if it's still going. A file that fails to upload is
 // tried again by the next call that needs it.
-func (p *Publisher) Upload(ctx context.Context, post decker.Post) error {
-	s, err := p.signedIn()
-	if err != nil {
-		return err
-	}
-	_, err = p.upload(ctx, s, post.Media)
+func (t *thread) Upload(ctx context.Context, post decker.Post) error {
+	_, err := t.upload(ctx, post.Media)
 	return err
 }
 
-// Post uploads post's media, unless an Upload has, and posts it in reply
-// to parent, in the thread root starts. A post is created with the same
-// record key every time it's tried, so a retry after an answer that never
-// arrived finds the post already there instead of posting it twice.
-func (p *Publisher) Post(ctx context.Context, post decker.Post, root, parent string) (string, error) {
-	s, err := p.signedIn()
-	if err != nil {
-		return "", err
-	}
-	key := newPostID(post, root, parent)
-	p.mu.Lock()
-	if p.rkeys == nil {
-		p.rkeys = map[postID]syntax.TID{}
-	}
-	rkey, retry := p.rkeys[key]
-	if !retry {
-		rkey = syntax.NewTIDNow(0)
-		p.rkeys[key] = rkey
-	}
-	mentions := p.mentions
-	p.mu.Unlock()
-	if retry {
-		if ref, err := s.existing(ctx, rkey); err != nil || ref != "" {
+// Post uploads post's media, unless an Upload has, and posts it where d
+// says. The post's record key is made from d's Key and First, the same on
+// every try, so a retry finds the post if an earlier try made it.
+func (t *thread) Post(ctx context.Context, post decker.Post, d decker.Delivery) (string, error) {
+	rkey := recordKey(d)
+	if d.Retry {
+		if ref, err := t.s.existing(ctx, rkey); err != nil || ref != "" {
 			return ref, err
 		}
 	}
 	rec := &appbsky.FeedPost{
 		Text:      post.Text,
 		CreatedAt: syntax.DatetimeNow().String(),
-		Langs:     p.Langs,
-		Facets:    facets(post.Text, mentions),
+		Langs:     t.langs,
+		Facets:    facets(post.Text, t.mentions),
 	}
-	if root != "" {
-		r, err := strongRef(root)
+	if d.Root != "" {
+		r, err := strongRef(d.Root)
 		if err != nil {
 			return "", err
 		}
-		pr, err := strongRef(parent)
+		pr, err := strongRef(d.Parent)
 		if err != nil {
 			return "", err
 		}
 		rec.Reply = &appbsky.FeedPost_ReplyRef{Root: r, Parent: pr}
 	}
-	if rec.Embed, err = p.embed(ctx, s, post.Media); err != nil {
+	var err error
+	if rec.Embed, err = t.embed(ctx, post.Media); err != nil {
 		return "", err
 	}
-	out, err := comatproto.RepoCreateRecord(ctx, s.api, &comatproto.RepoCreateRecord_Input{
-		Repo:       s.did.String(),
+	out, err := comatproto.RepoCreateRecord(ctx, t.s.api, &comatproto.RepoCreateRecord_Input{
+		Repo:       t.s.did.String(),
 		Collection: "app.bsky.feed.post",
 		Rkey:       new(rkey.String()),
 		Record:     &lexutil.LexiconTypeDecoder{Val: rec},
 	})
 	if blobMissing(err) {
-		p.forget(post.Media)
+		t.forget(post.Media)
 	}
 	if err != nil {
 		return "", fmt.Errorf("bsky: posting: %w", err)
 	}
 	return out.Uri + " " + out.Cid, nil
+}
+
+// recordKey is the record key of the post d delivers: a TID, as a post's
+// key must be, of when it was first tried, and its clock ID from d.Key,
+// which tells it from a post first tried the same microsecond.
+func recordKey(d decker.Delivery) syntax.TID {
+	h := fnv.New32a()
+	h.Write([]byte(d.Key))
+	return syntax.NewTIDFromTime(d.First, uint(h.Sum32()))
 }
 
 // blobMissing reports whether err is the account's host refusing a post
@@ -355,29 +355,12 @@ func blobMissing(err error) bool {
 // forget drops media's blobs, for the next try to upload them again. Only
 // a host that lost them calls for it: uploading a clip again spends the
 // account's daily video allowance.
-func (p *Publisher) forget(media []decker.Media) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+func (t *thread) forget(media []decker.Media) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
 	for _, m := range media {
-		delete(p.blobs, m.Path)
+		delete(t.blobs, m.Path)
 	}
-}
-
-// postID tells posts apart across retries. A retry replies to the same
-// parent, and a post that repeats an earlier one's text replies to a
-// different one.
-type postID struct {
-	root, parent string
-	slide        int
-	text, media  string
-}
-
-func newPostID(post decker.Post, root, parent string) postID {
-	id := postID{root: root, parent: parent, slide: post.Slide, text: post.Text}
-	for _, m := range post.Media {
-		id.media += "\x00" + m.Path
-	}
-	return id
 }
 
 // existing is the ref of the post at rkey, or "" if there is none. It
@@ -418,11 +401,11 @@ func strongRef(ref string) (*comatproto.RepoStrongRef, error) {
 // clip that plays like a GIF. Up to four images go as an images embed,
 // which every client shows; more, as a gallery, which clients from before
 // it was added in mid-2026 don't.
-func (p *Publisher) embed(ctx context.Context, s *session, media []decker.Media) (*appbsky.FeedPost_Embed, error) {
+func (t *thread) embed(ctx context.Context, media []decker.Media) (*appbsky.FeedPost_Embed, error) {
 	if len(media) == 0 {
 		return nil, nil
 	}
-	blobs, err := p.upload(ctx, s, media)
+	blobs, err := t.upload(ctx, media)
 	if err != nil {
 		return nil, err
 	}
@@ -456,13 +439,13 @@ func aspect(m decker.Media) *appbsky.EmbedDefs_AspectRatio {
 // upload uploads media, parallel files at a time, and returns their blobs
 // in order. A file that fails doesn't stop the rest, so a retry finds
 // them uploaded.
-func (p *Publisher) upload(ctx context.Context, s *session, media []decker.Media) ([]*lexutil.LexBlob, error) {
+func (t *thread) upload(ctx context.Context, media []decker.Media) ([]*lexutil.LexBlob, error) {
 	blobs := make([]*lexutil.LexBlob, len(media))
 	var g errgroup.Group
 	g.SetLimit(parallel)
 	for i, m := range media {
 		g.Go(func() (err error) {
-			blobs[i], err = p.blob(ctx, s, m)
+			blobs[i], err = t.blob(ctx, m)
 			return err
 		})
 	}
@@ -471,20 +454,20 @@ func (p *Publisher) upload(ctx context.Context, s *session, media []decker.Media
 
 // blob is m's blob: one uploaded before, or by a call uploading it now,
 // which blob waits for, or else one blob uploads.
-func (p *Publisher) blob(ctx context.Context, s *session, m decker.Media) (*lexutil.LexBlob, error) {
+func (t *thread) blob(ctx context.Context, m decker.Media) (*lexutil.LexBlob, error) {
 	for {
-		p.mu.Lock()
-		u, started := p.blobs[m.Path]
+		t.mu.Lock()
+		u, started := t.blobs[m.Path]
 		if !started {
 			u = &upload{done: make(chan struct{})}
-			if p.blobs == nil {
-				p.blobs = map[string]*upload{}
+			if t.blobs == nil {
+				t.blobs = map[string]*upload{}
 			}
-			p.blobs[m.Path] = u
+			t.blobs[m.Path] = u
 		}
-		p.mu.Unlock()
+		t.mu.Unlock()
 		if !started {
-			return p.send(ctx, s, m, u)
+			return t.send(ctx, m, u)
 		}
 		select {
 		case <-u.done:
@@ -498,28 +481,20 @@ func (p *Publisher) blob(ctx context.Context, s *session, m decker.Media) (*lexu
 }
 
 // send uploads m for u, and ends it.
-func (p *Publisher) send(ctx context.Context, s *session, m decker.Media, u *upload) (*lexutil.LexBlob, error) {
+func (t *thread) send(ctx context.Context, m decker.Media, u *upload) (*lexutil.LexBlob, error) {
 	if m.Video {
-		u.blob, u.err = s.uploadVideo(ctx, m.Path)
+		u.blob, u.err = t.s.uploadVideo(ctx, m.Path)
 	} else {
-		u.blob, u.err = s.uploadImage(ctx, p.fitted(m.Path))
+		u.blob, u.err = t.s.uploadImage(ctx, cmp.Or(t.images[m.Path], m.Path))
 	}
 	if u.err != nil {
 		u.err = fmt.Errorf("bsky: uploading %s: %w", m.Path, u.err)
-		p.mu.Lock()
-		if p.blobs[m.Path] == u {
-			delete(p.blobs, m.Path)
+		t.mu.Lock()
+		if t.blobs[m.Path] == u {
+			delete(t.blobs, m.Path)
 		}
-		p.mu.Unlock()
+		t.mu.Unlock()
 	}
 	close(u.done)
 	return u.blob, u.err
-}
-
-// fitted is the file that goes up for the image at path: the smaller copy
-// Prepare made of it, if it needed one.
-func (p *Publisher) fitted(path string) string {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	return cmp.Or(p.images[path], path)
 }

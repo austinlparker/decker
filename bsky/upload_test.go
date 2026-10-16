@@ -61,7 +61,6 @@ func fileCID(t *testing.T, path string) string {
 func TestUploadThenPost(t *testing.T) {
 	pollEvery = 0
 	h := newFakeHost(t)
-	p := h.publisher()
 	dir := t.TempDir()
 	clip := filepath.Join(dir, "clip.mp4")
 	if err := os.WriteFile(clip, []byte("mp4"), 0o644); err != nil {
@@ -75,12 +74,10 @@ func TestUploadThenPost(t *testing.T) {
 		{Slide: 1, Text: "a clip", Media: []decker.Media{{Path: clip, Video: true, W: 16, H: 9}}},
 	}
 	ctx := context.Background()
-	if err := p.Prepare(ctx, posts); err != nil {
-		t.Fatal(err)
-	}
+	th := open(t, h.session(), posts...)
 	for _, post := range posts {
 		for range 2 {
-			if err := p.Upload(ctx, post); err != nil {
+			if err := th.Upload(ctx, post); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -88,8 +85,8 @@ func TestUploadThenPost(t *testing.T) {
 	if len(h.uploads) != 3 {
 		t.Fatalf("uploads ahead: %q", h.uploads)
 	}
-	for _, post := range posts {
-		if _, err := p.Post(ctx, post, "", ""); err != nil {
+	for i, post := range posts {
+		if _, err := th.Post(ctx, post, first(fmt.Sprint(i))); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -103,16 +100,16 @@ func TestUploadThenPost(t *testing.T) {
 func TestPostDuringUpload(t *testing.T) {
 	h := newFakeHost(t)
 	h.gate, h.arrived = make(chan struct{}), make(chan string, 4)
-	p := h.publisher()
 	post := decker.Post{Slide: 0, Text: "once", Media: []decker.Media{
 		{Path: writePNG(t, t.TempDir(), "a.png", 16, false), W: 16, H: 9}}}
 	ctx := context.Background()
+	th := open(t, h.session(), post)
 	uploaded := make(chan error, 1)
-	go func() { uploaded <- p.Upload(ctx, post) }()
+	go func() { uploaded <- th.Upload(ctx, post) }()
 	<-h.arrived
 	posted := make(chan error, 1)
 	go func() {
-		_, err := p.Post(ctx, post, "", "")
+		_, err := th.Post(ctx, post, first("once"))
 		posted <- err
 	}()
 	close(h.gate)
@@ -137,20 +134,20 @@ func TestPostWaitsForUpload(t *testing.T) {
 	if err := json.Unmarshal([]byte(blobJSON(cidOf([]byte("theirs")), "image/png")), &theirs); err != nil {
 		t.Fatal(err)
 	}
-	start := func(ctx context.Context, p *Publisher) (*upload, chan string, chan error) {
+	start := func(ctx context.Context, th *thread) (*upload, chan string, chan error) {
 		u := &upload{done: make(chan struct{})}
-		p.blobs = map[string]*upload{path: u}
+		th.blobs = map[string]*upload{path: u}
 		refs, errs := make(chan string, 1), make(chan error, 1)
 		go func() {
-			ref, err := p.Post(ctx, post, "", "")
+			ref, err := th.Post(ctx, post, first("waits"))
 			refs <- ref
 			errs <- err
 		}()
 		return u, refs, errs
 	}
 
-	p := h.publisher()
-	u, refs, errs := start(context.Background(), p)
+	th := open(t, h.session(), post)
+	u, refs, errs := start(context.Background(), th)
 	u.blob = &theirs
 	close(u.done)
 	ref := <-refs
@@ -163,11 +160,11 @@ func TestPostWaitsForUpload(t *testing.T) {
 
 	// One that fails is gone from blobs as it ends: the post uploads the
 	// file itself.
-	p = h.publisher()
-	u, refs, errs = start(context.Background(), p)
-	p.mu.Lock()
-	delete(p.blobs, path)
-	p.mu.Unlock()
+	th = open(t, h.session(), post)
+	u, refs, errs = start(context.Background(), th)
+	th.mu.Lock()
+	delete(th.blobs, path)
+	th.mu.Unlock()
 	u.err = errors.New("lost")
 	close(u.done)
 	ref = <-refs
@@ -180,7 +177,7 @@ func TestPostWaitsForUpload(t *testing.T) {
 
 	// One that never ends holds the post only until its context does.
 	ctx, cancel := context.WithCancel(context.Background())
-	_, _, errs = start(ctx, h.publisher())
+	_, _, errs = start(ctx, open(t, h.session(), post))
 	cancel()
 	if err := <-errs; !errors.Is(err, context.Canceled) {
 		t.Errorf("cancelled: %v", err)
@@ -191,14 +188,14 @@ func TestPostWaitsForUpload(t *testing.T) {
 func TestUploadRetry(t *testing.T) {
 	h := newFakeHost(t)
 	h.failUploads = 1
-	p := h.publisher()
 	post := decker.Post{Slide: 0, Text: "retried", Media: []decker.Media{
 		{Path: writePNG(t, t.TempDir(), "a.png", 16, false), W: 16, H: 9}}}
 	ctx := context.Background()
-	if err := p.Upload(ctx, post); err == nil || !strings.Contains(err.Error(), "a.png") {
+	th := open(t, h.session(), post)
+	if err := th.Upload(ctx, post); err == nil || !strings.Contains(err.Error(), "a.png") {
 		t.Fatalf("a failed upload: %v", err)
 	}
-	if _, err := p.Post(ctx, post, "", ""); err != nil {
+	if _, err := th.Post(ctx, post, first("retried")); err != nil {
 		t.Fatal(err)
 	}
 	if len(h.uploads) != 2 || len(h.records) != 1 {
@@ -211,7 +208,6 @@ func TestUploadRetry(t *testing.T) {
 func TestGalleryUpload(t *testing.T) {
 	h := newFakeHost(t)
 	h.gate, h.arrived = make(chan struct{}), make(chan string, maxGallery)
-	p := h.publisher()
 	dir := t.TempDir()
 	var media []decker.Media
 	var want []string
@@ -222,12 +218,10 @@ func TestGalleryUpload(t *testing.T) {
 	}
 	post := decker.Post{Slide: 0, Text: "six", Media: media}
 	ctx := context.Background()
-	if err := p.Prepare(ctx, []decker.Post{post}); err != nil {
-		t.Fatal(err)
-	}
+	th := open(t, h.session(), post)
 	refs, errs := make(chan string, 1), make(chan error, 1)
 	go func() {
-		ref, err := p.Post(ctx, post, "", "")
+		ref, err := th.Post(ctx, post, first("six"))
 		refs <- ref
 		errs <- err
 	}()
@@ -250,14 +244,16 @@ func TestGalleryUpload(t *testing.T) {
 func TestBlobMissing(t *testing.T) {
 	h := newFakeHost(t)
 	h.missingBlobs = 1
-	p := h.publisher()
 	post := decker.Post{Slide: 0, Text: "lost", Media: []decker.Media{
 		{Path: writePNG(t, t.TempDir(), "a.png", 16, false), W: 16, H: 9}}}
 	ctx := context.Background()
-	if _, err := p.Post(ctx, post, "", ""); err == nil || !strings.Contains(err.Error(), "BlobNotFound") {
+	th := open(t, h.session(), post)
+	d := first("lost")
+	if _, err := th.Post(ctx, post, d); err == nil || !strings.Contains(err.Error(), "BlobNotFound") {
 		t.Fatalf("a missing blob: %v", err)
 	}
-	if _, err := p.Post(ctx, post, "", ""); err != nil {
+	d.Retry = true
+	if _, err := th.Post(ctx, post, d); err != nil {
 		t.Fatal(err)
 	}
 	if len(h.uploads) != 2 || len(h.records) != 1 {

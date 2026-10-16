@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/austinlparker/decker"
 	"github.com/bluesky-social/indigo/atproto/auth/oauth"
 	"github.com/bluesky-social/indigo/atproto/syntax"
 	"github.com/zalando/go-keyring"
@@ -64,8 +65,8 @@ func newKeychainStore(account string) *keychainStore {
 }
 
 // SaveSession keeps d in memory and the keychain. A keychain that can't be
-// written isn't an error here: the session works for this run, which
-// Prepare warns signs in again next time.
+// written isn't an error here: the session works for this run, and
+// SignIn warns the next run signs in again.
 func (s *keychainStore) SaveSession(ctx context.Context, d oauth.ClientSessionData) error {
 	if err := s.MemStore.SaveSession(ctx, d); err != nil {
 		return err
@@ -89,13 +90,10 @@ func (s *keychainStore) SaveSession(ctx context.Context, d oauth.ClientSessionDa
 // for it, refreshed, or else has the speaker approve a new one at the page
 // it gives visit. A session that can't be kept in the keychain still works
 // for this run; the log says the next run signs in again.
-func (p *Publisher) SignIn(ctx context.Context, account string, visit func(url string)) error {
+func (p *Publisher) SignIn(ctx context.Context, account string, visit func(url string)) (decker.Session, error) {
 	account = strings.TrimPrefix(strings.TrimSpace(account), "@")
-	p.mu.Lock()
-	p.sess, p.blobs, p.rkeys = nil, nil, nil
-	p.mu.Unlock()
 	if account == "" {
-		return errors.New("bsky: no account to sign in to")
+		return nil, errors.New("bsky: no account to sign in to")
 	}
 	sess, store, err := p.resume(ctx, account)
 	if err != nil && !errors.Is(err, keyring.ErrNotFound) {
@@ -103,17 +101,14 @@ func (p *Publisher) SignIn(ctx context.Context, account string, visit func(url s
 	}
 	if err != nil {
 		if sess, store, err = p.signIn(ctx, account, visit); err != nil {
-			return fmt.Errorf("bsky: signing in as %s: %w", account, err)
+			return nil, fmt.Errorf("bsky: signing in as %s: %w", account, err)
 		}
 	}
-	p.mu.Lock()
-	p.sess = sess
-	p.mu.Unlock()
 	if store.err != nil {
 		slog.Warn("bsky: couldn't keep the session in the system keychain; the next run signs in again",
 			"account", account, "err", store.err)
 	}
-	return nil
+	return sess, nil
 }
 
 // resume picks up the session kept for account and refreshes it, which
@@ -145,9 +140,10 @@ func (p *Publisher) resume(ctx context.Context, account string) (*session, *keyc
 	return p.adopt(sess), store, nil
 }
 
-// adopt is the session Post posts with, from sess.
+// adopt is the session that posts as sess's account.
 func (p *Publisher) adopt(sess *oauth.ClientSession) *session {
 	return &session{
+		pub:    p,
 		api:    sess.APIClient(),
 		did:    sess.Data.AccountDID,
 		pds:    sess.Data.HostURL,

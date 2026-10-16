@@ -273,7 +273,7 @@ func (p presenter) activate(c ctl) (presenter, tea.Cmd) {
 		if account == ps.account {
 			return p, ps.begin(startLive)
 		}
-		ps.account, ps.signedIn = account, ""
+		ps.account, ps.signedIn, ps.session = account, "", nil
 		root := ps.root
 		save := func() tea.Msg { return accountSavedMsg{saveAccount(root, account)} }
 		return p, tea.Batch(ps.begin(startLive), save)
@@ -311,7 +311,7 @@ func (p presenter) dialogMessage() []msgLine {
 		}
 	case threadUnsaved:
 		return []msgLine{
-			{text: "▲ Posted, but the thread file wasn't saved, so a restart would post it again:", tone: toneWarn},
+			{text: "▲ Posted, but the thread file wasn't saved; the next post saves it, or won't go out:", tone: toneWarn},
 			{text: pb.saveErr, detail: true},
 		}
 	case threadPaused:

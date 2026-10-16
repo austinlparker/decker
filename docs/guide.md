@@ -325,7 +325,8 @@ pick a button:
   closes and each slide posts as you move on from it.
 - **Rehearse** does the same without signing in, writing each post to a
   file instead of sending it, and shows a problem posting for real would
-  stop on as a warning. **Stop rehearsing** goes back to setting up.
+  stop on as a warning. Checks only the account can answer, such as its
+  daily video allowance, wait for posting for real. **Stop rehearsing** goes back to setting up.
 
 `tab` and the arrow keys move between the dialog's fields and buttons,
 `enter` or `space` presses a button or picks an option, and `esc` closes
@@ -358,8 +359,15 @@ Each thread keeps its record of what went out in a directory of its own,
 under `decker/talks/NAME/threads` in your config directory
 (`~/Library/Application Support` on macOS, `~/.config` on Linux), and the
 rehearsal writes `decker/talks/NAME/rehearsal/dry-run.md`. Each post is
-recorded as it goes out, so a presenter view that restarts can carry on the
-same thread without posting anything twice. The posts' media is rendered
+recorded as pending before it goes out and as sent once it has, so a
+presenter view that restarts can carry on the same thread without posting
+anything twice: a post that was going out is tried again first, and the
+publisher finds it if it went (the `bsky` publisher makes each post's
+record key from what the thread file keeps of it). The record names posts
+by what they say and show and their slide's title, not by position, so
+carrying on after moving slides or posts doesn't skip or repeat any, and a
+post edited since counts as a new one. A thread is carried on only as the
+account that posted it. The posts' media is rendered
 into `decker/talks/NAME/media` once a run, so starting after a rehearsal
 doesn't render it again, and cleared by the next run. What the publisher logs goes to
 `decker/talks/NAME/posting.log`, not the screen.
@@ -694,7 +702,7 @@ and on a frame that comes out different when drawn again: a View must
 depend only on its `Ctx`.
 `Review` fails on every error `review` would report (see below), so a slide
 that starts clipping fails the build. `Posts` renders every post in the
-notes and has the deck's `Publisher` check them, as starting to post does,
+notes and has the deck's `Publisher` check them, as a rehearsal does,
 without signing in. `Golden` keeps an image of each slide in the
 directory, every build appearing, entered and settled, and settled again
 at 240×67 and 80×24, where layout is tightest, and fails when a slide no
