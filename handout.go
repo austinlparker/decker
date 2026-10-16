@@ -70,14 +70,15 @@ func handoutMarkdown(d *Deck, thumbs []string) string {
 	}
 	var cited []*citation
 	byKey := map[Source]*citation{}
+	notes := d.slideNotes()
 	for i, s := range d.Slides {
 		fmt.Fprintf(&b, "\n## %d. %s\n\n*", i+1, mdText(s.Title))
 		if sec := sectionAt(d.Slides, i); sec != "" {
 			b.WriteString(mdText(sec) + " · ")
 		}
 		fmt.Fprintf(&b, "%s*\n\n![Slide %d](%s)\n", plural(s.steps(), "build"), i+1, thumbs[i])
-		if notes := strings.TrimSpace(s.Notes); notes != "" {
-			b.WriteString("\n" + notes + "\n")
+		if notes[i] != "" {
+			b.WriteString("\n" + notes[i] + "\n")
 		}
 		if len(s.Sources) > 0 {
 			b.WriteString("\nSources:\n\n")

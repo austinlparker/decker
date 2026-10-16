@@ -68,7 +68,6 @@ func waterfallSlide() decker.Slide {
 	trace := checkoutTrace
 	return decker.Slide{Title: "Trace waterfall", Section: "Waterfall", Transition: decker.TransitionPush,
 		Steps: len(trace) + 1, // a build per span, then one for the critical path
-		Notes: "One span per click. The last click dims everything off the critical path: the payment call is where the time goes.",
 		View: func(c decker.Ctx, sc *decker.Scene) {
 			area := heading(c, sc.Px, "Trace waterfall")
 			lay := layoutWaterfall(c, area, trace, false)

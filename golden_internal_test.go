@@ -21,6 +21,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"hash"
 	"math"
@@ -28,6 +29,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -152,7 +154,7 @@ var goldenBase = time.Date(2025, 1, 2, 3, 4, 5, 0, time.UTC)
 // text attributes, a Lip Gloss box and a gradient: what transitions' seams
 // and the cell writer have to get right.
 func wideSlide() Slide {
-	return Slide{Title: "Wide", Notes: "wide characters\nand a second line", Steps: 2, Transition: TransitionWipe,
+	return Slide{Title: "Wide", Steps: 2, Transition: TransitionWipe,
 		View: func(c Ctx, sc *Scene) {
 			sc.Px.VGradient(0, sc.Px.H-1, c.Theme.Panel, c.Theme.Accent2.Scale(0.4))
 			for i := 0; i < 9 && i < c.H; i++ {
@@ -559,8 +561,7 @@ func goldenModel(t *testing.T, g *goldenEntries) {
 		}
 		// Long notes get cut off.
 		long := *d
-		long.Slides = append([]Slide(nil), d.Slides...)
-		long.Slides[0].Notes = strings.Repeat("a long line of speaker notes that wraps\n", 30)
+		long.Notes = "## Block letters\n" + strings.Repeat("a long line of speaker notes that wraps\n", 30)
 		m = testModel(&long, 0, 0, size[0], size[1], Settled, nil)
 		m.showNotes = true
 		g.addString(key(m, "plain", "long-notes"), view(m))
@@ -862,7 +863,7 @@ func presenterFor(d *Deck, w, h int, linked bool, slide, step int, previews map[
 	p := newPresenter(d, "/tmp/x.sock", 30*time.Minute)
 	p.previews, p.now, p.w, p.h, p.linked = previews, goldenBase, w, h, linked
 	if slide >= 0 {
-		p.st = linkState{Slide: slide, Step: step, Outline: outline, Notes: slides[slide].Notes, W: 682, H: 171}
+		p.st = linkState{Slide: slide, Step: step, Outline: outline, Notes: d.slideNotes()[slide], W: 682, H: 171}
 	}
 	return p
 }
@@ -870,7 +871,8 @@ func presenterFor(d *Deck, w, h int, linked bool, slide, step int, previews map[
 func goldenPresenter(t *testing.T, g *goldenEntries) {
 	d := testDeck()
 	d.Slides = append(d.Slides, wideSlide()) // 6 slides; the last has notes and steps
-	previews := map[previewKey]string{}      // shared: a preview doesn't depend on who asks
+	d.Notes += "\n## Character layer\n\n## Last\n\n## Wide\n\nwide characters\nand a second line\n"
+	previews := map[previewKey]string{} // shared: a preview doesn't depend on who asks
 	timers := []struct {
 		name    string
 		running bool
@@ -950,6 +952,12 @@ func goldenPresenter(t *testing.T, g *goldenEntries) {
 		p = presenterFor(d, w, h, true, 0, 0, previews)
 		p.st.Notes = strings.Repeat("a long line of speaker notes, which wraps over several lines\n", 20)
 		g.addString(key("long-notes"), p.View().Content)
+		p = presenterFor(d, w, h, true, 1, 1, previews)
+		p.dialog = dialogKeys
+		g.addString(key("keys"), p.View().Content)
+		for _, ps := range postingStates(d, w, h, previews) {
+			g.addString(key("posting/"+ps.name), ps.p.View().Content)
+		}
 	}
 	// Messages through the presenter's Update: size, tick, report, keys.
 	var pm tea.Model = presenterFor(d, 0, 0, false, -1, 0, previews)
@@ -987,7 +995,7 @@ func goldenPresenter(t *testing.T, g *goldenEntries) {
 	}
 	g.addString("presenter/pace/degenerate", fmt.Sprint(pace(nil, 0, 0, time.Minute, time.Minute), pace(outline, 0, 0, time.Minute, 0)))
 	g.addString("presenter/clock", clock(0), clock(59*time.Second), clock(61*time.Second), clock(-90*time.Second), clock(3601*time.Second), clock(1499*time.Millisecond), clock(1500*time.Millisecond))
-	g.addString("presenter/text", spread("left", "right", 20), spread("left", "right", 8), cutAt("abcdefghij", 3, "X"), indent("a\nb", "  "), truncate("abcdef", 3), truncateLeft("abcdef", 3), truncate("abc", -1))
+	g.addString("presenter/text", spread("left", "right", 20), spread("left", "right", 8), indent("a\nb", "  "), truncate("abcdef", 3), truncate("abc", -1))
 	p := presenterFor(d, 100, 30, true, 1, 1, previews)
 	g.addString("presenter/placeholder", p.placeholder(20, 5, "message"))
 	g.addString("presenter/frame", frame("a\nb", testTheme.Accent))
@@ -1049,4 +1057,105 @@ func goldenMisc(t *testing.T, g *goldenEntries) {
 	g.addString("misc/chrome", testModel(testDeck(), 2, 1, 100, 30, 0, &devState{}).chrome(),
 		testModel(testDeck(), 1, 2, 60, 30, 0, &devState{}).chrome())
 	g.addString("misc/defaultSocket", filepath.Base(defaultSocket("name")))
+}
+
+type namedPresenter struct {
+	name string
+	p    presenter
+}
+
+// postingStates are the presenter view, for d with posts added to its
+// notes, with posting in each of its states, panel open and closed. The
+// files would live under a root that doesn't exist, so none is read or
+// written, and times are goldenBase's.
+func postingStates(d *Deck, w, h int, previews map[previewKey]string) []namedPresenter {
+	dp := *d
+	dp.Publisher = &fakePublisher{}
+	dp.Notes = "```post media=none\nopening\n```\n" +
+		strings.Replace(d.Notes, "## Bullets\n", "## Bullets\n\n```post media=builds\nthe builds\n```\n", 1)
+	const account = "me.bsky.social"
+	var out []namedPresenter
+	at := func(name string, slide int, set func(p *presenter, ps *posting)) {
+		p := presenterFor(&dp, w, h, slide >= 0, slide, 1, previews)
+		p.running, p.since = true, goldenBase.Add(-7*time.Minute)
+		p.post = newPosting(&dp, "/nonexistent/decker", &sync.Mutex{})
+		set(&p, p.post)
+		out = append(out, namedPresenter{name, p})
+	}
+	open := func(p *presenter, ps *posting) *posting { p.dialog = dialogPosting; return ps }
+	live := func(ps *posting, dry bool) *publishing {
+		pb := &publishing{pub: dp.Publisher, dry: dry, on: true, thread: &thread{}, titles: dp.titles(),
+			posts: map[int][]Post{-1: {{Slide: -1}}, 1: {{Slide: 1}}}}
+		ps.pub, ps.account, ps.signedIn = pb, account, account
+		return pb
+	}
+	at("not-set-up", 1, func(*presenter, *posting) {})
+	at("dialog", 1, func(p *presenter, ps *posting) { open(p, ps) })
+	at("typing", 1, func(p *presenter, ps *posting) { open(p, ps).input, ps.focus = "me.bs", ctlAccount })
+	at("carry-on", 1, func(p *presenter, ps *posting) {
+		open(p, ps).account, ps.signedIn, ps.input, ps.cont = account, account, account, true
+		ps.last = lastThread{dir: "/nonexistent/decker/talks/deck-test/threads/x", posted: 5, at: goldenBase.Add(-24 * time.Hour)}
+	})
+	at("signing-in", 1, func(p *presenter, ps *posting) {
+		open(p, ps).account = account
+		ps.start = &start{kind: startLive, job: jobSignIn}
+		ps.start.visit = "https://bsky.social/oauth/authorize?client_id=http%3A%2F%2Flocalhost%3Fredirect_uri%3Dhttp%253A%252F%252F127.0.0.1%252Fcallback&request_uri=urn%3Aietf%3Aparams%3Aoauth%3Arequest_uri%3Areq-abc123"
+	})
+	at("rendering", 1, func(p *presenter, ps *posting) {
+		open(p, ps).account, ps.signedIn = account, account
+		ps.start = &start{kind: startLive, job: jobRender, slide: 1}
+	})
+	at("checking", 1, func(p *presenter, ps *posting) {
+		open(p, ps).account, ps.signedIn = account, account
+		ps.start = &start{kind: startRehearsal, job: jobCheck}
+		ps.rendered[1] = []Post{{}}
+	})
+	at("setup-failed", 1, func(p *presenter, ps *posting) {
+		ps.account = account
+		ps.fail("Couldn't sign in as "+account+":", errors.New("resolving the handle: no such host"))
+	})
+	at("setup-failed-dialog", 1, func(p *presenter, ps *posting) {
+		open(p, ps).account = account
+		ps.fail("Couldn't sign in as "+account+":", errors.New("resolving the handle: no such host"))
+	})
+	at("live", 1, func(p *presenter, ps *posting) { live(ps, false) })
+	at("live-dialog", 1, func(p *presenter, ps *posting) { live(open(p, ps), false) })
+	at("sent", 2, func(p *presenter, ps *posting) {
+		pb := live(ps, false)
+		pb.thread.Posts = []threadPost{{Slide: -1}, {Slide: 1}}
+		pb.slide = 2
+	})
+	retrying := func(p *presenter, ps *posting) {
+		pb := live(ps, false)
+		pb.queue, pb.fails = []queuedPost{{-1, 0}, {1, 0}}, 3
+		pb.err = "bsky: posting: API request failed (HTTP 502): UpstreamFailure"
+		pb.retryAt = goldenBase.Add(20 * time.Second)
+	}
+	at("retrying", 1, retrying)
+	at("retrying-dialog", 1, func(p *presenter, ps *posting) { retrying(p, open(p, ps)) })
+	at("paused", 1, func(p *presenter, ps *posting) {
+		pb := live(ps, false)
+		pb.on, pb.queue = false, []queuedPost{{-1, 0}, {1, 0}}
+	})
+	at("save-error", 1, func(p *presenter, ps *posting) {
+		live(ps, false).saveErr = "rename thread.json.tmp thread.json: permission denied"
+	})
+	at("save-error-dialog", 1, func(p *presenter, ps *posting) {
+		live(open(p, ps), false).saveErr = "rename thread.json.tmp thread.json: permission denied"
+	})
+	at("rehearsing", 1, func(p *presenter, ps *posting) {
+		live(open(p, ps), true).file = "/nonexistent/decker/talks/deck-test/rehearsal/dry-run.md"
+		ps.account, ps.signedIn = "", ""
+		ps.say(msgLine{text: "▲ Posting for real would stop here:", tone: toneWarn},
+			msgLine{text: "bsky: slide 2's post \"the builds\": 11 images, but a post takes up to 10", detail: true},
+			msgLine{text: "The rehearsal goes on regardless."})
+	})
+	at("rehearsal-paused", 1, func(p *presenter, ps *posting) { live(ps, true).on = false })
+	at("quit-armed", 1, func(p *presenter, ps *posting) {
+		live(ps, false).queue = []queuedPost{{1, 0}}
+		p.quitArmed = goldenBase.Add(3 * time.Second)
+	})
+	at("waiting-dialog", -1, func(p *presenter, ps *posting) { open(p, ps) })
+	at("keys", 1, func(p *presenter, _ *posting) { p.dialog = dialogKeys })
+	return out
 }

@@ -100,7 +100,7 @@ func TestPresenterLaunchLifecycle(t *testing.T) {
 	}
 	next, _ = p.Update(presentationWaitMsg(p.launchAttempt))
 	p = next.(presenter)
-	if p.launching || !strings.Contains(p.launchErr, "not connected") {
+	if p.launching || !strings.Contains(p.launchErr, "hasn't connected") {
 		t.Fatal("connection timeout did not allow retry")
 	}
 	next, cmd = p.handleKey("p")

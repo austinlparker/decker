@@ -50,7 +50,7 @@ type cli struct {
 // parseArgs parses args, the command line after the program name, for d. It
 // returns no parser if the deck itself is invalid.
 func parseArgs(d *Deck, args []string) (*kong.Kong, *kong.Context, error) {
-	if err := d.check(); err != nil {
+	if err := d.Check(); err != nil {
 		return nil, nil, err
 	}
 	k, err := kong.New(&cli{},

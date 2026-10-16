@@ -24,12 +24,27 @@ jobs:
           fi
       - name: go mod tidy
         run: |
-          go mod tidy
-          git diff --exit-code go.mod go.sum
+          for m in . bsky examples/showcase; do (cd $m && go mod tidy); done
+          git diff --exit-code -- ':(glob)**/go.mod' ':(glob)**/go.sum'
       - run: go vet ./...
       # The goldens hash every pixel, so this also catches any change to
       # rendered output.
       - run: go test ./...
+      # bsky and the showcase are modules of their own, which ./... from the
+      # root leaves out.
+      - name: bsky
+        working-directory: bsky
+        run: |
+          go vet ./...
+          go test ./...
+      # Its posts include a clip, which needs ffmpeg; without it
+      # decktest.Posts would skip them all.
+      - name: showcase
+        working-directory: examples/showcase
+        run: |
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+          go vet ./...
+          go test ./...
       - name: goreleaser check
         uses: goreleaser/goreleaser-action@v7
         with:

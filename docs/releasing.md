@@ -29,7 +29,19 @@ The selection script checks `*.go`, `go.mod`, `go.sum` and `fonts/**`,
 excluding `*_test.go` and `testdata/**`. Go comment edits and new example
 programs therefore count toward a release even when the exported API is
 unchanged; they normally produce a patch bump. Markdown under `docs/` alone
-does not trigger one, while font documentation under `fonts/` does.
+does not trigger one, while font documentation under `fonts/` does. Files
+in a module of their own (`bsky/`, `examples/showcase/`) don't count
+toward the engine's releases.
+
+The `bsky` module releases on its own, as `bsky/vX.Y.Z` tags with a
+GitHub Release each (not marked latest), by the same rules applied to the
+files under `bsky/`; a change there doesn't release the engine, nor the
+reverse. Its `go.mod` replaces the engine with `../`, which those who
+import bsky don't see: they get the engine version it requires. So before
+tagging, the workflow builds bsky without the replacement, against that
+version from the proxy, and stops if the version isn't released or lacks
+what bsky uses. A manual run's version applies to the engine; bsky works
+its own out.
 
 Each release ends by asking the Go module proxy for the new version, so
 `go get github.com/austinlparker/decker@latest` can discover it sooner. This warms the module proxy; pkg.go.dev indexing

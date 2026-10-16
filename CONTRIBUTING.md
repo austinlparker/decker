@@ -20,11 +20,17 @@ Run these checks from the repository root:
 
 ```sh
 gofmt -l .
-go mod tidy
-git diff --exit-code go.mod go.sum
-go vet ./...
-go test ./...
+for m in . bsky examples/showcase; do (cd $m && go mod tidy && go vet ./... && go test ./...); done
+git diff --exit-code -- ':(glob)**/go.mod' ':(glob)**/go.sum'
 ```
+
+`bsky/` and `examples/showcase/` are modules of their own, so `./...` from
+the root leaves them out. The showcase posts a clip, so its tests need
+ffmpeg. Its
+`go.mod` replaces the engine with `../`, so a change to both is tested
+together; when bsky starts using engine API that isn't released yet, raise
+the engine version it requires to the one that release will be (the next
+section's rules say which), or bsky's next release fails its check.
 
 `gofmt -l .` should print nothing. `go test -short ./...` skips the slow
 golden tests and is useful during edits, but run the full suite before a PR.

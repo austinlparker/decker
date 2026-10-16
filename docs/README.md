@@ -27,9 +27,20 @@ talk to copy, with an `AGENTS.md` for its repository. The
 with a trace waterfall, to copy and change.
 Both review clean with `go run ./examples/starter review review`.
 
-The README's example clips come from the [showcase example](../examples/showcase/main.go).
-Each clip is a range of its slides, exported with `video` and converted to
-a GIF (needs ffmpeg with libx264):
+The [showcase](../examples/showcase) is decker's example talk: what a
+talk can draw, with speaker notes, and posts that make a Bluesky thread as
+it's given, every kind of post a talk can make, to try [live
+posting](guide.md#presenting-posting-the-talk-live) end to end. It's a
+module of its own, so the engine doesn't depend on `bsky`; run it from its
+directory:
+
+```sh
+cd examples/showcase && go run . present   # then P for the posting dialog
+```
+
+The README's example clips are its first eight slides. Each clip is a
+range of them, exported with `video` and converted to a GIF (needs ffmpeg
+with libx264):
 
 ```sh
 sh examples/showcase/record.sh

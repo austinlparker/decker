@@ -15,9 +15,6 @@ type Slide struct {
 	// following slide. Zero means 1.
 	Steps int
 
-	// Notes are speaker notes, shown in the presenter view and with the n key.
-	Notes string
-
 	// Sources are the works this slide cites. The handout lists them under the
 	// slide, and gathers every source once at the end.
 	Sources []Source

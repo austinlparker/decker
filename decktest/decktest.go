@@ -6,6 +6,7 @@
 //
 //	func TestSlides(t *testing.T)      { decktest.Slides(t, talk()) }
 //	func TestReview(t *testing.T)      { decktest.Review(t, talk()) }
+//	func TestPosts(t *testing.T)       { decktest.Posts(t, talk()) }
 //	func TestGolden(t *testing.T)      { decktest.Golden(t, talk(), "testdata/golden.txt") }
 //	func BenchmarkFrames(b *testing.B) { decktest.Frames(b, talk()) }
 package decktest
@@ -14,8 +15,10 @@ import (
 	"bufio"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -23,12 +26,16 @@ import (
 	"github.com/austinlparker/decker"
 )
 
-// Slides renders every slide at every step, at three sizes and four moments
-// (appearing, mid-entrance, entered, settled), as the deck draws them
-// (Deck.Draw), and fails on the first panic: in a View, a placed element or
-// the theme's overlay.
+// Slides checks the deck as Main does (Deck.Check), then renders every
+// slide at every step, at three sizes and four moments (appearing,
+// mid-entrance, entered, settled), as the deck draws them (Deck.Draw), and
+// fails on the first panic: in a View, a placed element or the theme's
+// overlay.
 func Slides(t *testing.T, d decker.Deck) {
 	t.Helper()
+	if err := d.Check(); err != nil {
+		t.Fatal(err)
+	}
 	for i := range d.Slides {
 		for _, size := range [][2]int{{80, 24}, {120, 36}, {200, 50}} {
 			for step := 0; step < d.Steps(i); step++ {
@@ -56,6 +63,31 @@ func Review(t *testing.T, d decker.Deck) {
 			t.Log(is)
 		}
 	}
+}
+
+// Posts renders every post the deck's notes make (Deck.Posts) and has the
+// deck's Publisher check them (Publisher.Prepare), as starting to post
+// does, so a post its service would turn away fails the test instead of
+// the talk. Nothing signs in or posts, so a check that needs the account,
+// like how many clips it may still upload today, waits for the talk. It
+// returns the posts, their media in a directory the test removes, for a
+// talk's own checks. Posts skips if a post is a clip and ffmpeg isn't
+// installed.
+func Posts(t *testing.T, d decker.Deck) []decker.Post {
+	t.Helper()
+	posts, err := d.Posts(t.TempDir())
+	if errors.Is(err, exec.ErrNotFound) {
+		t.Skip(err)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.Publisher != nil {
+		if err := d.Publisher.Prepare(t.Context(), posts); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return posts
 }
 
 // Golden compares every frame with the hashes recorded in path: one per slide

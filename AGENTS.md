@@ -58,12 +58,14 @@ rather than the engine? Read `docs/authoring.md` and start from
 ## Commands
 
 ```sh
-go test ./...                       # everything, including goldens (a few seconds)
+go test ./...                       # the engine, including goldens (a few seconds)
+(cd bsky && go test ./...)          # bsky, a module of its own: ./... above leaves it out
+(cd examples/showcase && go test ./...)   # the example talk, a module too; posts a clip, so needs ffmpeg
 go test -short ./...                # skips the slow golden tests
 go vet ./...
 gofmt -l .                          # must print nothing
 go test -run '^$' -bench Live       # the engine's share of a live frame
-go run ./examples/showcase review /tmp/review   # what a review reports, on a real deck
+(cd examples/showcase && go run . review /tmp/review)   # what a review reports, on a real deck
 UPDATE_GOLDEN=1 go test ./...       # re-record goldens: only for intended output changes
 ```
 

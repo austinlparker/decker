@@ -1,10 +1,13 @@
 package decker
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"strings"
+	"sync"
 	"time"
 )
 
@@ -12,8 +15,10 @@ type videoOptions struct {
 	path          string
 	width, height int // in pixels; height must be even
 	fps           int
-	hold          float64 // seconds each build step stays, unless the slide sets Hold
-	first, last   int     // slides to include, 0-based
+	hold          float64     // seconds each build step stays, unless the slide sets Hold
+	first, last   int         // slides to include, 0-based
+	quiet         bool        // nothing on stderr, for post clips
+	lock          sync.Locker // held while each frame draws, if set: the presenter view draws alongside
 }
 
 // videoTiming is how long step (0-based) of s stays on screen; step 0 adds the
@@ -47,7 +52,13 @@ func renderVideo(d *Deck, o videoOptions) error {
 		"-c:v", "libx264", "-preset", "medium", "-crf", "16", "-tune", "animation",
 		"-pix_fmt", "yuv420p", "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709",
 		"-movflags", "+faststart", o.path)
+	// A quiet render runs under the presenter view, whose screen ffmpeg
+	// mustn't write on; what it says goes in the error instead.
+	var errOut bytes.Buffer
 	cmd.Stderr = os.Stderr
+	if o.quiet {
+		cmd.Stderr = &errOut
+	}
 	pipe, err := cmd.StdinPipe()
 	if err != nil {
 		return err
@@ -58,6 +69,9 @@ func renderVideo(d *Deck, o videoOptions) error {
 	werr := writeVideoFrames(d, o, pipe)
 	pipe.Close()
 	if err := cmd.Wait(); err != nil {
+		if msg := strings.TrimSpace(errOut.String()); msg != "" {
+			return fmt.Errorf("ffmpeg: %w: %s", err, msg)
+		}
 		return fmt.Errorf("ffmpeg: %w", err)
 	}
 	return werr
@@ -79,28 +93,40 @@ func writeVideoFrames(d *Deck, o videoOptions, w io.Writer) error {
 	var lastSlide Slide
 	var lastCtx Ctx
 	dt := 1 / float64(o.fps)
+	lock := o.lock
+	if lock == nil {
+		lock = new(sync.Mutex)
+	}
+	progress := io.Writer(os.Stderr)
+	if o.quiet {
+		progress = io.Discard
+	}
 	start, frames := time.Now(), 0
 	for i := o.first; i <= o.last; i++ {
 		s := d.Slides[i]
 		kind, tdur := s.Transition.resolve(), s.Transition.Duration()
-		fmt.Fprintf(os.Stderr, "\rslide %d/%d  %-40.40s", i+1, o.last+1, s.Title)
+		fmt.Fprintf(progress, "\rslide %d/%d  %-40.40s", i+1, o.last+1, s.Title)
 		if from != nil {
 			from.Release()
 			from = nil
 		}
 		if i > o.first {
+			lock.Lock()
 			from = drawSlide(lastSlide, lastCtx)
+			lock.Unlock()
 		}
 		slideT := 0.0
 		for step := 0; step < s.steps(); step++ {
 			dur := videoTiming(s, step, o.hold)
 			for t := 0.0; t < dur-dt/2; t += dt {
 				c := Ctx{W: cw, H: ch, T: slideT + t, Step: step, StepT: t, Theme: d.Theme}.at(d.Slides, i)
+				lock.Lock()
 				sc := drawSlide(s, c)
 				if step == 0 && from != nil && t < tdur {
 					mixTransition(kind, from, sc, t/tdur, true, d.Theme)
 				}
 				sc.finish()
+				lock.Unlock()
 				toRGB24(sc.Px, frame)
 				sc.Release()
 				lastSlide, lastCtx = s, c
@@ -113,7 +139,7 @@ func writeVideoFrames(d *Deck, o videoOptions, w io.Writer) error {
 		}
 	}
 	secs := float64(frames) / float64(o.fps)
-	fmt.Fprintf(os.Stderr, "\r%d frames, %d:%02d of video, in %v%40s\n",
+	fmt.Fprintf(progress, "\r%d frames, %d:%02d of video, in %v%40s\n",
 		frames, int(secs)/60, int(secs)%60, time.Since(start).Round(time.Second), "")
 	return nil
 }

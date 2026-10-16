@@ -96,9 +96,9 @@ func talk() decker.Deck {
 	}
 	return decker.Deck{
 		Name: "hello-decker", Theme: theme,
+		Notes: "## Hello, decker\n\nPress space to reveal the second line. Press q to quit.",
 		Slides: []decker.Slide{{
 			Title: "Hello, decker", Steps: 2,
-			Notes: "Press space to reveal the second line. Press q to quit.",
 			View: func(c decker.Ctx, sc *decker.Scene) {
 				const title = "Hello, decker"
 				t := decker.Text{Font: c.Theme.Display, Size: c.Size(0.18), Color: c.Theme.Accent}.

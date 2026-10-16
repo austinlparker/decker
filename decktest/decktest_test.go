@@ -1,6 +1,7 @@
 package decktest
 
 import (
+	"context"
 	"errors"
 	"os"
 	"os/exec"
@@ -77,6 +78,23 @@ func TestSlidesFailsOnEveryPart(t *testing.T) {
 	}
 }
 
+// TestSlidesChecksTheDeck runs Slides, in a child test process, on a deck
+// whose notes have fallen out of step with its slides.
+func TestSlidesChecksTheDeck(t *testing.T) {
+	if os.Getenv("DECKTEST_NOTES") != "" {
+		d := boomDeck("")
+		d.Notes = "## Renamed\n"
+		Slides(t, d)
+		return
+	}
+	cmd := exec.Command(os.Args[0], "-test.run=^TestSlidesChecksTheDeck$")
+	cmd.Env = append(os.Environ(), "DECKTEST_NOTES=1")
+	out, err := cmd.CombinedOutput()
+	if err == nil || !strings.Contains(string(out), `deck: Notes line 1: section 1 is "Renamed"`) {
+		t.Errorf("Slides passed or said something else: %v\n%s", err, out)
+	}
+}
+
 func TestReviewPassesACleanDeck(t *testing.T) {
 	d := decker.Deck{Name: "clean", Theme: theme, Slides: []decker.Slide{{
 		Title: "Hello",
@@ -94,5 +112,54 @@ func TestReviewPassesACleanDeck(t *testing.T) {
 	is := d.Review()
 	if len(is) != 3 || is[0].Severity != decker.SeverityError || !strings.Contains(is[0].Msg, "past the right edge") {
 		t.Errorf("off-edge deck: %v", is)
+	}
+}
+
+// prepared is a Publisher that keeps what Prepare is given and turns away a
+// post that says "too long".
+type prepared struct{ posts []decker.Post }
+
+func (*prepared) SignIn(context.Context, string, func(string)) error { return nil }
+func (*prepared) Upload(context.Context, decker.Post) error          { return nil }
+
+func (p *prepared) Prepare(_ context.Context, posts []decker.Post) error {
+	p.posts = posts
+	for _, post := range posts {
+		if post.Text == "too long" {
+			return errors.New("too long for the service")
+		}
+	}
+	return nil
+}
+
+func (*prepared) Post(context.Context, decker.Post, string, string) (string, error) {
+	return "", errors.New("Posts posted")
+}
+
+// TestPosts checks Posts renders every post and hands them all to the
+// Publisher, and, in a child test process, fails when it turns one away.
+func TestPosts(t *testing.T) {
+	pub := &prepared{}
+	d := boomDeck("")
+	d.Publisher = pub
+	d.Notes = "```post\nopening\n```\n## Boom\n```post\nthe slide\n```\n"
+	if os.Getenv("DECKTEST_POSTS") != "" {
+		d.Notes = "## Boom\n```post\ntoo long\n```\n"
+		Posts(t, d)
+		return
+	}
+	posts := Posts(t, d)
+	if len(posts) != 2 || len(pub.posts) != 2 || posts[0].Text != "opening" || len(posts[0].Media) != 0 ||
+		posts[1].Slide != 0 || len(posts[1].Media) != 1 {
+		t.Fatalf("posts %+v, prepared %+v", posts, pub.posts)
+	}
+	if _, err := os.Stat(posts[1].Media[0].Path); err != nil {
+		t.Errorf("the slide's image: %v", err)
+	}
+	cmd := exec.Command(os.Args[0], "-test.run=^TestPosts$")
+	cmd.Env = append(os.Environ(), "DECKTEST_POSTS=1")
+	out, err := cmd.CombinedOutput()
+	if err == nil || !strings.Contains(string(out), "too long for the service") {
+		t.Errorf("Posts passed or said something else: %v\n%s", err, out)
 	}
 }

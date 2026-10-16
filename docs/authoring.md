@@ -72,7 +72,7 @@ starting with a trace waterfall, to copy and change, not to import.
    `c.Since(n)` how long ago it started, for easing it in. Count builds
    from the data when the visual is data (`Steps: len(spans)`).
 6. **Keep text readable.** Nothing below `c.SmallText(font)`. A slide holds
-   one idea; the rest goes in `Notes`, and citations in `Sources`.
+   one idea; the rest goes in the notes, and citations in `Sources`.
 
 ## The loop
 
@@ -111,12 +111,21 @@ Put the review in the talk's tests so it keeps holding:
 ```go
 func TestSlides(t *testing.T) { decktest.Slides(t, talk()) }
 func TestReview(t *testing.T) { decktest.Review(t, talk()) }
+func TestPosts(t *testing.T)  { decktest.Posts(t, talk()) }
 ```
 
 ## Notes, sources and the handout
 
-`Slide.Notes` are what you'll say; the presenter view shows them.
-`Slide.Sources` are what you cite, kept on the slide with what cites
-them. `go run . handout handout` writes `handout/handout.md`:
+The notes are what you'll say; the presenter view shows them. They live
+in `notes.md`, embedded into `Deck.Notes`: a `## Title` section per slide,
+in running order, headed with the slide's title as written. A section that
+doesn't match its slide stops the deck, and `decktest.Slides`, with the
+line it's on, so a slide added or moved without its notes can't shift
+every note after it. `Slide.Sources` are what you cite, kept on the slide
+with what cites them. To post the talk as a thread while you give it, put
+`post` blocks in the notes; see [posting the talk
+live](guide.md#presenting-posting-the-talk-live). `decktest.Posts` checks
+them against the service's limits, so a post that's too long fails the
+test rather than the talk. `go run . handout handout` writes `handout/handout.md`:
 every slide's thumbnail, notes and sources, then every source once with the
 slides that cite it. Rehearse from it, or give it to the audience.

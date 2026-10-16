@@ -32,12 +32,25 @@ var testTheme = &Theme{
 	},
 }
 
+// testNotes are testDeck's notes: sections for its first three slides,
+// only the third with any.
+const testNotes = `# The test deck
+
+## Block letters
+
+## Bullets
+
+## Diagram
+
+a ring, a box and an arrow
+`
+
 // SampleDeck is testDeck for the external test package, which can use
 // decktest.
 var SampleDeck = testDeck
 
 func testDeck() *Deck {
-	return &Deck{Name: "deck-test", Theme: testTheme, Slides: []Slide{
+	return &Deck{Name: "deck-test", Theme: testTheme, Notes: testNotes, Slides: []Slide{
 		{
 			Title: "Block letters", HideChrome: true, Transition: TransitionDissolve,
 			View: func(c Ctx, sc *Scene) {
@@ -57,7 +70,7 @@ func testDeck() *Deck {
 			},
 		},
 		{
-			Title: "Diagram", Steps: 4, Transition: TransitionWipe, Notes: "a ring, a box and an arrow",
+			Title: "Diagram", Steps: 4, Transition: TransitionWipe,
 			View: func(c Ctx, sc *Scene) {
 				p := sc.Px
 				Panel(c, p, c.X(0.05), c.Y(0.05), c.X(0.25), c.Y(0.15), "panel", c.Theme.Panel, c.Theme.Accent2, c.Theme.Text, 1)
@@ -113,7 +126,7 @@ func TestOverlayDrawsOnSlides(t *testing.T) {
 
 func TestDeckCheck(t *testing.T) {
 	good := testDeck()
-	if err := good.check(); err != nil {
+	if err := good.Check(); err != nil {
 		t.Fatal(err)
 	}
 	for name, d := range map[string]Deck{
@@ -122,7 +135,7 @@ func TestDeckCheck(t *testing.T) {
 		"no fonts":  {Name: "x", Theme: &Theme{}, Slides: good.Slides},
 		"no slides": {Name: "x", Theme: testTheme},
 	} {
-		if d.check() == nil {
+		if d.Check() == nil {
 			t.Errorf("%s: accepted", name)
 		}
 	}

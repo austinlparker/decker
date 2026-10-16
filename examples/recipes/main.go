@@ -14,10 +14,17 @@ package main
 
 import "github.com/austinlparker/decker"
 
+// notes are the speaker notes; a talk keeps them in an embedded notes.md.
+const notes = `## Trace waterfall
+
+One span per click. The last click dims everything off the critical path:
+the payment call is where the time goes.
+`
+
 func main() { decker.Main(talk()) }
 
 func talk() decker.Deck {
-	return decker.Deck{Name: "decker-recipes", Theme: theme, Slides: []decker.Slide{
+	return decker.Deck{Name: "decker-recipes", Theme: theme, Notes: notes, Slides: []decker.Slide{
 		waterfallSlide(),
 	}}
 }

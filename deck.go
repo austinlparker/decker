@@ -15,6 +15,33 @@ type Deck struct {
 
 	// Slides in running order. Must not be empty.
 	Slides []Slide
+
+	// Notes are the speaker notes, in Markdown, for the presenter view, the
+	// n key and the handout. Each "## " heading starts the next slide's
+	// section and is that slide's Title as written, so the file reads as the
+	// talk's outline and a slide added or moved without its notes fails
+	// the deck's check rather than shifting every note after it. Text
+	// before the first heading is about the talk as a whole. Sections may
+	// stop before the last slide; the slides after have no notes. Keep
+	// them in a file beside the talk and embed it:
+	//
+	//	//go:embed notes.md
+	//	var notes string
+	//
+	// A fenced block whose info string is "post" is a post for a live
+	// thread (Publisher), left out of the notes the speaker sees:
+	// media=final (the default) attaches the slide's last build,
+	// media=builds an image of each build (builds=2-4,6 picks them),
+	// media=clip a looping video of it building, and media=none nothing.
+	// An "alt" block right after a post describes its media. Posts before
+	// the first section open the thread, and attach nothing.
+	Notes string
+
+	// Publisher posts the talk as a thread while it's given, once the
+	// presenter view's posting dialog (P) starts it: a slide's posts go
+	// out when the speaker moves on from it. Nil leaves the dialog only
+	// its rehearsal.
+	Publisher Publisher
 }
 
 // Render draws slide i (0-based) as a styled string of exactly c.W×c.H cells,
@@ -32,6 +59,34 @@ func (d *Deck) Section(i int) string { return sectionAt(d.Slides, i) }
 
 // Steps returns how many build steps slide i (0-based) has.
 func (d *Deck) Steps(i int) int { return d.Slides[i].steps() }
+
+// notes is d.Notes parsed, or no notes at all if it doesn't parse, which
+// Check reports.
+func (d *Deck) notes() deckNotes {
+	dn, err := parseNotes(d.Notes, d.Slides)
+	if err != nil {
+		return deckNotes{slides: make([]slideNotes, len(d.Slides))}
+	}
+	return dn
+}
+
+// titles are the slides' titles, in order.
+func (d *Deck) titles() []string {
+	titles := make([]string, len(d.Slides))
+	for i, s := range d.Slides {
+		titles[i] = s.Title
+	}
+	return titles
+}
+
+// slideNotes is the text of each slide's notes, empty for a slide with none.
+func (d *Deck) slideNotes() []string {
+	var notes []string
+	for _, sn := range d.notes().slides {
+		notes = append(notes, sn.text)
+	}
+	return notes
+}
 
 // builds counts the deck's build steps, every slide's together.
 func (d *Deck) builds() int {
@@ -85,7 +140,10 @@ func (d *Deck) withTheme(i int, c Ctx) Ctx {
 	return c.at(d.Slides, i)
 }
 
-func (d *Deck) check() error {
+// Check reports what makes d unfit to run, as Main refuses it: a missing
+// Name, Theme or theme font, no slides, or Notes whose sections don't follow
+// the slides' titles in order.
+func (d *Deck) Check() error {
 	switch {
 	case d.Name == "":
 		return errors.New("deck: Name is required")
@@ -96,5 +154,6 @@ func (d *Deck) check() error {
 	case len(d.Slides) == 0:
 		return errors.New("deck: no slides")
 	}
-	return nil
+	_, err := parseNotes(d.Notes, d.Slides)
+	return err
 }

@@ -8,7 +8,6 @@ import (
 
 func titleSlide() decker.Slide {
 	return decker.Slide{Title: "Starter", Section: "Intro",
-		Notes: "Replace this deck with your own. Run go run . review review after every change.",
 		View: func(c decker.Ctx, sc *decker.Scene) {
 			th := c.Theme
 			box := c.Frame().Inset(c.X(0.08), c.Y(0.2))
@@ -25,7 +24,6 @@ func titleSlide() decker.Slide {
 
 func pointSlide() decker.Slide {
 	return decker.Slide{Title: "One idea per slide", Steps: 2,
-		Notes:   "The headline is the point. The second build is the evidence.",
 		Sources: []decker.Source{{Label: "Your citation", URL: "https://example.com/source"}},
 		View: func(c decker.Ctx, sc *decker.Scene) {
 			th := c.Theme
@@ -55,7 +53,6 @@ var budget = []struct {
 // checks that layout fits, and only then draws.
 func budgetSlide() decker.Slide {
 	return decker.Slide{Title: "Where the time goes", Section: "Evidence", Steps: len(budget),
-		Notes: "Each build adds one hop. Database is the one to talk about.",
 		View: func(c decker.Ctx, sc *decker.Scene) {
 			th, p := c.Theme, sc.Px
 			body := heading(c, p, "Where the time goes")

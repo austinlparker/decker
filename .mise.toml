@@ -3,4 +3,4 @@ go = "1.27"
 
 [tasks.test]
 description = "Test the engine"
-run = "go test ./..."
+run = ["go test ./...", "cd bsky && go test ./...", "cd examples/showcase && go test ./..."]

@@ -17,7 +17,11 @@ once; this file is the short version.
   order you'll say it. Copy from decker's `examples/recipes` (a trace
   waterfall) and change it.
 - **One idea per slide.** The headline says the point. Detail goes in
-  `Notes`, citations in `Sources`.
+  the notes, citations in `Sources`.
+- **Notes live in `notes.md`:** a `## Title` section per slide, in running
+  order, each heading the slide's `Title` exactly. When you add, remove,
+  rename or reorder a slide, do the same to its section; a section out of
+  step with its slide fails `go test` and stops the deck.
 
 ## How to write a slide
 
@@ -39,7 +43,7 @@ once; this file is the short version.
 
 ```sh
 go run . review review       # every build at 240x67, 320x90 and 682x171
-go test ./...                # decktest.Slides and decktest.Review
+go test ./...                # decktest.Slides, Review and Posts
 ```
 
 - **Fix every error and warning** the review prints. It names the slide,

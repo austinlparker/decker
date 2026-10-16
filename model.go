@@ -55,6 +55,7 @@ func (m *model) toggleBlank(mode blankMode) {
 // the terminal writer; tests call frame directly.
 type model struct {
 	slides    []Slide
+	notes     []string // each slide's
 	theme     *Theme
 	st        styles
 	idx, step int
@@ -89,7 +90,7 @@ type model struct {
 
 func newModel(d *Deck, idx, step, fps int, dev *devState) model {
 	now := time.Now()
-	m := model{slides: d.Slides, theme: d.Theme, st: d.Theme.styles(),
+	m := model{slides: d.Slides, notes: d.slideNotes(), theme: d.Theme, st: d.Theme.styles(),
 		fps: fps, dev: dev, now: now, enter: now, stepStart: now}
 	m.idx = min(max(idx, 0), len(m.slides)-1)
 	m.step = min(max(step, 0), m.cur().steps()-1)
@@ -133,7 +134,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) linkState() linkState {
-	st := linkState{Slide: m.idx, Step: m.step, Notes: m.cur().Notes, W: m.w, H: m.h, Blank: m.blank.String()}
+	st := linkState{Slide: m.idx, Step: m.step, Notes: m.notes[m.idx], W: m.w, H: m.h, Blank: m.blank.String()}
 	for i, s := range m.slides {
 		st.Outline = append(st.Outline, linkOutline{Title: s.Title, Steps: s.steps(), Section: sectionAt(m.slides, i)})
 	}
@@ -381,7 +382,7 @@ func (m model) panels() string {
 		out = append(out, panel("build failed — fix and save to retry", m.dev.buildErr, m.theme.Warn, max(m.h/3, 3)))
 	}
 	if m.showNotes {
-		notes := m.cur().Notes
+		notes := m.notes[m.idx]
 		if notes == "" {
 			notes = noNotes
 		}
@@ -402,7 +403,7 @@ func (m model) chrome() string {
 	if s := m.cur().steps(); s > 1 {
 		right = append(right, m.st.meter("●", "○", m.step+1, s))
 	}
-	if m.cur().Notes != "" {
+	if m.notes[m.idx] != "" {
 		right = append(right, m.st.faint.Render("✎"))
 	}
 	right = append(right, m.st.faint.Render(fmt.Sprintf("%d/%d ", m.idx+1, n)))
