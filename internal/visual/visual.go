@@ -38,12 +38,15 @@ const (
 	// arithmetic moved one by 24 at most; the smallest planted regression,
 	// an element moved half a pixel, moved one by 63.
 	MaxDelta = 40
-	// SmallDelta and MaxSmallShare bound broad, faint changes: at most
-	// MaxSmallShare of the pixels may move by more than SmallDelta. Fused
-	// arithmetic moved 0.14% of a frame's pixels that much; a color moved by
-	// 3 moves every pixel it covers.
+	// SmallDelta, MaxSmallShare and MinSmall bound broad, faint changes:
+	// more than MaxSmallShare of an image's pixels, and more than MinSmall,
+	// may not move by more than SmallDelta. Fused arithmetic moved 0.28% of
+	// a 682×171 frame's pixels (80) that much, and 5 of an 80×24 frame's
+	// 960; a color moved by 3 moves every pixel it covers. MinSmall keeps a
+	// handful of pixels in a small frame from counting as broad.
 	SmallDelta    = 2
 	MaxSmallShare = 0.005
+	MinSmall      = 16
 )
 
 // Updating reports whether the test run records references instead of
@@ -106,8 +109,8 @@ func Compare(got, want *image.RGBA) (problem string, diff *image.RGBA) {
 	switch {
 	case worst > MaxDelta:
 		return fmt.Sprintf("a pixel moved by %d (at %d,%d in the shrunk image), more than %d", worst, worstAt.X, worstAt.Y, MaxDelta), diff
-	case share > MaxSmallShare:
-		return fmt.Sprintf("%.2f%% of pixels moved by more than %d, more than %.1f%%", 100*share, SmallDelta, 100*MaxSmallShare), diff
+	case share > MaxSmallShare && small > MinSmall:
+		return fmt.Sprintf("%.2f%% of pixels (%d) moved by more than %d, more than %.1f%%", 100*share, small, SmallDelta, 100*MaxSmallShare), diff
 	}
 	return "", diff
 }

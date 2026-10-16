@@ -214,7 +214,7 @@ func TestGolden(t *testing.T) {
 	t.Setenv("UPDATE_GOLDEN", "")
 	Golden(t, goldenDeck(0.1), dir)
 	chars, _ := os.ReadFile(filepath.Join(dir, "characters.txt"))
-	if !strings.Contains(string(chars), "=== 1.2 Boom ===\n\n  words\n") {
+	if want := "=== 1.2 Boom, 80×24 ===\n\n  words\n"; !strings.HasSuffix(string(chars), want) {
 		t.Errorf("characters.txt:\n%s", chars)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "02-Gone.png"), nil, 0o644); err != nil {
@@ -223,7 +223,7 @@ func TestGolden(t *testing.T) {
 	cmd := exec.Command(os.Args[0], "-test.run=^TestGolden$")
 	cmd.Env = append(os.Environ(), "DECKTEST_GOLDEN="+dir)
 	out, err := cmd.CombinedOutput()
-	for _, want := range []string{"01-Boom.png:", "build 1 at 0.25: a pixel moved by", "02-Gone.png: no slide draws it"} {
+	for _, want := range []string{"01-Boom.png:", "build 1 at 0.25: a pixel moved by", "build 2 at 80×24: a pixel moved by", "02-Gone.png: no slide draws it"} {
 		if err == nil || !strings.Contains(string(out), want) {
 			t.Errorf("Golden passed or didn't say %q: %v\n%s", want, err, out)
 		}

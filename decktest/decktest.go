@@ -109,8 +109,9 @@ func Posts(t *testing.T, d decker.Deck) []decker.Post {
 
 // Golden compares how each slide looks with the reference images in dir:
 // one PNG per slide, every build at three moments (appearing, entered and
-// settled), drawn at 682×171 and halved, and a text file of any characters
-// slides place in the character layer. Images match within a tolerance,
+// settled) drawn at 682×171, and settled at 240×67 and 80×24, where layout
+// is tightest, each halved; and a text file of any characters slides place
+// in the character layer, settled at each size. Images match within a tolerance,
 // since the same source renders slightly different bits on different
 // machines (see the guide); text matches exactly. Run with UPDATE_GOLDEN=1
 // to record after an intentional change: only the images that changed are
@@ -122,25 +123,37 @@ func Golden(t *testing.T, d decker.Deck, dir string) {
 		t.Skip("golden frames take a few seconds; skipped with -short")
 	}
 	moments := []float64{0.25, 0.7, decker.Settled}
+	type size struct{ w, h int }
+	small := []size{{240, 67}, {80, 24}}
 	var text visual.Text
 	kept := map[string]bool{}
 	for i, s := range d.Slides {
 		var tiles []visual.Tile
+		add := func(name string, c decker.Ctx) {
+			px := d.Canvas(i, c)
+			img := visual.Shrink(px.W, px.H, func(x, y int) (r, g, b float32) {
+				p := px.Pix[y*px.W+x]
+				return p.R, p.G, p.B
+			})
+			tiles = append(tiles, visual.Tile{Name: name, Img: img})
+		}
 		for step := range d.Steps(i) {
 			for _, at := range moments {
 				c := decker.Ctx{W: 682, H: 171, T: at, Step: step, StepT: at}
 				if step > 0 { // a build appearing on a slide that has settled
 					c.T = decker.Settled
 				}
-				px := d.Canvas(i, c)
-				img := visual.Shrink(px.W, px.H, func(x, y int) (r, g, b float32) {
-					p := px.Pix[y*px.W+x]
-					return p.R, p.G, p.B
-				})
-				tiles = append(tiles, visual.Tile{Name: fmt.Sprintf("build %d at %v", step+1, at), Img: img})
+				add(fmt.Sprintf("build %d at %v", step+1, at), c)
 			}
-			if chars := characters(d.Render(i, decker.Ctx{W: 682, H: 171, T: decker.Settled, Step: step, StepT: decker.Settled})); chars != "" {
-				text.Add(fmt.Sprintf("%d.%d %s", i+1, step+1, s.Title), chars)
+			for _, sz := range small {
+				add(fmt.Sprintf("build %d at %d×%d", step+1, sz.w, sz.h),
+					decker.Ctx{W: sz.w, H: sz.h, T: decker.Settled, Step: step, StepT: decker.Settled})
+			}
+			for _, sz := range append([]size{{682, 171}}, small...) {
+				frame := d.Render(i, decker.Ctx{W: sz.w, H: sz.h, T: decker.Settled, Step: step, StepT: decker.Settled})
+				if chars := characters(frame); chars != "" {
+					text.Add(fmt.Sprintf("%d.%d %s, %d×%d", i+1, step+1, s.Title, sz.w, sz.h), chars)
+				}
 			}
 		}
 		name := fmt.Sprintf("%02d-%s.png", i+1, fileName(s.Title))
@@ -169,26 +182,25 @@ func Golden(t *testing.T, d decker.Deck, dir string) {
 }
 
 // characters is a rendered frame's character layer: what's left once the
-// cells that only show pixels (spaces and half blocks) are blank, or "".
+// cells that only show pixels (spaces and half blocks) are blank, without
+// the blank lines after the last that has any, or "".
 func characters(frame string) string {
-	var b strings.Builder
-	any := false
+	var lines []string
 	for line := range strings.Lines(ansi.Strip(frame)) {
-		line = strings.Map(func(r rune) rune {
+		lines = append(lines, strings.Map(func(r rune) rune {
 			if r == '▀' {
 				return ' '
 			}
 			return r
-		}, strings.TrimSuffix(line, "\n"))
-		if strings.TrimSpace(line) != "" {
-			any = true
-		}
-		b.WriteString(line + "\n")
+		}, strings.TrimSuffix(line, "\n")))
 	}
-	if !any {
+	for len(lines) > 0 && strings.TrimSpace(lines[len(lines)-1]) == "" {
+		lines = lines[:len(lines)-1]
+	}
+	if len(lines) == 0 {
 		return ""
 	}
-	return b.String()
+	return strings.Join(lines, "\n") + "\n"
 }
 
 // fileName is s with what a file name can't hold, or shouldn't, replaced.

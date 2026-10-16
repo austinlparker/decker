@@ -40,13 +40,24 @@ func TestCompare(t *testing.T) {
 					img.Pix[img.PixOffset(x, y)+2] += SmallDelta + 1
 				}
 			}
-		}, "1.00% of pixels moved by more than 2"},
+		}, "1.00% of pixels (100) moved by more than 2"},
 	} {
 		got := flat(100, 100, 100)
 		tc.edit(got)
 		problem, _ := Compare(got, base)
 		if tc.fails == "" && problem != "" || tc.fails != "" && !strings.Contains(problem, tc.fails) {
 			t.Errorf("%s: %q, want %q", tc.name, problem, tc.fails)
+		}
+	}
+	// In a frame as small as an 80×24 terminal's, halved, a few pixels
+	// moved are noise; a few more than MinSmall are a change.
+	for n, fails := range map[int]bool{5: false, MinSmall + 1: true} {
+		got := flat(40, 24, 100)
+		for i := range n {
+			got.Pix[got.PixOffset(i, 0)] += SmallDelta + 1
+		}
+		if problem, _ := Compare(got, flat(40, 24, 100)); (problem != "") != fails {
+			t.Errorf("%d of 960 pixels moved: %q", n, problem)
 		}
 	}
 	if problem, _ := Compare(flat(10, 10, 0), flat(10, 11, 0)); !strings.Contains(problem, "size") {

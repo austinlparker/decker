@@ -696,14 +696,15 @@ depend only on its `Ctx`.
 that starts clipping fails the build. `Posts` renders every post in the
 notes and has the deck's `Publisher` check them, as starting to post does,
 without signing in. `Golden` keeps an image of each slide in the
-directory, every build appearing, entered and settled, and fails when a
-slide no longer looks the same; text in the character layer is checked
+directory, every build appearing, entered and settled, and settled again
+at 240×67 and 80×24, where layout is tightest, and fails when a slide no
+longer looks the same; text in the character layer is checked
 exactly. Images are compared at half size and within a small tolerance:
 the same program doesn't draw the same bits on every machine (an M-series
 Mac rounds some arithmetic differently from most Linux CI), and those
 differences are far too small to see, while a word changed, an element
-moved half a pixel or a color shifted is not. A failure says which build
-and moment, and leaves what it drew and a diff image where it says. After
+moved half a pixel or a color shifted is not. A failure says which build,
+moment or size, and leaves what it drew and a diff image where it says. After
 changing a slide on purpose, record with `UPDATE_GOLDEN=1 go test -run
 Golden`; only the images that changed are rewritten. That makes the engine
 safe to change: an engine change that alters how a talk looks fails that

@@ -1,4 +1,4 @@
-=== 18.1 Character layer ===
+=== 18.1 Character layer, 682×171 ===
 
  plain    bold italic   faint                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       clippe
    ╭───────────────╮
@@ -168,9 +168,96 @@
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    ^^^^   sprite
 
  sprite 6x2
+=== 18.1 Character layer, 240×67 ===
+
+ plain    bold italic   faint                                                                                                                                                                                                             clippe
+   ╭───────────────╮
+   │ terminal text │
+   │ second line   │
+  日本語のテキスト─🎉 ✓ wide
+ the left
+
+         ov
+   ★ 界   gap
+        lay
+
+          put
+          put
 
 
-=== 25.1 Fade ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                                                                                                                                           ╭────
+                                                                                                                                                                                                                                           │ ter
+                                                                                                                                                                                                                                           │ sec
+                                                                                                                                                                                                                                           ╰────
+                                                                                                               ╭───────────────╮
+                                                                                                               │ terminal text │
+                                                                                                               │ second line   │
+                                                                                                               ╰───────────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                (o)##>  plain
+                                                                                 ^^^^   sprite
+
+ sprite 6x2
+=== 18.1 Character layer, 80×24 ===
+
+ plain    bold italic   faint                                             clippe
+   ╭───────────────╮
+   │ terminal text │
+   │ second line   │
+  日本語のテキスト─🎉 ✓ wide
+ the left
+
+         ov
+   ★ 界   gap                                                              ╭────
+        lay                                                                │ ter
+                                                                           │ sec
+          put                                                              ╰────
+          put                  ╭───────────────╮
+                               │ terminal text │
+                               │ second line   │
+                               ╰───────────────╯
+
+(o)##>  plain
+ ^^^^   sprite
+
+ sprite 6x2
+=== 25.1 Fade, 682×171 ===
 
 
 
@@ -339,10 +426,94 @@
 
 
                                                                                                                                                                                                                                                                                                                                              enters with fade
+=== 25.1 Fade, 240×67 ===
 
 
 
-=== 26.1 Fade through ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                enters with fade
+=== 25.1 Fade, 80×24 ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                enters with fade
+=== 26.1 Fade through, 682×171 ===
 
 
 
@@ -511,10 +682,94 @@
 
 
                                                                                                                                                                                                                                                                                                                                              enters with fade through
+=== 26.1 Fade through, 240×67 ===
 
 
 
-=== 27.1 Cover ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                enters with fade through
+=== 26.1 Fade through, 80×24 ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                enters with fade through
+=== 27.1 Cover, 682×171 ===
 
 
 
@@ -683,10 +938,94 @@
 
 
                                                                                                                                                                                                                                                                                                                                              enters with cover
+=== 27.1 Cover, 240×67 ===
 
 
 
-=== 28.1 Uncover ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                enters with cover
+=== 27.1 Cover, 80×24 ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                enters with cover
+=== 28.1 Uncover, 682×171 ===
 
 
 
@@ -855,10 +1194,94 @@
 
 
                                                                                                                                                                                                                                                                                                                                              enters with uncover
+=== 28.1 Uncover, 240×67 ===
 
 
 
-=== 29.1 Split ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                enters with uncover
+=== 28.1 Uncover, 80×24 ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                enters with uncover
+=== 29.1 Split, 682×171 ===
 
 
 
@@ -1027,10 +1450,94 @@
 
 
                                                                                                                                                                                                                                                                                                                                              enters with split
+=== 29.1 Split, 240×67 ===
 
 
 
-=== 30.1 Iris ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                enters with split
+=== 29.1 Split, 80×24 ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                enters with split
+=== 30.1 Iris, 682×171 ===
 
 
 
@@ -1199,10 +1706,94 @@
 
 
                                                                                                                                                                                                                                                                                                                                              enters with iris
+=== 30.1 Iris, 240×67 ===
 
 
 
-=== 31.1 Zoom ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                enters with iris
+=== 30.1 Iris, 80×24 ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                enters with iris
+=== 31.1 Zoom, 682×171 ===
 
 
 
@@ -1371,10 +1962,94 @@
 
 
                                                                                                                                                                                                                                                                                                                                              enters with zoom
+=== 31.1 Zoom, 240×67 ===
 
 
 
-=== 32.1 Pixelate ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                enters with zoom
+=== 31.1 Zoom, 80×24 ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                enters with zoom
+=== 32.1 Pixelate, 682×171 ===
 
 
 
@@ -1543,10 +2218,94 @@
 
 
                                                                                                                                                                                                                                                                                                                                              enters with pixelate
+=== 32.1 Pixelate, 240×67 ===
 
 
 
-=== 33.1 Glitch ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                enters with pixelate
+=== 32.1 Pixelate, 80×24 ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                enters with pixelate
+=== 33.1 Glitch, 682×171 ===
 
 
 
@@ -1715,10 +2474,94 @@
 
 
                                                                                                                                                                                                                                                                                                                                              enters with glitch
+=== 33.1 Glitch, 240×67 ===
 
 
 
-=== 34.1 Push from top ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                enters with glitch
+=== 33.1 Glitch, 80×24 ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                enters with glitch
+=== 34.1 Push from top, 682×171 ===
 
 
 
@@ -1887,10 +2730,94 @@
 
 
                                                                                                                                                                                                                                                                                                                                              enters with push from top
+=== 34.1 Push from top, 240×67 ===
 
 
 
-=== 35.1 Wipe from bottom ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                enters with push from top
+=== 34.1 Push from top, 80×24 ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                enters with push from top
+=== 35.1 Wipe from bottom, 682×171 ===
 
 
 
@@ -2059,6 +2986,90 @@
 
 
                                                                                                                                                                                                                                                                                                                                              enters with wipe from bottom
+=== 35.1 Wipe from bottom, 240×67 ===
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                enters with wipe from bottom
+=== 35.1 Wipe from bottom, 80×24 ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                enters with wipe from bottom
