@@ -1,7 +1,7 @@
 # Where things live
 
 Changing the engine itself? Read [AGENTS.md](../AGENTS.md) first: the
-invariants, the golden tests, and a recipe for each kind of addition.
+invariants, the reference tests, and a recipe for each kind of addition.
 
 | File | What's in it |
 | --- | --- |
@@ -35,5 +35,6 @@ invariants, the golden tests, and a recipe for each kind of addition.
 | `present_window.go`, `kitty.go` | launch a Ghostty deck window with its own font size; upload and manage full-resolution presenter images |
 | `png.go` | PNG snapshots and contact sheets, painted from cell grids |
 | `video.go` | rendering a deck to a video |
-| `decktest/` | the test suite for decks: renders, review, goldens, posts checked against the publisher |
+| `decktest/` | the test suite for decks: renders (and that drawing again gives the same frame), review, reference images, posts checked against the publisher |
+| `internal/visual/` | reference images and text for tests: frames halved and compared within a tolerance set from measurement, sheets of small frames, readable diffs |
 | `bsky/` | its own module, `github.com/austinlparker/decker/bsky`, so the engine doesn't carry its dependencies (`examples/showcase`, which posts with it, is a module too). `bsky.Publisher`: posting the talk to Bluesky; OAuth sign-in as a loopback client with the session kept in the system keychain, uploads through the video service, image posts and galleries, links, mentions and hashtags as facets, retries that never post twice |

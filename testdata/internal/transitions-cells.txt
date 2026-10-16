@@ -1,0 +1,1540 @@
+=== default fwd=true p=0.4 ===
+
+日本語のテキスト 🎉 wide ✓ 界a界b界
+                                        ╭───────────╮
+ 日本語のテキスト 🎉 wide ✓ 界a界b界    │ 界 box 世 │                                                              界界
+                                        │ 🎉 emoji  │
+  日本語のテキスト 🎉 wide ✓ 界a界b界   ╰───────────╯
+
+日本語のテキスト 🎉 wide ✓ 界a界b界
+
+ 日本語のテキスト 🎉 wide ✓ 界a界b界
+
+  日本語のテキスト 🎉 wide ✓ 界a界b界
+
+日本語のテキスト 🎉 wide ✓ 界a界b界
+
+ 日本語のテキスト 🎉 wide ✓ 界a界b界
+
+  日本語のテキスト 🎉 wide ✓ 界a界b界                        ╭───────────╮
+                                                             │ 界 box 世 │
+                                                             │ 🎉 emoji  │
+                                                             ╰───────────╯
+
+
+
+
+
+
+
+
+
+  step 1 t=0.4
+
+bold  italic faint  u r
+
+=== default fwd=false p=0.4 ===
+
+日本語のテキスト 🎉 wide ✓ 界a界b界
+                                        ╭───────────╮
+ 日本語のテキスト 🎉 wide ✓ 界a界b界    │ 界 box 世 │                                                              界界
+                                        │ 🎉 emoji  │
+  日本語のテキスト 🎉 wide ✓ 界a界b界   ╰───────────╯
+
+日本語のテキスト 🎉 wide ✓ 界a界b界
+
+ 日本語のテキスト 🎉 wide ✓ 界a界b界
+
+  日本語のテキスト 🎉 wide ✓ 界a界b界
+
+日本語のテキスト 🎉 wide ✓ 界a界b界
+
+ 日本語のテキスト 🎉 wide ✓ 界a界b界
+
+  日本語のテキスト 🎉 wide ✓ 界a界b界                        ╭───────────╮
+                                                             │ 界 box 世 │
+                                                             │ 🎉 emoji  │
+                                                             ╰───────────╯
+
+
+
+
+
+
+
+
+
+  step 1 t=0.4
+
+bold  italic faint  u r
+
+=== none fwd=true p=0.4 ===
+
+日本語のテキスト 🎉 wide ✓ 界a界b界
+                                        ╭───────────╮
+ 日本語のテキスト 🎉 wide ✓ 界a界b界    │ 界 box 世 │                                                              界界
+                                        │ 🎉 emoji  │
+  日本語のテキスト 🎉 wide ✓ 界a界b界   ╰───────────╯
+
+日本語のテキスト 🎉 wide ✓ 界a界b界
+
+ 日本語のテキスト 🎉 wide ✓ 界a界b界
+
+  日本語のテキスト 🎉 wide ✓ 界a界b界
+
+日本語のテキスト 🎉 wide ✓ 界a界b界
+
+ 日本語のテキスト 🎉 wide ✓ 界a界b界
+
+  日本語のテキスト 🎉 wide ✓ 界a界b界                        ╭───────────╮
+                                                             │ 界 box 世 │
+                                                             │ 🎉 emoji  │
+                                                             ╰───────────╯
+
+
+
+
+
+
+
+
+
+  step 1 t=0.4
+
+bold  italic faint  u r
+
+=== none fwd=false p=0.4 ===
+
+日本語のテキスト 🎉 wide ✓ 界a界b界
+                                        ╭───────────╮
+ 日本語のテキスト 🎉 wide ✓ 界a界b界    │ 界 box 世 │                                                              界界
+                                        │ 🎉 emoji  │
+  日本語のテキスト 🎉 wide ✓ 界a界b界   ╰───────────╯
+
+日本語のテキスト 🎉 wide ✓ 界a界b界
+
+ 日本語のテキスト 🎉 wide ✓ 界a界b界
+
+  日本語のテキスト 🎉 wide ✓ 界a界b界
+
+日本語のテキスト 🎉 wide ✓ 界a界b界
+
+ 日本語のテキスト 🎉 wide ✓ 界a界b界
+
+  日本語のテキスト 🎉 wide ✓ 界a界b界                        ╭───────────╮
+                                                             │ 界 box 世 │
+                                                             │ 🎉 emoji  │
+                                                             ╰───────────╯
+
+
+
+
+
+
+
+
+
+  step 1 t=0.4
+
+bold  italic faint  u r
+
+=== push fwd=true p=0.4 ===
+
+                                                                                         日本語のテキスト 🎉 wide ✓ 界a
+
+                                                                                          日本語のテキスト 🎉 wide ✓ 界a
+
+                                                                                           日本語のテキスト 🎉 wide ✓ 界
+
+                                                                                         日本語のテキスト 🎉 wide ✓ 界a
+
+                                                                                          日本語のテキスト 🎉 wide ✓ 界a
+
+                                                                                           日本語のテキスト 🎉 wide ✓ 界
+
+                                                                                         日本語のテキスト 🎉 wide ✓ 界a
+
+                                                                                          日本語のテキスト 🎉 wide ✓ 界a
+
+                                                                                           日本語のテキスト 🎉 wide ✓ 界
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                           step 1 t=0.4
+
+                                                                                         bold  italic faint  u r
+
+=== push fwd=false p=0.4 ===
+
+
+
+                          界界
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== dissolve fwd=true p=0.4 ===
+
+    語  テ       🎉 wi   ✓      b
+                                            ──   ─
+   本  の  キ        wi     界a                  世                                                                界界
+                                          🎉  mo i
+        の    スト 🎉 w  e   界a  b           ──   ─╯
+
+日  語の  キ     🎉 w           b界
+
+   本    テキ          de   界 界 界
+
+            キス   🎉 w    ✓ 界a   界
+
+日          ス       ide ✓
+
+           キ           e   界 界
+
+    本  の    ス   🎉 w d                                       ─    ─ ─
+                                                               界 b x
+                                                                  e   i
+                                                             ╰    ─  ─  ─
+
+
+
+
+
+
+
+
+
+  st p     0.
+
+ ol    t  ic fa     u r
+
+=== dissolve fwd=false p=0.4 ===
+
+    語  テ       🎉 wi   ✓      b
+                                            ──   ─
+   本  の  キ        wi     界a                  世                                                                界界
+                                          🎉  mo i
+        の    スト 🎉 w  e   界a  b           ──   ─╯
+
+日  語の  キ     🎉 w           b界
+
+   本    テキ          de   界 界 界
+
+            キス   🎉 w    ✓ 界a   界
+
+日          ス       ide ✓
+
+           キ           e   界 界
+
+    本  の    ス   🎉 w d                                       ─    ─ ─
+                                                               界 b x
+                                                                  e   i
+                                                             ╰    ─  ─  ─
+
+
+
+
+
+
+
+
+
+  st p     0.
+
+ ol    t  ic fa     u r
+
+=== wipe fwd=true p=0.4 ===
+
+日本語のテキスト 🎉 wide ✓ 界
+
+ 日本語のテキスト 🎉 wide ✓
+
+  日本語のテキスト 🎉 wide ✓
+
+日本語のテキスト 🎉 wide ✓ 界
+
+ 日本語のテキスト 🎉 wide ✓
+
+  日本語のテキスト 🎉 wide ✓
+
+日本語のテキスト 🎉 wide ✓ 界
+
+ 日本語のテキスト 🎉 wide ✓
+
+  日本語のテキスト 🎉 wide ✓
+
+
+
+
+
+
+
+
+
+
+
+
+  step 1 t=0.4
+
+bold  italic faint  u r
+
+=== wipe fwd=false p=0.4 ===
+
+
+
+                                                                                                                   界界
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== morph fwd=true p=0.4 ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== morph fwd=false p=0.4 ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== fade fwd=true p=0.4 ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== fade fwd=false p=0.4 ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== fadeThrough fwd=true p=0.4 ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== fadeThrough fwd=false p=0.4 ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== cover fwd=true p=0.4 ===
+
+                                                                                         日本語のテキスト 🎉 wide ✓ 界a
+
+                                                                                          日本語のテキスト 🎉 wide ✓ 界a
+
+                                                                                           日本語のテキスト 🎉 wide ✓ 界
+
+                                                                                         日本語のテキスト 🎉 wide ✓ 界a
+
+                                                                                          日本語のテキスト 🎉 wide ✓ 界a
+
+                                                                                           日本語のテキスト 🎉 wide ✓ 界
+
+                                                                                         日本語のテキスト 🎉 wide ✓ 界a
+
+                                                                                          日本語のテキスト 🎉 wide ✓ 界a
+
+                                                                                           日本語のテキスト 🎉 wide ✓ 界
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                           step 1 t=0.4
+
+                                                                                         bold  italic faint  u r
+
+=== cover fwd=false p=0.4 ===
+
+
+
+                          界界
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== uncover fwd=true p=0.4 ===
+
+
+
+                                                                                                                   界界
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== uncover fwd=false p=0.4 ===
+
+日本語のテキスト 🎉 wide ✓ 界a界
+
+ 日本語のテキスト 🎉 wide ✓ 界a
+
+  日本語のテキスト 🎉 wide ✓ 界
+
+日本語のテキスト 🎉 wide ✓ 界a界
+
+ 日本語のテキスト 🎉 wide ✓ 界a
+
+  日本語のテキスト 🎉 wide ✓ 界
+
+日本語のテキスト 🎉 wide ✓ 界a界
+
+ 日本語のテキスト 🎉 wide ✓ 界a
+
+  日本語のテキスト 🎉 wide ✓ 界
+
+
+
+
+
+
+
+
+
+
+
+
+  step 1 t=0.4
+
+bold  italic faint  u r
+
+=== split fwd=true p=0.4 ===
+
+
+                                             ───────╮
+                                             box 世 │
+                                             emoji  │
+                                             ───────╯
+
+
+
+
+
+
+
+
+
+
+
+                                                             ╭───────────╮
+                                                             │ 界 box 世 │
+                                                             │ 🎉 emoji  │
+                                                             ╰───────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== split fwd=false p=0.4 ===
+
+
+                                             ───────╮
+                                             box 世 │
+                                             emoji  │
+                                             ───────╯
+
+
+
+
+
+
+
+
+
+
+
+                                                             ╭───────────╮
+                                                             │ 界 box 世 │
+                                                             │ 🎉 emoji  │
+                                                             ╰───────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== iris fwd=true p=0.4 ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                             ╭───────────╮
+                                                             │ 界 box 世 │
+                                                             │ 🎉 emoji  │
+                                                             ╰───────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== iris fwd=false p=0.4 ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                             ╭───────────╮
+                                                             │ 界 box 世 │
+                                                             │ 🎉 emoji  │
+                                                             ╰───────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== zoom fwd=true p=0.4 ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== zoom fwd=false p=0.4 ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== pixelate fwd=true p=0.4 ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== pixelate fwd=false p=0.4 ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== glitch fwd=true p=0.4 ===
+
+
+                                        ╭───────────╮
+
+
+    日本語のテキスト 🎉 wide ✓ 界a界b界   ╰───────────╯
+
+
+
+
+
+のテキスト 🎉 wide ✓ 界a界b界                                                                                     日本語
+
+
+
+                 日本語のテキスト 🎉 wide ✓ 界a界b界
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                          step 1 t=0.4
+
+bold  italic faint  u r
+
+=== glitch fwd=false p=0.4 ===
+
+
+                                        ╭───────────╮
+
+
+    日本語のテキスト 🎉 wide ✓ 界a界b界   ╰───────────╯
+
+
+
+
+
+のテキスト 🎉 wide ✓ 界a界b界                                                                                     日本語
+
+
+
+                 日本語のテキスト 🎉 wide ✓ 界a界b界
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                          step 1 t=0.4
+
+bold  italic faint  u r
+
+=== push-top fwd=true p=0.4 ===
+
+
+
+
+
+  step 1 t=0.4
+
+bold  italic faint  u r
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== push-top fwd=false p=0.4 ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+日本語のテキスト 🎉 wide ✓ 界a界b界
+                                        ╭───────────╮
+ 日本語のテキスト 🎉 wide ✓ 界a界b界    │ 界 box 世 │                                                              界界
+                                        │ 🎉 emoji  │
+  日本語のテキスト 🎉 wide ✓ 界a界b界   ╰───────────╯
+
+日本語のテキスト 🎉 wide ✓ 界a界b界
+
+=== push-left fwd=true p=0.4 ===
+
+
+
+                          界界
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== push-left fwd=false p=0.4 ===
+
+                                                                                         日本語のテキスト 🎉 wide ✓ 界a
+
+                                                                                          日本語のテキスト 🎉 wide ✓ 界a
+
+                                                                                           日本語のテキスト 🎉 wide ✓ 界
+
+                                                                                         日本語のテキスト 🎉 wide ✓ 界a
+
+                                                                                          日本語のテキスト 🎉 wide ✓ 界a
+
+                                                                                           日本語のテキスト 🎉 wide ✓ 界
+
+                                                                                         日本語のテキスト 🎉 wide ✓ 界a
+
+                                                                                          日本語のテキスト 🎉 wide ✓ 界a
+
+                                                                                           日本語のテキスト 🎉 wide ✓ 界
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                           step 1 t=0.4
+
+                                                                                         bold  italic faint  u r
+
+=== wipe-top fwd=true p=0.4 ===
+
+日本語のテキスト 🎉 wide ✓ 界a界b界
+                                        ╭───────────╮
+ 日本語のテキスト 🎉 wide ✓ 界a界b界    │ 界 box 世 │                                                              界界
+                                        │ 🎉 emoji  │
+  日本語のテキスト 🎉 wide ✓ 界a界b界   ╰───────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== wipe-top fwd=false p=0.4 ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  step 1 t=0.4
+
+bold  italic faint  u r
+
+=== wipe-right fwd=true p=0.4 ===
+
+
+
+                                                                                                                   界界
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== wipe-right fwd=false p=0.4 ===
+
+日本語のテキスト 🎉 wide ✓ 界
+
+ 日本語のテキスト 🎉 wide ✓
+
+  日本語のテキスト 🎉 wide ✓
+
+日本語のテキスト 🎉 wide ✓ 界
+
+ 日本語のテキスト 🎉 wide ✓
+
+  日本語のテキスト 🎉 wide ✓
+
+日本語のテキスト 🎉 wide ✓ 界
+
+ 日本語のテキスト 🎉 wide ✓
+
+  日本語のテキスト 🎉 wide ✓
+
+
+
+
+
+
+
+
+
+
+
+
+  step 1 t=0.4
+
+bold  italic faint  u r
+
+=== cover-top fwd=true p=0.4 ===
+
+
+
+
+
+  step 1 t=0.4
+
+bold  italic faint  u r
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== cover-top fwd=false p=0.4 ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+日本語のテキスト 🎉 wide ✓ 界a界b界
+                                        ╭───────────╮
+ 日本語のテキスト 🎉 wide ✓ 界a界b界    │ 界 box 世 │                                                              界界
+                                        │ 🎉 emoji  │
+  日本語のテキスト 🎉 wide ✓ 界a界b界   ╰───────────╯
+
+日本語のテキスト 🎉 wide ✓ 界a界b界
+
+=== uncover-left fwd=true p=0.4 ===
+
+日本語のテキスト 🎉 wide ✓ 界a界
+
+ 日本語のテキスト 🎉 wide ✓ 界a
+
+  日本語のテキスト 🎉 wide ✓ 界
+
+日本語のテキスト 🎉 wide ✓ 界a界
+
+ 日本語のテキスト 🎉 wide ✓ 界a
+
+  日本語のテキスト 🎉 wide ✓ 界
+
+日本語のテキスト 🎉 wide ✓ 界a界
+
+ 日本語のテキスト 🎉 wide ✓ 界a
+
+  日本語のテキスト 🎉 wide ✓ 界
+
+
+
+
+
+
+
+
+
+
+
+
+  step 1 t=0.4
+
+bold  italic faint  u r
+
+=== uncover-left fwd=false p=0.4 ===
+
+
+
+                                                                                                                   界界
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== split-top fwd=true p=0.4 ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+日本語のテキスト 🎉 wide ✓ 界a界b界
+
+ 日本語のテキスト 🎉 wide ✓ 界a界b界
+
+  日本語のテキスト 🎉 wide ✓ 界a界b界                        ╭───────────╮
+                                                             │ 界 box 世 │
+                                                             │ 🎉 emoji  │
+                                                             ╰───────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== split-top fwd=false p=0.4 ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+日本語のテキスト 🎉 wide ✓ 界a界b界
+
+ 日本語のテキスト 🎉 wide ✓ 界a界b界
+
+  日本語のテキスト 🎉 wide ✓ 界a界b界                        ╭───────────╮
+                                                             │ 界 box 世 │
+                                                             │ 🎉 emoji  │
+                                                             ╰───────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -9,7 +9,7 @@ Start with the [project README](../README.md) and its complete first talk.
 | [CLI reference](cli.md) | All modes, flags, defaults, indexing and export behavior |
 | [Troubleshooting](troubleshooting.md) | Common symptoms and fixes |
 | [API reference](https://pkg.go.dev/github.com/austinlparker/decker) | Exported types, functions and methods |
-| [Contributing](../CONTRIBUTING.md) | Engine changes, checks, goldens and bug reports |
+| [Contributing](../CONTRIBUTING.md) | Engine changes, checks, reference tests and bug reports |
 | [Architecture](architecture.md) | Engine source-file map |
 | [Releasing](releasing.md) | Version selection and release automation |
 | [Font licenses](../fonts/README.md) | Bundled font inventory, OFL and BSD notices |

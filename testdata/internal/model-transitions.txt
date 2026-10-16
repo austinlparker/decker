@@ -1,0 +1,36 @@
+=== push-fwd ===
+p=0 kind=2 fwd=true running=true
+p=0.2 kind=2 fwd=true running=true
+p=0.5 kind=2 fwd=true running=true
+p=0.8 kind=2 fwd=true running=true
+p=1.2 kind=2 fwd=true running=false
+=== wipe-fwd ===
+p=0 kind=4 fwd=true running=true
+p=0.2 kind=4 fwd=true running=true
+p=0.5 kind=4 fwd=true running=true
+p=0.8 kind=4 fwd=true running=true
+p=1.2 kind=4 fwd=true running=false
+=== dissolve-back ===
+p=0 kind=3 fwd=false running=true
+p=0.2 kind=3 fwd=false running=true
+p=0.5 kind=3 fwd=false running=true
+p=0.8 kind=3 fwd=false running=true
+p=1.2 kind=3 fwd=false running=false
+=== push-back ===
+p=0 kind=2 fwd=false running=true
+p=0.2 kind=2 fwd=false running=true
+p=0.5 kind=2 fwd=false running=true
+p=0.8 kind=2 fwd=false running=true
+p=1.2 kind=2 fwd=false running=false
+=== none-fwd ===
+p=0 kind=1 fwd=true running=false
+p=0.2 kind=1 fwd=true running=false
+p=0.5 kind=1 fwd=true running=false
+p=0.8 kind=1 fwd=true running=false
+p=1.2 kind=1 fwd=true running=false
+=== wipe-fwd-dev ===
+p=0 kind=4 fwd=true running=true
+p=0.2 kind=4 fwd=true running=true
+p=0.5 kind=4 fwd=true running=true
+p=0.8 kind=4 fwd=true running=true
+p=1.2 kind=4 fwd=true running=false

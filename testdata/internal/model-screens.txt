@@ -1,0 +1,1968 @@
+=== plain 80x24 s0.0 settled ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== plain 80x24 s1.2 settled ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== plain 80x24 s2.3 settled ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== plain 80x24 s3.0 settled ===
+
+ plain
+
+
+
+
+
+
+
+
+                               ╭───────────────╮
+                               │ terminal text │
+                               ╰───────────────╯
+
+
+
+
+
+
+
+
+
+
+
+=== plain 80x24 s4.0 settled ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== dev 80x24 s0.0 settled ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== dev 80x24 s1.2 settled ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁ ● dev  ●●●  2/5
+=== dev 80x24 s2.3 settled ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁ ● dev  ●●●●  ✎  3/5
+=== dev 80x24 s3.0 settled ===
+
+ plain
+
+
+
+
+
+
+
+
+                               ╭───────────────╮
+                               │ terminal text │
+                               ╰───────────────╯
+
+
+
+
+
+
+
+
+
+
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁ ● dev  4/5
+=== dev 80x24 s4.0 settled ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁ ● dev  5/5
+=== building 80x24 s2.2 footer ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁ ⟳ rebuilding  ●●●○  ✎  3/5
+=== building 80x24 s2.2 footer+notes ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+────────────────────────────────────────────────────────────────────────────────
+ notes
+ a ring, a box and an arrow
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁ ⟳ rebuilding  ●●●○  ✎  3/5
+=== failed 80x24 s2.2 footer ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+────────────────────────────────────────────────────────────────────────────────
+ build failed — fix and save to retry
+ ./main.go:12:3: undefined: nope
+ ./main.go:13:1: syntax error
+ more output
+ more output
+ more output
+ more output
+ more output
+ …
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁ ✗ build failed  ●●●○  ✎  3/5
+=== failed 80x24 s2.2 footer+notes ===
+
+
+
+
+
+
+
+
+
+
+────────────────────────────────────────────────────────────────────────────────
+ build failed — fix and save to retry
+ ./main.go:12:3: undefined: nope
+ ./main.go:13:1: syntax error
+ more output
+ more output
+ more output
+ more output
+ more output
+ …
+────────────────────────────────────────────────────────────────────────────────
+ notes
+ a ring, a box and an arrow
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁ ✗ build failed  ●●●○  ✎  3/5
+=== dev 80x24 s2.1 count ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁ go to 12…  ● dev  ●●○○  ✎  3/5
+=== plain 80x24 s0.0 notes ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+────────────────────────────────────────────────────────────────────────────────
+ notes
+ (no notes for this slide)
+=== plain 80x24 s0.0 notes+help ===
+
+
+
+            ╭──────────────────────────────────────────────────────╮
+            │                                                      │
+            │  → l space pgdn  next step / slide                   │
+            │  ← h pgup        previous                            │
+            │  ] [             next / previous slide (skip steps)  │
+            │  g G             first / last slide                  │
+            │  12g  12⏎        jump to slide 12                    │
+            │  r               replay this slide                   │
+            │  b .             black screen (again to resume)      │
+            │  w ,             white screen (again to resume)      │
+            │  n               speaker notes                       │
+            │  ?               this help                           │
+            │  q               quit                                │
+            │                                                      │
+            ╰──────────────────────────────────────────────────────╯
+
+
+
+────────────────────────────────────────────────────────────────────────────────
+ notes
+ (no notes for this slide)
+=== plain 80x24 s0.0 help ===
+
+
+
+
+            ╭──────────────────────────────────────────────────────╮
+            │                                                      │
+            │  → l space pgdn  next step / slide                   │
+            │  ← h pgup        previous                            │
+            │  ] [             next / previous slide (skip steps)  │
+            │  g G             first / last slide                  │
+            │  12g  12⏎        jump to slide 12                    │
+            │  r               replay this slide                   │
+            │  b .             black screen (again to resume)      │
+            │  w ,             white screen (again to resume)      │
+            │  n               speaker notes                       │
+            │  ?               this help                           │
+            │  q               quit                                │
+            │                                                      │
+            ╰──────────────────────────────────────────────────────╯
+
+
+
+
+
+=== plain 80x24 s2.0 notes ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+────────────────────────────────────────────────────────────────────────────────
+ notes
+ a ring, a box and an arrow
+=== plain 80x24 s2.0 notes+help ===
+
+
+
+            ╭──────────────────────────────────────────────────────╮
+            │                                                      │
+            │  → l space pgdn  next step / slide                   │
+            │  ← h pgup        previous                            │
+            │  ] [             next / previous slide (skip steps)  │
+            │  g G             first / last slide                  │
+            │  12g  12⏎        jump to slide 12                    │
+            │  r               replay this slide                   │
+            │  b .             black screen (again to resume)      │
+            │  w ,             white screen (again to resume)      │
+            │  n               speaker notes                       │
+            │  ?               this help                           │
+            │  q               quit                                │
+            │                                                      │
+            ╰──────────────────────────────────────────────────────╯
+
+
+
+────────────────────────────────────────────────────────────────────────────────
+ notes
+ a ring, a box and an arrow
+=== plain 80x24 s2.0 help ===
+
+
+
+
+            ╭──────────────────────────────────────────────────────╮
+            │                                                      │
+            │  → l space pgdn  next step / slide                   │
+            │  ← h pgup        previous                            │
+            │  ] [             next / previous slide (skip steps)  │
+            │  g G             first / last slide                  │
+            │  12g  12⏎        jump to slide 12                    │
+            │  r               replay this slide                   │
+            │  b .             black screen (again to resume)      │
+            │  w ,             white screen (again to resume)      │
+            │  n               speaker notes                       │
+            │  ?               this help                           │
+            │  q               quit                                │
+            │                                                      │
+            ╰──────────────────────────────────────────────────────╯
+
+
+
+
+
+=== plain 80x24 s0.0 long-notes ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+────────────────────────────────────────────────────────────────────────────────
+ notes
+ a long line of speaker notes that wraps
+ a long line of speaker notes that wraps
+ a long line of speaker notes that wraps
+ a long line of speaker notes that wraps
+ a long line of speaker notes that wraps
+ …
+=== dev 80x24 s2.1 blank-black ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== dev 80x24 s2.1 blank-white ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== plain 200x56 s0.0 settled ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== plain 200x56 s1.2 settled ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== plain 200x56 s2.3 settled ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== plain 200x56 s3.0 settled ===
+
+ plain
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                           ╭───────────────╮
+                                                                                           │ terminal text │
+                                                                                           ╰───────────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== plain 200x56 s4.0 settled ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== dev 200x56 s0.0 settled ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== dev 200x56 s1.2 settled ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁ ● dev  ●●●  2/5
+=== dev 200x56 s2.3 settled ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁ ● dev  ●●●●  ✎  3/5
+=== dev 200x56 s3.0 settled ===
+
+ plain
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                           ╭───────────────╮
+                                                                                           │ terminal text │
+                                                                                           ╰───────────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁ ● dev  4/5
+=== dev 200x56 s4.0 settled ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁ ● dev  5/5
+=== building 200x56 s2.2 footer ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁ ⟳ rebuilding  ●●●○  ✎  3/5
+=== building 200x56 s2.2 footer+notes ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ notes
+ a ring, a box and an arrow
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁ ⟳ rebuilding  ●●●○  ✎  3/5
+=== failed 200x56 s2.2 footer ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ build failed — fix and save to retry
+ ./main.go:12:3: undefined: nope
+ ./main.go:13:1: syntax error
+ more output
+ more output
+ more output
+ more output
+ more output
+ more output
+ more output
+ more output
+ more output
+ more output
+ more output
+ more output
+ more output
+ more output
+ more output
+ …
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁ ✗ build failed  ●●●○  ✎  3/5
+=== failed 200x56 s2.2 footer+notes ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ build failed — fix and save to retry
+ ./main.go:12:3: undefined: nope
+ ./main.go:13:1: syntax error
+ more output
+ more output
+ more output
+ more output
+ more output
+ more output
+ more output
+ more output
+ more output
+ more output
+ more output
+ more output
+ more output
+ more output
+ more output
+ …
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ notes
+ a ring, a box and an arrow
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁ ✗ build failed  ●●●○  ✎  3/5
+=== dev 200x56 s2.1 count ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁ go to 12…  ● dev  ●●○○  ✎  3/5
+=== plain 200x56 s0.0 notes ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ notes
+ (no notes for this slide)
+=== plain 200x56 s0.0 notes+help ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                        ╭──────────────────────────────────────────────────────╮
+                                                                        │                                                      │
+                                                                        │  → l space pgdn  next step / slide                   │
+                                                                        │  ← h pgup        previous                            │
+                                                                        │  ] [             next / previous slide (skip steps)  │
+                                                                        │  g G             first / last slide                  │
+                                                                        │  12g  12⏎        jump to slide 12                    │
+                                                                        │  r               replay this slide                   │
+                                                                        │  b .             black screen (again to resume)      │
+                                                                        │  w ,             white screen (again to resume)      │
+                                                                        │  n               speaker notes                       │
+                                                                        │  ?               this help                           │
+                                                                        │  q               quit                                │
+                                                                        │                                                      │
+                                                                        ╰──────────────────────────────────────────────────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ notes
+ (no notes for this slide)
+=== plain 200x56 s0.0 help ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                        ╭──────────────────────────────────────────────────────╮
+                                                                        │                                                      │
+                                                                        │  → l space pgdn  next step / slide                   │
+                                                                        │  ← h pgup        previous                            │
+                                                                        │  ] [             next / previous slide (skip steps)  │
+                                                                        │  g G             first / last slide                  │
+                                                                        │  12g  12⏎        jump to slide 12                    │
+                                                                        │  r               replay this slide                   │
+                                                                        │  b .             black screen (again to resume)      │
+                                                                        │  w ,             white screen (again to resume)      │
+                                                                        │  n               speaker notes                       │
+                                                                        │  ?               this help                           │
+                                                                        │  q               quit                                │
+                                                                        │                                                      │
+                                                                        ╰──────────────────────────────────────────────────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== plain 200x56 s2.0 notes ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ notes
+ a ring, a box and an arrow
+=== plain 200x56 s2.0 notes+help ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                        ╭──────────────────────────────────────────────────────╮
+                                                                        │                                                      │
+                                                                        │  → l space pgdn  next step / slide                   │
+                                                                        │  ← h pgup        previous                            │
+                                                                        │  ] [             next / previous slide (skip steps)  │
+                                                                        │  g G             first / last slide                  │
+                                                                        │  12g  12⏎        jump to slide 12                    │
+                                                                        │  r               replay this slide                   │
+                                                                        │  b .             black screen (again to resume)      │
+                                                                        │  w ,             white screen (again to resume)      │
+                                                                        │  n               speaker notes                       │
+                                                                        │  ?               this help                           │
+                                                                        │  q               quit                                │
+                                                                        │                                                      │
+                                                                        ╰──────────────────────────────────────────────────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ notes
+ a ring, a box and an arrow
+=== plain 200x56 s2.0 help ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                        ╭──────────────────────────────────────────────────────╮
+                                                                        │                                                      │
+                                                                        │  → l space pgdn  next step / slide                   │
+                                                                        │  ← h pgup        previous                            │
+                                                                        │  ] [             next / previous slide (skip steps)  │
+                                                                        │  g G             first / last slide                  │
+                                                                        │  12g  12⏎        jump to slide 12                    │
+                                                                        │  r               replay this slide                   │
+                                                                        │  b .             black screen (again to resume)      │
+                                                                        │  w ,             white screen (again to resume)      │
+                                                                        │  n               speaker notes                       │
+                                                                        │  ?               this help                           │
+                                                                        │  q               quit                                │
+                                                                        │                                                      │
+                                                                        ╰──────────────────────────────────────────────────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== plain 200x56 s0.0 long-notes ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ notes
+ a long line of speaker notes that wraps
+ a long line of speaker notes that wraps
+ a long line of speaker notes that wraps
+ a long line of speaker notes that wraps
+ a long line of speaker notes that wraps
+ a long line of speaker notes that wraps
+ a long line of speaker notes that wraps
+ a long line of speaker notes that wraps
+ a long line of speaker notes that wraps
+ a long line of speaker notes that wraps
+ a long line of speaker notes that wraps
+ a long line of speaker notes that wraps
+ a long line of speaker notes that wraps
+ …
+=== dev 200x56 s2.1 blank-black ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== dev 200x56 s2.1 blank-white ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

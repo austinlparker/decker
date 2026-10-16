@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -161,5 +162,70 @@ func TestPosts(t *testing.T) {
 	out, err := cmd.CombinedOutput()
 	if err == nil || !strings.Contains(string(out), "too long for the service") {
 		t.Errorf("Posts passed or said something else: %v\n%s", err, out)
+	}
+}
+
+// TestSlidesFailsAnImpureView runs Slides, in a child test process, on a
+// deck whose View counts the frames it has drawn.
+func TestSlidesFailsAnImpureView(t *testing.T) {
+	if os.Getenv("DECKTEST_IMPURE") != "" {
+		d := boomDeck("")
+		frames := 0
+		d.Slides[0].View = func(c decker.Ctx, sc *decker.Scene) {
+			frames++
+			sc.Px.Rect(float64(frames%10), 0, 4, 4, decker.Hex("#FF8800"), 1)
+		}
+		Slides(t, d)
+		return
+	}
+	cmd := exec.Command(os.Args[0], "-test.run=^TestSlidesFailsAnImpureView$")
+	cmd.Env = append(os.Environ(), "DECKTEST_IMPURE=1")
+	out, err := cmd.CombinedOutput()
+	if err == nil || !strings.Contains(string(out), "drawn again, it changed") {
+		t.Errorf("Slides passed or said something else: %v\n%s", err, out)
+	}
+}
+
+// goldenDeck is a slide whose box sits at x, with words in the character
+// layer.
+func goldenDeck(x float64) decker.Deck {
+	d := boomDeck("")
+	d.Slides[0].Steps = 2
+	d.Slides[0].View = func(c decker.Ctx, sc *decker.Scene) {
+		sc.Px.Rect(c.X(x), c.Y(0.2), c.X(0.3), c.Y(0.3), decker.Hex("#FF8800"), 1)
+		if c.Reached(1) {
+			sc.Text(2, 1, "words", decker.Hex("#FFFFFF").Color())
+		}
+	}
+	return d
+}
+
+// TestGolden records a deck's references, checks them, and, in a child
+// test process, fails a deck whose box moved and a reference no slide
+// draws.
+func TestGolden(t *testing.T) {
+	if dir := os.Getenv("DECKTEST_GOLDEN"); dir != "" {
+		Golden(t, goldenDeck(0.2), dir)
+		return
+	}
+	dir := t.TempDir()
+	t.Setenv("UPDATE_GOLDEN", "1")
+	Golden(t, goldenDeck(0.1), dir)
+	t.Setenv("UPDATE_GOLDEN", "")
+	Golden(t, goldenDeck(0.1), dir)
+	chars, _ := os.ReadFile(filepath.Join(dir, "characters.txt"))
+	if !strings.Contains(string(chars), "=== 1.2 Boom ===\n\n  words\n") {
+		t.Errorf("characters.txt:\n%s", chars)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "02-Gone.png"), nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command(os.Args[0], "-test.run=^TestGolden$")
+	cmd.Env = append(os.Environ(), "DECKTEST_GOLDEN="+dir)
+	out, err := cmd.CombinedOutput()
+	for _, want := range []string{"01-Boom.png:", "build 1 at 0.25: a pixel moved by", "02-Gone.png: no slide draws it"} {
+		if err == nil || !strings.Contains(string(out), want) {
+			t.Errorf("Golden passed or didn't say %q: %v\n%s", want, err, out)
+		}
 	}
 }

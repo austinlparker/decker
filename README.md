@@ -192,8 +192,8 @@ presenter-only timer controls.
 ## Rendering contract
 
 A frame depends only on `Ctx`: use `c.T`, `c.StepT`, `c.Since` and `Hash01`
-for animation and noise. This lets replay, snapshots, video and golden tests
-render the same moment. Go build indexes start at **0**; CLI slide and step
+for animation and noise. This lets replay, snapshots, video and reference
+tests render the same moment. Go build indexes start at **0**; CLI slide and step
 numbers start at **1**. `Steps: 2` means two build states.
 
 Video uses the pixel canvas and has no audio. Native character-layer content

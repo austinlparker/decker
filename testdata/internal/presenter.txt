@@ -1,0 +1,76 @@
+=== update ===
+tea.WindowSizeMsg 100x30 linked=false s0.0 now=0s count="" running=false banked=0s cmd=false
+decker.presTickMsg 100x30 linked=false s0.0 now=1m30s count="" running=false banked=0s cmd=true
+decker.linkUpMsg 100x30 linked=true s0.0 now=1m30s count="" running=false banked=0s cmd=true
+decker.linkStateMsg 100x30 linked=true s0.1 now=1m30s count="" running=false banked=0s cmd=true
+tea.KeyPressMsg 100x30 linked=true s0.1 now=1m30s count="1" running=false banked=0s cmd=false
+tea.KeyPressMsg 100x30 linked=true s0.1 now=1m30s count="12" running=false banked=0s cmd=false
+tea.KeyPressMsg 100x30 linked=true s0.1 now=1m30s count="" running=false banked=0s cmd=false
+tea.KeyPressMsg 100x30 linked=true s0.1 now=1m30s count="" running=false banked=0s cmd=false
+tea.KeyPressMsg 100x30 linked=true s0.1 now=1m30s count="" running=false banked=0s cmd=false
+tea.KeyPressMsg 100x30 linked=true s0.1 now=1m30s count="" running=false banked=0s cmd=false
+tea.KeyPressMsg 100x30 linked=true s0.1 now=1m30s count="" running=false banked=0s cmd=false
+tea.KeyPressMsg 100x30 linked=true s0.1 now=1m30s count="" running=false banked=0s cmd=false
+tea.KeyPressMsg 100x30 linked=true s0.1 now=1m30s count="" running=false banked=0s cmd=false
+tea.KeyPressMsg 100x30 linked=true s0.1 now=1m30s count="" running=false banked=0s cmd=false
+tea.KeyPressMsg 100x30 linked=true s0.1 now=1m30s count="" running=false banked=0s cmd=false
+tea.KeyPressMsg 100x30 linked=true s0.1 now=1m30s count="" running=false banked=0s cmd=false
+tea.KeyPressMsg 100x30 linked=true s0.1 now=1m30s count="" running=false banked=0s cmd=false
+tea.KeyPressMsg 100x30 linked=true s0.1 now=1m30s count="" running=false banked=0s cmd=true
+decker.linkDownMsg 100x30 linked=false s0.1 now=1m30s count="" running=false banked=0s cmd=true
+struct {} 100x30 linked=false s0.1 now=1m30s count="" running=false banked=0s cmd=false
+=== empty ===
+""
+=== pace 0.0 at 0s ===
+0s
+=== pace 1.2 at 15m0s ===
+0s
+=== pace 1.2 at 10m0s ===
+5m0s
+=== pace 0.0 at 5m0s ===
+-5m0s
+=== pace 2.0 at 29m0s ===
+-3m59.999999999s
+=== pace, degenerate ===
+0s 0s
+=== clock ===
+0:00
+0:59
+1:01
+1:30
+60:01
+0:01
+0:02
+=== text helpers ===
+"left           right"
+"left rig"
+"  a\n  b"
+"abc"
+""
+=== placeholder ===
+
+
+      message
+
+
+=== frame ===
+╭─╮
+│a│
+│b│
+╰─╯
+=== nextTarget ===
+[1 0] NEXT · 2/6 Bullets true
+[2 0] NEXT · 3/6 Diagram true
+[0 0]  false
+[5 0] NEXT · 6/6 Wide true
+[9 1] NEXT · step 2 true
+=== previewBox 100x30 for 682x171 ===
+44 11
+=== previewBox 40x12 for 682x171 ===
+0 0
+=== previewBox 200x60 for 120x40 ===
+94 31
+=== previewBox 30x9 for 100x100 ===
+0 0
+=== previewBox 120x5 for 682x171 ===
+0 0

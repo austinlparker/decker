@@ -1,11 +1,11 @@
 package decker_test
 
 // The gallery is a deck whose slides together exercise every exported
-// drawing API of the engine. Its golden hashes (testdata/gallery.golden)
-// pin the engine's output byte for byte: a refactor that moves a pixel, a
-// cell or an escape sequence fails TestGalleryGolden. Record with
-// UPDATE_GOLDEN=1 go test -run TestGalleryGolden, and only when a change in
-// output is intended.
+// drawing API of the engine. Its reference images (testdata/gallery, one
+// per slide) catch a change anyone could see: TestGalleryGolden fails when
+// a slide looks different, within the tolerance internal/visual explains.
+// Record with UPDATE_GOLDEN=1 go test -run TestGalleryGolden, and only when
+// a change in output is intended.
 //
 // Every View is a pure function of its Ctx: no clock, no rand. Animated
 // things vary with c.T / c.StepT so the golden moments differ.
@@ -30,7 +30,7 @@ import (
 )
 
 func TestGalleryGolden(t *testing.T) {
-	decktest.Golden(t, gallery(), "testdata/gallery.golden")
+	decktest.Golden(t, gallery(), "testdata/gallery")
 }
 
 func TestGallerySlides(t *testing.T) { decktest.Slides(t, gallery()) }
@@ -70,12 +70,6 @@ func TestGalleryReview(t *testing.T) {
 		}
 	}
 }
-
-// decktest.Hashes and decktest.Hash are API: talks diff them in CI.
-var (
-	_ = decktest.Hashes
-	_ decktest.Hash
-)
 
 // TestGalleryDraw covers Deck.Draw and Deck.Steps, which the golden does
 // not (it goes through Render).

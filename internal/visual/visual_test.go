@@ -1,0 +1,91 @@
+package visual
+
+import (
+	"image"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+func flat(w, h int, v uint8) *image.RGBA {
+	img := image.NewRGBA(image.Rect(0, 0, w, h))
+	for i := range img.Pix {
+		img.Pix[i] = v
+	}
+	for i := 3; i < len(img.Pix); i += 4 {
+		img.Pix[i] = 255
+	}
+	return img
+}
+
+func TestCompare(t *testing.T) {
+	base := flat(100, 100, 100)
+	for _, tc := range []struct {
+		name  string
+		edit  func(*image.RGBA)
+		fails string
+	}{
+		{"identical", func(*image.RGBA) {}, ""},
+		{"a few pixels a little off, as fused arithmetic leaves them", func(img *image.RGBA) {
+			for i := range 40 { // 0.4% of the pixels, each by up to MaxDelta
+				img.Pix[img.PixOffset(i, i)] += MaxDelta
+			}
+		}, ""},
+		{"one pixel moved past MaxDelta", func(img *image.RGBA) { img.Pix[img.PixOffset(5, 5)] += MaxDelta + 1 }, "a pixel moved by 41"},
+		{"a faint change over a broad area", func(img *image.RGBA) {
+			for y := range 10 {
+				for x := range 10 {
+					img.Pix[img.PixOffset(x, y)+2] += SmallDelta + 1
+				}
+			}
+		}, "1.00% of pixels moved by more than 2"},
+	} {
+		got := flat(100, 100, 100)
+		tc.edit(got)
+		problem, _ := Compare(got, base)
+		if tc.fails == "" && problem != "" || tc.fails != "" && !strings.Contains(problem, tc.fails) {
+			t.Errorf("%s: %q, want %q", tc.name, problem, tc.fails)
+		}
+	}
+	if problem, _ := Compare(flat(10, 10, 0), flat(10, 11, 0)); !strings.Contains(problem, "size") {
+		t.Errorf("different sizes: %q", problem)
+	}
+}
+
+func TestShrinkAverages(t *testing.T) {
+	// A checkerboard of 0 and 255 shrinks to mid grey, rounded once.
+	img := Shrink(4, 2, func(x, y int) (r, g, b float32) {
+		v := float32(255 * ((x + y) % 2))
+		return v, v, v
+	})
+	if img.Rect.Dx() != 2 || img.Rect.Dy() != 1 || img.Pix[0] != 128 || img.Pix[4] != 128 || img.Pix[3] != 255 {
+		t.Errorf("%v %v", img.Rect, img.Pix)
+	}
+}
+
+// TestRecordAndCheck records an image and some text, checks them, then
+// checks what changed after re-recording: only what moved is rewritten.
+func TestRecordAndCheck(t *testing.T) {
+	dir := t.TempDir()
+	path, textPath := filepath.Join(dir, "a.png"), filepath.Join(dir, "a.txt")
+	var text Text
+	text.Add("section", "line one  \nline two")
+	t.Setenv("UPDATE_GOLDEN", "1")
+	CheckSheet(t, path, []Tile{{"one", flat(10, 10, 50)}, {"two", flat(6, 4, 200)}})
+	text.Check(t, textPath)
+	if b, _ := os.ReadFile(textPath); string(b) != "=== section ===\nline one\nline two\n" {
+		t.Errorf("text file: %q", b)
+	}
+	st, _ := os.Stat(path)
+	// Within the tolerance: not rewritten.
+	nudged := flat(10, 10, 50)
+	nudged.Pix[0]++
+	CheckSheet(t, path, []Tile{{"one", nudged}, {"two", flat(6, 4, 200)}})
+	if st2, _ := os.Stat(path); !st2.ModTime().Equal(st.ModTime()) {
+		t.Error("a sheet within the tolerance was rewritten")
+	}
+	t.Setenv("UPDATE_GOLDEN", "")
+	CheckSheet(t, path, []Tile{{"one", nudged}, {"two", flat(6, 4, 200)}})
+	text.Check(t, textPath)
+}

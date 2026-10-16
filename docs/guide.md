@@ -684,20 +684,30 @@ import (
 func TestSlides(t *testing.T)      { decktest.Slides(t, talk()) }
 func TestReview(t *testing.T)      { decktest.Review(t, talk()) }
 func TestPosts(t *testing.T)       { decktest.Posts(t, talk()) }
-func TestGolden(t *testing.T)      { decktest.Golden(t, talk(), "testdata/golden.txt") }
+func TestGolden(t *testing.T)      { decktest.Golden(t, talk(), "testdata/golden") }
 func BenchmarkFrames(b *testing.B) { decktest.Frames(b, talk()) }
 ```
 
 `Slides` renders every slide at every build step, at three sizes and four
-moments, and fails on panics in a View, a placed element or the overlay.
+moments, and fails on panics in a View, a placed element or the overlay,
+and on a frame that comes out different when drawn again: a View must
+depend only on its `Ctx`.
 `Review` fails on every error `review` would report (see below), so a slide
 that starts clipping fails the build. `Posts` renders every post in the
 notes and has the deck's `Publisher` check them, as starting to post does,
-without signing in. `Golden` hashes every frame of every step at eight moments and
-three sizes, and fails if any of them changed: after changing a slide on
-purpose, record it with `UPDATE_GOLDEN=1 go test -run Golden`. That makes
-the engine safe to change: an engine change that moves one pixel of any
-talk fails that talk's test.
+without signing in. `Golden` keeps an image of each slide in the
+directory, every build appearing, entered and settled, and fails when a
+slide no longer looks the same; text in the character layer is checked
+exactly. Images are compared at half size and within a small tolerance:
+the same program doesn't draw the same bits on every machine (an M-series
+Mac rounds some arithmetic differently from most Linux CI), and those
+differences are far too small to see, while a word changed, an element
+moved half a pixel or a color shifted is not. A failure says which build
+and moment, and leaves what it drew and a diff image where it says. After
+changing a slide on purpose, record with `UPDATE_GOLDEN=1 go test -run
+Golden`; only the images that changed are rewritten. That makes the engine
+safe to change: an engine change that alters how a talk looks fails that
+talk's test.
 
 
 ### Reviewing a deck

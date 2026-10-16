@@ -4,10 +4,10 @@ Talks depend on decker by version, so a release is a semver tag and a GitHub
 Release; there are no binaries. It all happens on its own:
 
 - **CI** ([ci.yml](../.github/workflows/ci.yml)) runs on pushes to `main` and every pull request:
-  gofmt, `go mod tidy`, vet and the full test suite, goldens included.
+  gofmt, `go mod tidy`, vet and the full test suite, reference images included.
 - **Release** ([release.yml](../.github/workflows/release.yml)) runs on every push to `main`
   and once a day. If the library changed since the last tag (not just tests,
-  goldens, docs or CI), it works out the next version from the exported API
+  reference files, docs or CI), it works out the next version from the exported API
   with `apidiff` ([next-version.sh](../.github/scripts/next-version.sh)): a breaking change bumps
   the major version (the minor one while decker is v0), an addition the minor,
   anything else the patch. Then it runs the tests again, tags, and

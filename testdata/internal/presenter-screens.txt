@@ -1,0 +1,2696 @@
+=== 60x15 waiting ===
+  deck-test                      30:00 · starts at slide 2
+  ? keys
+
+
+
+
+                   Waiting for the deck…
+
+             Start the deck in another window.
+                        /tmp/x.sock
+
+
+
+
+  0:00 ───────────────────────────────────── 30:00   03:04
+=== 60x15 s0.0 running ===
+  1/6  Block letters              23:00 left   7:00 behind
+  ? keys
+  NEXT · 2/6 Bullets
+  NOTES
+  (no notes for this slide)
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━───────────────────────────── 30:00   03:04
+=== 60x15 s1.1 running ===
+  2/6  Bullets  ●●○               23:00 left   2:00 behind
+  ? keys
+  NEXT · step 3
+  NOTES
+  (no notes for this slide)
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━───────────────────────────── 30:00   03:04
+=== 60x15 s2.3 running ===
+  3/6  Diagram  ●●●●              23:00 left   10:30 ahead
+  ? keys
+  NEXT · 4/6 Character layer
+  NOTES
+  a ring, a box and an arrow
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━───────────────────────────── 30:00   03:04
+=== 60x15 s5.1 running ===
+  6/6  Wide  ●●                   23:00 left   20:30 ahead
+  ? keys
+  NEXT · end of deck
+  NOTES
+  wide characters
+  and a second line
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━───────────────────────────── 30:00   03:04
+=== 60x15 long-notes ===
+  1/6  Block letters             30:00 · starts at slide 2
+  ? keys
+  NEXT · 2/6 Bullets
+  NOTES
+  a long line of speaker notes, which wraps over several
+  lines
+  a long line of speaker notes, which wraps over several
+  lines
+  a long line of speaker notes, which wraps over several
+  lines
+  a long line of speaker notes, which wraps over several
+  lines
+  a long line of speaker notes, which wraps over several
+  …
+  0:00 ───────────────────────────────────── 30:00   03:04
+=== 60x15 keys ===
+  2/6  Bullets  ●●○              30:00 · starts at slide 2
+  ? keys
+  ╭─ Keys ───────────────────────────────────────────────╮
+  │  → l space pgdn      next step / slide               │
+  │  ← h pgup            previous                        │
+  │  ] [                 next / previous slide (skip st  │
+  │  g G                 first / last slide              │
+  │  12g  12⏎            jump to slide 12                │
+  │  r                   replay this slide               │
+  │  b .                 black screen (again to resume)  │
+  │  w ,                 white screen (again to resume)  │
+  │  t  T                start or pause the timer / res  │
+  │  q                   quit                            │
+  ╰─ ? or esc closes · deck keys still work ─────────────╯
+  0:00 ───────────────────────────────────── 30:00   03:04
+=== 60x15 small-deck ===
+  4/6  Character layer           30:00 · starts at slide 2
+  ? keys
+  NEXT · 5/6 Last
+  NOTES
+  (no notes for this slide)
+
+
+
+
+
+
+
+
+
+  0:00 ───────────────────────────────────── 30:00   03:04
+=== 60x15 posting/live-dialog ===
+  2/6  Bullets  ●●○               23:00 left   2:00 behind
+  ? keys           ● POSTING as @me.bsky.social · 0/2 sent
+  NEXT · step 3
+  ╭─ Posting as @me.bsky.social ─────────────────────────╮
+  │                                                      │
+  │  0 of 2 sent · a new thread                          │
+  │                                                      │
+  │  Posting carries on: the status line shows how it    │
+  │  goes, and P opens this again.                       │
+  │                                                      │
+  │                        [ Pause posting ]  [ Close ]  │
+  ╰─ tab moves · enter selects · esc closes ─────────────╯
+
+
+  7:00 ━━━━━━━━───────────────────────────── 30:00   03:04
+=== 60x15 posting/rehearsing ===
+  2/6  Bullets  ●●○               23:00 left   2:00 behind
+  ? keys                        ● REHEARSING · 0/2 written
+  ╭─ Rehearsing posts ───────────────────────────────────╮
+  │  0 of 2 written                                      │
+  │  in /nonexistent/decker/talks/deck-test/rehearsal/d  │
+  │  ry-run.md                                           │
+  │  ▲ Posting for real would stop here:                 │
+  │    bsky: slide 2's post "the builds": 11 images,     │
+  │    but a post takes up to 10                         │
+  │  The rehearsal goes on regardless.                   │
+  │  The rehearsal carries on: the status line shows     │
+  │  how it goes, and P opens this again.                │
+  │           [ Pause ]  [ Stop rehearsing ]  [ Close ]  │
+  ╰─ tab moves · enter selects · esc closes ─────────────╯
+  7:00 ━━━━━━━━───────────────────────────── 30:00   03:04
+=== 80x24 waiting ===
+  deck-test                                          30:00 · starts at slide 2
+  ? keys
+
+
+
+
+
+
+
+
+                             Waiting for the deck…
+
+                       Start the deck in another window.
+                                  /tmp/x.sock
+
+
+
+
+
+
+
+
+
+  0:00 ───────────────────────────────────────────────────────── 30:00   03:04
+=== 80x24 s0.0 running ===
+  1/6  Block letters                                  23:00 left   7:00 behind
+  ? keys
+  NOW                                    NEXT · 2/6 Bullets
+  ╭──────────────────────────────────╮   ╭──────────────────────────────────╮
+  │                                  │   │                                  │
+  │                                  │   │                                  │
+  │                                  │   │                                  │
+  │                                  │   │                                  │
+  │                                  │   │                                  │
+  │                                  │   │                                  │
+  │                                  │   │                                  │
+  │                                  │   │                                  │
+  ╰──────────────────────────────────╯   ╰──────────────────────────────────╯
+
+  NOTES
+  (no notes for this slide)
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━──────────────────────────────────────────── 30:00   03:04
+=== 80x24 s1.1 running ===
+  2/6  Bullets  ●●○                                   23:00 left   2:00 behind
+  ? keys
+  NOW                                    NEXT · step 3
+  ╭──────────────────────────────────╮   ╭──────────────────────────────────╮
+  │                                  │   │                                  │
+  │                                  │   │                                  │
+  │                                  │   │                                  │
+  │                                  │   │                                  │
+  │                                  │   │                                  │
+  │                                  │   │                                  │
+  │                                  │   │                                  │
+  │                                  │   │                                  │
+  ╰──────────────────────────────────╯   ╰──────────────────────────────────╯
+
+  NOTES
+  (no notes for this slide)
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━──────────────────────────────────────────── 30:00   03:04
+=== 80x24 s2.3 running ===
+  3/6  Diagram  ●●●●                                  23:00 left   10:30 ahead
+  ? keys
+  NOW                                    NEXT · 4/6 Character layer
+  ╭──────────────────────────────────╮   ╭──────────────────────────────────╮
+  │                                  │   │                                  │
+  │                                  │   │                                  │
+  │                                  │   │                                  │
+  │                                  │   │                                  │
+  │                                  │   │                                  │
+  │                                  │   │                                  │
+  │                                  │   │                                  │
+  │                                  │   │                                  │
+  ╰──────────────────────────────────╯   ╰──────────────────────────────────╯
+
+  NOTES
+  a ring, a box and an arrow
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━──────────────────────────────────────────── 30:00   03:04
+=== 80x24 s5.1 running ===
+  6/6  Wide  ●●                                       23:00 left   20:30 ahead
+  ? keys
+  NOW                                    NEXT · end of deck
+  ╭──────────────────────────────────╮   ╭──────────────────────────────────╮
+  │                                  │   │                                  │
+  │                                  │   │                                  │
+  │                                  │   │                                  │
+  │                                  │   │      that's the last slide       │
+  │                                  │   │                                  │
+  │                                  │   │                                  │
+  │                                  │   │                                  │
+  │                                  │   │                                  │
+  ╰──────────────────────────────────╯   ╰──────────────────────────────────╯
+
+  NOTES
+  wide characters
+  and a second line
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━──────────────────────────────────────────── 30:00   03:04
+=== 80x24 long-notes ===
+  1/6  Block letters                                 30:00 · starts at slide 2
+  ? keys
+  NOW                                    NEXT · 2/6 Bullets
+  ╭──────────────────────────────────╮   ╭──────────────────────────────────╮
+  │                                  │   │                                  │
+  │                                  │   │                                  │
+  │                                  │   │                                  │
+  │                                  │   │                                  │
+  │                                  │   │                                  │
+  │                                  │   │                                  │
+  │                                  │   │                                  │
+  │                                  │   │                                  │
+  ╰──────────────────────────────────╯   ╰──────────────────────────────────╯
+
+  NOTES
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  …
+  0:00 ───────────────────────────────────────────────────────── 30:00   03:04
+=== 80x24 keys ===
+  2/6  Bullets  ●●○                                  30:00 · starts at slide 2
+  ? keys
+  NEXT · step 3
+  NOTES
+  (no notes for this slide)
+
+      ╭─ Keys ───────────────────────────────────────────────────────────╮
+      │                                                                  │
+      │  → l space pgdn      next step / slide                           │
+      │  ← h pgup            previous                                    │
+      │  ] [                 next / previous slide (skip steps)          │
+      │  g G                 first / last slide                          │
+      │  12g  12⏎            jump to slide 12                            │
+      │  r                   replay this slide                           │
+      │  b .                 black screen (again to resume)              │
+      │  w ,                 white screen (again to resume)              │
+      │  t  T                start or pause the timer / reset it         │
+      │  q                   quit                                        │
+      ╰─ ? or esc closes · deck keys still work ─────────────────────────╯
+
+
+
+
+  0:00 ───────────────────────────────────────────────────────── 30:00   03:04
+=== 80x24 small-deck ===
+  4/6  Character layer                               30:00 · starts at slide 2
+  ? keys
+  NOW                                NEXT · 5/6 Last
+  ╭──────────────────────────────╮   ╭──────────────────────────────╮
+  │                              │   │                              │
+  │                              │   │                              │
+  │                              │   │                              │
+  │                              │   │                              │
+  │                              │   │                              │
+  │                              │   │                              │
+  │                              │   │                              │
+  │                              │   │                              │
+  │                              │   │                              │
+  │                              │   │                              │
+  ╰──────────────────────────────╯   ╰──────────────────────────────╯
+
+  NOTES
+  (no notes for this slide)
+
+
+
+
+
+  0:00 ───────────────────────────────────────────────────────── 30:00   03:04
+=== 80x24 posting/live-dialog ===
+  2/6  Bullets  ●●○                                   23:00 left   2:00 behind
+  ? keys                               ● POSTING as @me.bsky.social · 0/2 sent
+  NEXT · step 3
+  NOTES                                           post  sends when you move on
+  (no notes for this slide)
+
+
+
+      ╭─ Posting as @me.bsky.social ─────────────────────────────────────╮
+      │                                                                  │
+      │  0 of 2 sent · a new thread                                      │
+      │                                                                  │
+      │  Posting carries on: the status line shows how it goes, and P    │
+      │  opens this again.                                               │
+      │                                                                  │
+      │                                    [ Pause posting ]  [ Close ]  │
+      ╰─ tab moves · enter selects · esc closes · deck keys paused ──────╯
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━──────────────────────────────────────────── 30:00   03:04
+=== 80x24 posting/rehearsing ===
+  2/6  Bullets  ●●○                                   23:00 left   2:00 behind
+  ? keys                                            ● REHEARSING · 0/2 written
+  NEXT · step 3
+  NOTES                                           post  sends when you move on
+  (no notes for this slide)
+      ╭─ Rehearsing posts ───────────────────────────────────────────────╮
+      │                                                                  │
+      │  0 of 2 written                                                  │
+      │  in /nonexistent/decker/talks/deck-test/rehearsal/dry-run.md     │
+      │  ▲ Posting for real would stop here:                             │
+      │    bsky: slide 2's post "the builds": 11 images, but a post      │
+      │    takes up to 10                                                │
+      │  The rehearsal goes on regardless.                               │
+      │                                                                  │
+      │  The rehearsal carries on: the status line shows how it goes,    │
+      │  and P opens this again.                                         │
+      │                                                                  │
+      │                       [ Pause ]  [ Stop rehearsing ]  [ Close ]  │
+      ╰─ tab moves · enter selects · esc closes · deck keys paused ──────╯
+
+
+
+
+  7:00 ━━━━━━━━━━━━━──────────────────────────────────────────── 30:00   03:04
+=== 120x36 waiting ===
+  deck-test                                                                                  30:00 · starts at slide 2
+  ? keys
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                 Waiting for the deck…
+
+                                           Start the deck in another window.
+                                                      /tmp/x.sock
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  0:00 ───────────────────────────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 s0.0 running ===
+  1/6  Block letters                                                                          23:00 left   7:00 behind
+  ? keys
+  NOW                                                        NEXT · 2/6 Bullets
+  ╭──────────────────────────────────────────────────────╮   ╭──────────────────────────────────────────────────────╮
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  ╰──────────────────────────────────────────────────────╯   ╰──────────────────────────────────────────────────────╯
+
+  NOTES
+  (no notes for this slide)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━─────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 s1.1 running ===
+  2/6  Bullets  ●●○                                                                           23:00 left   2:00 behind
+  ? keys
+  NOW                                                        NEXT · step 3
+  ╭──────────────────────────────────────────────────────╮   ╭──────────────────────────────────────────────────────╮
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  ╰──────────────────────────────────────────────────────╯   ╰──────────────────────────────────────────────────────╯
+
+  NOTES
+  (no notes for this slide)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━─────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 s2.3 running ===
+  3/6  Diagram  ●●●●                                                                          23:00 left   10:30 ahead
+  ? keys
+  NOW                                                        NEXT · 4/6 Character layer
+  ╭──────────────────────────────────────────────────────╮   ╭──────────────────────────────────────────────────────╮
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  ╰──────────────────────────────────────────────────────╯   ╰──────────────────────────────────────────────────────╯
+
+  NOTES
+  a ring, a box and an arrow
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━─────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 s5.1 running ===
+  6/6  Wide  ●●                                                                               23:00 left   20:30 ahead
+  ? keys
+  NOW                                                        NEXT · end of deck
+  ╭──────────────────────────────────────────────────────╮   ╭──────────────────────────────────────────────────────╮
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                that's the last slide                 │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  ╰──────────────────────────────────────────────────────╯   ╰──────────────────────────────────────────────────────╯
+
+  NOTES
+  wide characters
+  and a second line
+
+
+
+
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━─────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 long-notes ===
+  1/6  Block letters                                                                         30:00 · starts at slide 2
+  ? keys
+  NOW                                                        NEXT · 2/6 Bullets
+  ╭──────────────────────────────────────────────────────╮   ╭──────────────────────────────────────────────────────╮
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  ╰──────────────────────────────────────────────────────╯   ╰──────────────────────────────────────────────────────╯
+
+  NOTES
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  …
+  0:00 ───────────────────────────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 keys ===
+  2/6  Bullets  ●●○                                                                          30:00 · starts at slide 2
+  ? keys
+  NEXT · step 3
+  NOTES
+  (no notes for this slide)
+
+
+
+
+
+
+
+                          ╭─ Keys ───────────────────────────────────────────────────────────╮
+                          │                                                                  │
+                          │  → l space pgdn      next step / slide                           │
+                          │  ← h pgup            previous                                    │
+                          │  ] [                 next / previous slide (skip steps)          │
+                          │  g G                 first / last slide                          │
+                          │  12g  12⏎            jump to slide 12                            │
+                          │  r                   replay this slide                           │
+                          │  b .                 black screen (again to resume)              │
+                          │  w ,                 white screen (again to resume)              │
+                          │  t  T                start or pause the timer / reset it         │
+                          │  q                   quit                                        │
+                          ╰─ ? or esc closes · deck keys still work ─────────────────────────╯
+
+
+
+
+
+
+
+
+
+
+  0:00 ───────────────────────────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 small-deck ===
+  4/6  Character layer                                                                       30:00 · starts at slide 2
+  ? keys
+  NOW                                                        NEXT · 5/6 Last
+  ╭──────────────────────────────────────────────────────╮   ╭──────────────────────────────────────────────────────╮
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  ╰──────────────────────────────────────────────────────╯   ╰──────────────────────────────────────────────────────╯
+
+  NOTES
+  (no notes for this slide)
+
+
+
+
+
+
+
+
+
+  0:00 ───────────────────────────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 posting/not-set-up ===
+  2/6  Bullets  ●●○                                                                           23:00 left   2:00 behind
+  ? keys                                                                                   ○ not posting · P to set up
+  NOW                                                        NEXT · step 3
+  ╭──────────────────────────────────────────────────────╮   ╭──────────────────────────────────────────────────────╮
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  ╰──────────────────────────────────────────────────────╯   ╰──────────────────────────────────────────────────────╯
+
+  NOTES
+  (no notes for this slide)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━─────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 posting/dialog ===
+  2/6  Bullets  ●●○                                                                           23:00 left   2:00 behind
+  ? keys                                                                                   ○ not posting · P to set up
+  NEXT · step 3
+  NOTES
+  (no notes for this slide)
+
+
+
+
+
+
+
+                          ╭─ Post this talk ─────────────────────────────────────────────────╮
+                          │                                                                  │
+                          │  This talk makes 2 posts: 1 to open the thread, 1 on slides.     │
+                          │                                                                  │
+                          │  Account   [ ▏me.bsky.social                ]                    │
+                          │                                                                  │
+                          │  Thread    a new thread                                          │
+                          │                                                                  │
+                          │  The account to post as, like me.bsky.social. Enter starts       │
+                          │  posting.                                                        │
+                          │                                                                  │
+                          │           [ Rehearse ]  [ Sign in & start posting ]  [ Cancel ]  │
+                          ╰─ tab moves · enter selects · esc closes · deck keys paused ──────╯
+
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━─────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 posting/typing ===
+  2/6  Bullets  ●●○                                                                           23:00 left   2:00 behind
+  ? keys                                                                                   ○ not posting · P to set up
+  NEXT · step 3
+  NOTES
+  (no notes for this slide)
+
+
+
+
+
+
+
+                          ╭─ Post this talk ─────────────────────────────────────────────────╮
+                          │                                                                  │
+                          │  This talk makes 2 posts: 1 to open the thread, 1 on slides.     │
+                          │                                                                  │
+                          │  Account   [ me.bs▏                         ]                    │
+                          │                                                                  │
+                          │  Thread    a new thread                                          │
+                          │                                                                  │
+                          │  The account to post as, like me.bsky.social. Enter starts       │
+                          │  posting.                                                        │
+                          │                                                                  │
+                          │           [ Rehearse ]  [ Sign in & start posting ]  [ Cancel ]  │
+                          ╰─ tab moves · enter selects · esc closes · deck keys paused ──────╯
+
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━─────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 posting/carry-on ===
+  2/6  Bullets  ●●○                                                                           23:00 left   2:00 behind
+  ? keys                                                                                   ○ not posting · P to set up
+  NEXT · step 3
+  NOTES
+  (no notes for this slide)
+
+
+
+
+
+
+                          ╭─ Post this talk ─────────────────────────────────────────────────╮
+                          │                                                                  │
+                          │  This talk makes 2 posts: 1 to open the thread, 1 on slides.     │
+                          │                                                                  │
+                          │  Account   [ me.bsky.social                 ]  ✓ signed in       │
+                          │                                                                  │
+                          │  Thread    ( ) Start a new thread                                │
+                          │            (•) Carry on Jan 1 03:04 · 5 posts                    │
+                          │                                                                  │
+                          │  Each slide posts as you move on from it; slides you skip        │
+                          │  don't.                                                          │
+                          │                                                                  │
+                          │                     [ Rehearse ]  [ Start posting ]  [ Cancel ]  │
+                          ╰─ tab moves · enter selects · esc closes · deck keys paused ──────╯
+
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━─────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 posting/signing-in ===
+  2/6  Bullets  ●●○                                                                           23:00 left   2:00 behind
+  ? keys                                                                                       ◌ STARTING · signing in
+  NEXT · step 3
+  NOTES
+  (no notes for this slide)
+
+
+
+
+
+
+                          ╭─ Post this talk ─────────────────────────────────────────────────╮
+                          │                                                                  │
+                          │  ◌ Finish signing in in your browser…                            │
+                          │  No browser opened? Visit this address:                          │
+                          │  https://bsky.social/oauth/authorize?client_id=http%3A%2F%2Floc  │
+                          │  alhost%3Fredirect_uri%3Dhttp%253A%252F%252F127.0.0.1%252Fcallb  │
+                          │  ack&request_uri=urn%3Aietf%3Aparams%3Aoauth%3Arequest_uri%3Are  │
+                          │  q-abc123                                                        │
+                          │                                                                  │
+                          │  Closing doesn't stop it: the status line shows how it goes,     │
+                          │  and P opens this again.                                         │
+                          │                                                                  │
+                          │                                           [ Cancel ]  [ Close ]  │
+                          ╰─ tab moves · enter selects · esc closes · deck keys paused ──────╯
+
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━─────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 posting/rendering ===
+  2/6  Bullets  ●●○                                                                           23:00 left   2:00 behind
+  ? keys                                                                                    ◌ STARTING · rendering 2/6
+  NEXT · step 3
+  NOTES
+  (no notes for this slide)
+
+
+
+
+
+
+
+
+                          ╭─ Post this talk ─────────────────────────────────────────────────╮
+                          │                                                                  │
+                          │  ◌ Preparing posts: slide 2 of 6  ▰▰▱▱▱▱▱▱▱▱                     │
+                          │  Drawing each post's images and clips. Nothing posts until this  │
+                          │  is done.                                                        │
+                          │                                                                  │
+                          │  Closing doesn't stop it: the status line shows how it goes,     │
+                          │  and P opens this again.                                         │
+                          │                                                                  │
+                          │                                           [ Cancel ]  [ Close ]  │
+                          ╰─ tab moves · enter selects · esc closes · deck keys paused ──────╯
+
+
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━─────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 posting/checking ===
+  2/6  Bullets  ●●○                                                                           23:00 left   2:00 behind
+  ? keys                                                                         ◌ STARTING REHEARSAL · checking posts
+  NEXT · step 3
+  NOTES
+  (no notes for this slide)
+
+
+
+
+
+
+
+
+
+                          ╭─ Post this talk ─────────────────────────────────────────────────╮
+                          │                                                                  │
+                          │  ◌ Checking 2 posts…                                             │
+                          │                                                                  │
+                          │  Closing doesn't stop it: the status line shows how it goes,     │
+                          │  and P opens this again.                                         │
+                          │                                                                  │
+                          │                                           [ Cancel ]  [ Close ]  │
+                          ╰─ tab moves · enter selects · esc closes · deck keys paused ──────╯
+
+
+
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━─────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 posting/setup-failed ===
+  2/6  Bullets  ●●○                                                                           23:00 left   2:00 behind
+  ? keys                                                                                    ▲ POSTING SETUP FAILED · P
+  NOW                                                        NEXT · step 3
+  ╭──────────────────────────────────────────────────────╮   ╭──────────────────────────────────────────────────────╮
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  ╰──────────────────────────────────────────────────────╯   ╰──────────────────────────────────────────────────────╯
+
+  NOTES
+  (no notes for this slide)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━─────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 posting/setup-failed-dialog ===
+  2/6  Bullets  ●●○                                                                           23:00 left   2:00 behind
+  ? keys                                                                                    ▲ POSTING SETUP FAILED · P
+  NEXT · step 3
+  NOTES
+  (no notes for this slide)
+
+
+
+
+
+                          ╭─ Post this talk ─────────────────────────────────────────────────╮
+                          │                                                                  │
+                          │  This talk makes 2 posts: 1 to open the thread, 1 on slides.     │
+                          │                                                                  │
+                          │  Account   [ ▏me.bsky.social                ]                    │
+                          │                                                                  │
+                          │  Thread    a new thread                                          │
+                          │                                                                  │
+                          │  ▲ Couldn't sign in as me.bsky.social:                           │
+                          │    resolving the handle: no such host                            │
+                          │                                                                  │
+                          │  The account to post as, like me.bsky.social. Enter starts       │
+                          │  posting.                                                        │
+                          │                                                                  │
+                          │           [ Rehearse ]  [ Sign in & start posting ]  [ Cancel ]  │
+                          ╰─ tab moves · enter selects · esc closes · deck keys paused ──────╯
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━─────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 posting/live ===
+  2/6  Bullets  ●●○                                                                           23:00 left   2:00 behind
+  ? keys                                                                       ● POSTING as @me.bsky.social · 0/2 sent
+  NOW                                                        NEXT · step 3
+  ╭──────────────────────────────────────────────────────╮   ╭──────────────────────────────────────────────────────╮
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  ╰──────────────────────────────────────────────────────╯   ╰──────────────────────────────────────────────────────╯
+
+  NOTES                                                                                   post  sends when you move on
+  (no notes for this slide)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━─────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 posting/live-dialog ===
+  2/6  Bullets  ●●○                                                                           23:00 left   2:00 behind
+  ? keys                                                                       ● POSTING as @me.bsky.social · 0/2 sent
+  NEXT · step 3
+  NOTES                                                                                   post  sends when you move on
+  (no notes for this slide)
+
+
+
+
+
+
+
+
+
+                          ╭─ Posting as @me.bsky.social ─────────────────────────────────────╮
+                          │                                                                  │
+                          │  0 of 2 sent · a new thread                                      │
+                          │                                                                  │
+                          │  Posting carries on: the status line shows how it goes, and P    │
+                          │  opens this again.                                               │
+                          │                                                                  │
+                          │                                    [ Pause posting ]  [ Close ]  │
+                          ╰─ tab moves · enter selects · esc closes · deck keys paused ──────╯
+
+
+
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━─────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 posting/sent ===
+  3/6  Diagram  ●●○○                                                                           23:00 left   5:30 ahead
+  ? keys                                                                       ● POSTING as @me.bsky.social · 2/2 sent
+  NOW                                                        NEXT · step 3
+  ╭──────────────────────────────────────────────────────╮   ╭──────────────────────────────────────────────────────╮
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  ╰──────────────────────────────────────────────────────╯   ╰──────────────────────────────────────────────────────╯
+
+  NOTES
+  a ring, a box and an arrow
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━─────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 posting/retrying ===
+  2/6  Bullets  ●●○                                                                           23:00 left   2:00 behind
+  ? keys                                                                     ▲ POST FAILED · retry in 0:20 · 2 waiting
+  NOW                                                        NEXT · step 3
+  ╭──────────────────────────────────────────────────────╮   ╭──────────────────────────────────────────────────────╮
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  ╰──────────────────────────────────────────────────────╯   ╰──────────────────────────────────────────────────────╯
+
+  NOTES                                                                                                   post  queued
+  (no notes for this slide)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━─────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 posting/retrying-dialog ===
+  2/6  Bullets  ●●○                                                                           23:00 left   2:00 behind
+  ? keys                                                                     ▲ POST FAILED · retry in 0:20 · 2 waiting
+  NEXT · step 3
+  NOTES                                                                                                   post  queued
+  (no notes for this slide)
+
+
+
+
+
+
+
+                          ╭─ Posting as @me.bsky.social ─────────────────────────────────────╮
+                          │                                                                  │
+                          │  0 of 2 sent, 2 to send · a new thread                           │
+                          │  ▲ Post 1 failed (3 tries); retrying in 0:20. Posting carries    │
+                          │  on by itself:                                                   │
+                          │    bsky: posting: API request failed (HTTP 502):                 │
+                          │    UpstreamFailure                                               │
+                          │                                                                  │
+                          │  Posting carries on: the status line shows how it goes, and P    │
+                          │  opens this again.                                               │
+                          │                                                                  │
+                          │                                    [ Pause posting ]  [ Close ]  │
+                          ╰─ tab moves · enter selects · esc closes · deck keys paused ──────╯
+
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━─────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 posting/paused ===
+  2/6  Bullets  ●●○                                                                           23:00 left   2:00 behind
+  ? keys                                                                                     ‖ POSTING PAUSED · 2 held
+  NOW                                                        NEXT · step 3
+  ╭──────────────────────────────────────────────────────╮   ╭──────────────────────────────────────────────────────╮
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  ╰──────────────────────────────────────────────────────╯   ╰──────────────────────────────────────────────────────╯
+
+  NOTES                                                                                                   post  queued
+  (no notes for this slide)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━─────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 posting/save-error ===
+  2/6  Bullets  ●●○                                                                           23:00 left   2:00 behind
+  ? keys                                                                                   ▲ THREAD FILE NOT SAVED · P
+  NOW                                                        NEXT · step 3
+  ╭──────────────────────────────────────────────────────╮   ╭──────────────────────────────────────────────────────╮
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  ╰──────────────────────────────────────────────────────╯   ╰──────────────────────────────────────────────────────╯
+
+  NOTES                                                                                   post  sends when you move on
+  (no notes for this slide)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━─────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 posting/save-error-dialog ===
+  2/6  Bullets  ●●○                                                                           23:00 left   2:00 behind
+  ? keys                                                                                   ▲ THREAD FILE NOT SAVED · P
+  NEXT · step 3
+  NOTES                                                                                   post  sends when you move on
+  (no notes for this slide)
+
+
+
+
+
+
+
+                          ╭─ Posting as @me.bsky.social ─────────────────────────────────────╮
+                          │                                                                  │
+                          │  0 of 2 sent · a new thread                                      │
+                          │  ▲ Posted, but the thread file wasn't saved, so a restart would  │
+                          │  post it again:                                                  │
+                          │    rename thread.json.tmp thread.json: permission denied         │
+                          │                                                                  │
+                          │  Posting carries on: the status line shows how it goes, and P    │
+                          │  opens this again.                                               │
+                          │                                                                  │
+                          │                                    [ Pause posting ]  [ Close ]  │
+                          ╰─ tab moves · enter selects · esc closes · deck keys paused ──────╯
+
+
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━─────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 posting/rehearsing ===
+  2/6  Bullets  ●●○                                                                           23:00 left   2:00 behind
+  ? keys                                                                                    ● REHEARSING · 0/2 written
+  NEXT · step 3
+  NOTES                                                                                   post  sends when you move on
+  (no notes for this slide)
+
+
+
+
+
+
+                          ╭─ Rehearsing posts ───────────────────────────────────────────────╮
+                          │                                                                  │
+                          │  0 of 2 written                                                  │
+                          │  in /nonexistent/decker/talks/deck-test/rehearsal/dry-run.md     │
+                          │  ▲ Posting for real would stop here:                             │
+                          │    bsky: slide 2's post "the builds": 11 images, but a post      │
+                          │    takes up to 10                                                │
+                          │  The rehearsal goes on regardless.                               │
+                          │                                                                  │
+                          │  The rehearsal carries on: the status line shows how it goes,    │
+                          │  and P opens this again.                                         │
+                          │                                                                  │
+                          │                       [ Pause ]  [ Stop rehearsing ]  [ Close ]  │
+                          ╰─ tab moves · enter selects · esc closes · deck keys paused ──────╯
+
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━─────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 posting/rehearsal-paused ===
+  2/6  Bullets  ●●○                                                                           23:00 left   2:00 behind
+  ? keys                                                                                            ‖ REHEARSAL PAUSED
+  NOW                                                        NEXT · step 3
+  ╭──────────────────────────────────────────────────────╮   ╭──────────────────────────────────────────────────────╮
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  ╰──────────────────────────────────────────────────────╯   ╰──────────────────────────────────────────────────────╯
+
+  NOTES                                                                                      post  won't write: paused
+  (no notes for this slide)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━─────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 posting/quit-armed ===
+  2/6  Bullets  ●●○                                                                           23:00 left   2:00 behind
+  ▲ 1 post not sent yet · q again to quit                                     ● POSTING as @me.bsky.social · sending 1
+  NOW                                                        NEXT · step 3
+  ╭──────────────────────────────────────────────────────╮   ╭──────────────────────────────────────────────────────╮
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  ╰──────────────────────────────────────────────────────╯   ╰──────────────────────────────────────────────────────╯
+
+  NOTES                                                                                                   post  queued
+  (no notes for this slide)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━─────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 posting/waiting-dialog ===
+  deck-test                                                                                                 23:00 left
+  ? keys                                                                                   ○ not posting · P to set up
+
+
+
+
+
+
+
+
+
+
+                          ╭─ Post this talk ─────────────────────────────────────────────────╮
+                          │                                                                  │
+                          │  This talk makes 2 posts: 1 to open the thread, 1 on slides.     │
+                          │                                                                  │
+                          │  Account   [ ▏me.bsky.social                ]                    │
+                          │                                                                  │
+                          │  Thread    a new thread                                          │
+                          │                                                                  │
+                          │  The account to post as, like me.bsky.social. Enter starts       │
+                          │  posting.                                                        │
+                          │                                                                  │
+                          │           [ Rehearse ]  [ Sign in & start posting ]  [ Cancel ]  │
+                          ╰─ tab moves · enter selects · esc closes · deck keys paused ──────╯
+
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━─────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 posting/keys ===
+  2/6  Bullets  ●●○                                                                           23:00 left   2:00 behind
+  ? keys                                                                                   ○ not posting · P to set up
+  NEXT · step 3
+  NOTES
+  (no notes for this slide)
+
+
+
+
+
+
+                          ╭─ Keys ───────────────────────────────────────────────────────────╮
+                          │                                                                  │
+                          │  → l space pgdn      next step / slide                           │
+                          │  ← h pgup            previous                                    │
+                          │  ] [                 next / previous slide (skip steps)          │
+                          │  g G                 first / last slide                          │
+                          │  12g  12⏎            jump to slide 12                            │
+                          │  r                   replay this slide                           │
+                          │  b .                 black screen (again to resume)              │
+                          │  w ,                 white screen (again to resume)              │
+                          │  t  T                start or pause the timer / reset it         │
+                          │  P                   post the talk as you give it                │
+                          │  q                   quit (twice while posts wait to send)       │
+                          ╰─ ? or esc closes · deck keys still work ─────────────────────────╯
+
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━─────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 waiting-linked ===
+  deck-test                                                                                  30:00 · starts at slide 2
+  ? keys
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                 Waiting for the deck…
+
+                                           Start the deck in another window.
+                                                      /tmp/x.sock
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  0:00 ───────────────────────────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 launch/waiting ===
+  deck-test                                                                                  30:00 · starts at slide 2
+  ? keys
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                 Waiting for the deck…
+
+                                      Press p to open it in a new Ghostty window,
+                                          or start the deck in another window.
+                                                      /tmp/x.sock
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  0:00 ───────────────────────────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 launch/opening ===
+  deck-test                                                                                  30:00 · starts at slide 2
+  ◌ Opening the deck window…
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                 Waiting for the deck…
+
+                                                Opening the deck window…
+                                                      /tmp/x.sock
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  0:00 ───────────────────────────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 launch/error ===
+  deck-test                                                                                  30:00 · starts at slide 2
+  ▲ DECK WINDOW Ghostty could not open the presentation: Automation permission denied · p retries
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                 Waiting for the deck…
+
+                         Ghostty could not open the presentation: Automation permission denied
+                               Press p to try again, or start the deck in another window.
+                                                      /tmp/x.sock
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  0:00 ───────────────────────────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 launch/disconnected ===
+  2/6  Bullets  ●●○                                                                          30:00 · starts at slide 2
+  ○ DISCONNECTED · reconnecting… · p reopens it   ▲ DECK WINDOW
+  NOW                                                        NEXT · step 3
+  ╭──────────────────────────────────────────────────────╮   ╭──────────────────────────────────────────────────────╮
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  ╰──────────────────────────────────────────────────────╯   ╰──────────────────────────────────────────────────────╯
+
+  NOTES
+  (no notes for this slide)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  0:00 ───────────────────────────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 image-previews ===
+  2/6  Bullets  ●●○                                                                          30:00 · starts at slide 2
+  ? keys
+  NOW                                                        NEXT · step 3
+  ╭──────────────────────────────────────────────────────╮   ╭──────────────────────────────────────────────────────╮
+  │􎻮̅̅􎻮̅̍􎻮̅̎􎻮̅̐􎻮̅̒􎻮̅̽􎻮̅̾􎻮̅̿􎻮̅͆􎻮̅͊􎻮̅͋􎻮̅͌􎻮̅͐􎻮̅͑􎻮̅͒􎻮̅͗􎻮̅͛􎻮̅ͣ􎻮̅ͤ􎻮̅ͥ􎻮̅ͦ􎻮̅ͧ􎻮̅ͨ􎻮̅ͩ􎻮̅ͪ􎻮̅ͫ􎻮̅ͬ􎻮̅ͭ􎻮̅ͮ􎻮̅ͯ􎻮̅҃􎻮̅҄􎻮̅҅􎻮̅҆􎻮̅҇􎻮̅֒􎻮̅֓􎻮̅֔􎻮̅֕􎻮̅֗􎻮̅֘􎻮̅֙􎻮̅֜􎻮̅֝􎻮̅֞􎻮̅֟􎻮̅֠􎻮̅֡􎻮̅֨􎻮̅֩􎻮̅֫􎻮̅֬􎻮̅֯􎻮̅ׄ│   │􎻮̅̅􎻮̅̍􎻮̅̎􎻮̅̐􎻮̅̒􎻮̅̽􎻮̅̾􎻮̅̿􎻮̅͆􎻮̅͊􎻮̅͋􎻮̅͌􎻮̅͐􎻮̅͑􎻮̅͒􎻮̅͗􎻮̅͛􎻮̅ͣ􎻮̅ͤ􎻮̅ͥ􎻮̅ͦ􎻮̅ͧ􎻮̅ͨ􎻮̅ͩ􎻮̅ͪ􎻮̅ͫ􎻮̅ͬ􎻮̅ͭ􎻮̅ͮ􎻮̅ͯ􎻮̅҃􎻮̅҄􎻮̅҅􎻮̅҆􎻮̅҇􎻮̅֒􎻮̅֓􎻮̅֔􎻮̅֕􎻮̅֗􎻮̅֘􎻮̅֙􎻮̅֜􎻮̅֝􎻮̅֞􎻮̅֟􎻮̅֠􎻮̅֡􎻮̅֨􎻮̅֩􎻮̅֫􎻮̅֬􎻮̅֯􎻮̅ׄ│
+  │􎻮̍̅􎻮̍̍􎻮̍̎􎻮̍̐􎻮̍̒􎻮̍̽􎻮̍̾􎻮̍̿􎻮̍͆􎻮̍͊􎻮̍͋􎻮̍͌􎻮̍͐􎻮̍͑􎻮̍͒􎻮̍͗􎻮̍͛􎻮̍ͣ􎻮̍ͤ􎻮̍ͥ􎻮̍ͦ􎻮̍ͧ􎻮̍ͨ􎻮̍ͩ􎻮̍ͪ􎻮̍ͫ􎻮̍ͬ􎻮̍ͭ􎻮̍ͮ􎻮̍ͯ􎻮̍҃􎻮̍҄􎻮̍҅􎻮̍҆􎻮̍҇􎻮̍֒􎻮̍֓􎻮̍֔􎻮̍֕􎻮̍֗􎻮̍֘􎻮̍֙􎻮̍֜􎻮̍֝􎻮̍֞􎻮̍֟􎻮̍֠􎻮̍֡􎻮̍֨􎻮̍֩􎻮̍֫􎻮̍֬􎻮̍֯􎻮̍ׄ│   │􎻮̍̅􎻮̍̍􎻮̍̎􎻮̍̐􎻮̍̒􎻮̍̽􎻮̍̾􎻮̍̿􎻮̍͆􎻮̍͊􎻮̍͋􎻮̍͌􎻮̍͐􎻮̍͑􎻮̍͒􎻮̍͗􎻮̍͛􎻮̍ͣ􎻮̍ͤ􎻮̍ͥ􎻮̍ͦ􎻮̍ͧ􎻮̍ͨ􎻮̍ͩ􎻮̍ͪ􎻮̍ͫ􎻮̍ͬ􎻮̍ͭ􎻮̍ͮ􎻮̍ͯ􎻮̍҃􎻮̍҄􎻮̍҅􎻮̍҆􎻮̍҇􎻮̍֒􎻮̍֓􎻮̍֔􎻮̍֕􎻮̍֗􎻮̍֘􎻮̍֙􎻮̍֜􎻮̍֝􎻮̍֞􎻮̍֟􎻮̍֠􎻮̍֡􎻮̍֨􎻮̍֩􎻮̍֫􎻮̍֬􎻮̍֯􎻮̍ׄ│
+  │􎻮̎̅􎻮̎̍􎻮̎̎􎻮̎̐􎻮̎̒􎻮̎̽􎻮̎̾􎻮̎̿􎻮̎͆􎻮̎͊􎻮̎͋􎻮̎͌􎻮̎͐􎻮̎͑􎻮̎͒􎻮̎͗􎻮̎͛􎻮̎ͣ􎻮̎ͤ􎻮̎ͥ􎻮̎ͦ􎻮̎ͧ􎻮̎ͨ􎻮̎ͩ􎻮̎ͪ􎻮̎ͫ􎻮̎ͬ􎻮̎ͭ􎻮̎ͮ􎻮̎ͯ􎻮̎҃􎻮̎҄􎻮̎҅􎻮̎҆􎻮̎҇􎻮̎֒􎻮̎֓􎻮̎֔􎻮̎֕􎻮̎֗􎻮̎֘􎻮̎֙􎻮̎֜􎻮̎֝􎻮̎֞􎻮̎֟􎻮̎֠􎻮̎֡􎻮̎֨􎻮̎֩􎻮̎֫􎻮̎֬􎻮̎֯􎻮̎ׄ│   │􎻮̎̅􎻮̎̍􎻮̎̎􎻮̎̐􎻮̎̒􎻮̎̽􎻮̎̾􎻮̎̿􎻮̎͆􎻮̎͊􎻮̎͋􎻮̎͌􎻮̎͐􎻮̎͑􎻮̎͒􎻮̎͗􎻮̎͛􎻮̎ͣ􎻮̎ͤ􎻮̎ͥ􎻮̎ͦ􎻮̎ͧ􎻮̎ͨ􎻮̎ͩ􎻮̎ͪ􎻮̎ͫ􎻮̎ͬ􎻮̎ͭ􎻮̎ͮ􎻮̎ͯ􎻮̎҃􎻮̎҄􎻮̎҅􎻮̎҆􎻮̎҇􎻮̎֒􎻮̎֓􎻮̎֔􎻮̎֕􎻮̎֗􎻮̎֘􎻮̎֙􎻮̎֜􎻮̎֝􎻮̎֞􎻮̎֟􎻮̎֠􎻮̎֡􎻮̎֨􎻮̎֩􎻮̎֫􎻮̎֬􎻮̎֯􎻮̎ׄ│
+  │􎻮̐̅􎻮̐̍􎻮̐̎􎻮̐̐􎻮̐̒􎻮̐̽􎻮̐̾􎻮̐̿􎻮̐͆􎻮̐͊􎻮̐͋􎻮̐͌􎻮̐͐􎻮̐͑􎻮̐͒􎻮̐͗􎻮̐͛􎻮̐ͣ􎻮̐ͤ􎻮̐ͥ􎻮̐ͦ􎻮̐ͧ􎻮̐ͨ􎻮̐ͩ􎻮̐ͪ􎻮̐ͫ􎻮̐ͬ􎻮̐ͭ􎻮̐ͮ􎻮̐ͯ􎻮̐҃􎻮̐҄􎻮̐҅􎻮̐҆􎻮̐҇􎻮̐֒􎻮̐֓􎻮̐֔􎻮̐֕􎻮̐֗􎻮̐֘􎻮̐֙􎻮̐֜􎻮̐֝􎻮̐֞􎻮̐֟􎻮̐֠􎻮̐֡􎻮̐֨􎻮̐֩􎻮̐֫􎻮̐֬􎻮̐֯􎻮̐ׄ│   │􎻮̐̅􎻮̐̍􎻮̐̎􎻮̐̐􎻮̐̒􎻮̐̽􎻮̐̾􎻮̐̿􎻮̐͆􎻮̐͊􎻮̐͋􎻮̐͌􎻮̐͐􎻮̐͑􎻮̐͒􎻮̐͗􎻮̐͛􎻮̐ͣ􎻮̐ͤ􎻮̐ͥ􎻮̐ͦ􎻮̐ͧ􎻮̐ͨ􎻮̐ͩ􎻮̐ͪ􎻮̐ͫ􎻮̐ͬ􎻮̐ͭ􎻮̐ͮ􎻮̐ͯ􎻮̐҃􎻮̐҄􎻮̐҅􎻮̐҆􎻮̐҇􎻮̐֒􎻮̐֓􎻮̐֔􎻮̐֕􎻮̐֗􎻮̐֘􎻮̐֙􎻮̐֜􎻮̐֝􎻮̐֞􎻮̐֟􎻮̐֠􎻮̐֡􎻮̐֨􎻮̐֩􎻮̐֫􎻮̐֬􎻮̐֯􎻮̐ׄ│
+  │􎻮̒̅􎻮̒̍􎻮̒̎􎻮̒̐􎻮̒̒􎻮̒̽􎻮̒̾􎻮̒̿􎻮̒͆􎻮̒͊􎻮̒͋􎻮̒͌􎻮̒͐􎻮̒͑􎻮̒͒􎻮̒͗􎻮̒͛􎻮̒ͣ􎻮̒ͤ􎻮̒ͥ􎻮̒ͦ􎻮̒ͧ􎻮̒ͨ􎻮̒ͩ􎻮̒ͪ􎻮̒ͫ􎻮̒ͬ􎻮̒ͭ􎻮̒ͮ􎻮̒ͯ􎻮̒҃􎻮̒҄􎻮̒҅􎻮̒҆􎻮̒҇􎻮̒֒􎻮̒֓􎻮̒֔􎻮̒֕􎻮̒֗􎻮̒֘􎻮̒֙􎻮̒֜􎻮̒֝􎻮̒֞􎻮̒֟􎻮̒֠􎻮̒֡􎻮̒֨􎻮̒֩􎻮̒֫􎻮̒֬􎻮̒֯􎻮̒ׄ│   │􎻮̒̅􎻮̒̍􎻮̒̎􎻮̒̐􎻮̒̒􎻮̒̽􎻮̒̾􎻮̒̿􎻮̒͆􎻮̒͊􎻮̒͋􎻮̒͌􎻮̒͐􎻮̒͑􎻮̒͒􎻮̒͗􎻮̒͛􎻮̒ͣ􎻮̒ͤ􎻮̒ͥ􎻮̒ͦ􎻮̒ͧ􎻮̒ͨ􎻮̒ͩ􎻮̒ͪ􎻮̒ͫ􎻮̒ͬ􎻮̒ͭ􎻮̒ͮ􎻮̒ͯ􎻮̒҃􎻮̒҄􎻮̒҅􎻮̒҆􎻮̒҇􎻮̒֒􎻮̒֓􎻮̒֔􎻮̒֕􎻮̒֗􎻮̒֘􎻮̒֙􎻮̒֜􎻮̒֝􎻮̒֞􎻮̒֟􎻮̒֠􎻮̒֡􎻮̒֨􎻮̒֩􎻮̒֫􎻮̒֬􎻮̒֯􎻮̒ׄ│
+  │􎻮̽̅􎻮̽̍􎻮̽̎􎻮̽̐􎻮̽̒􎻮̽̽􎻮̽̾􎻮̽̿􎻮̽͆􎻮̽͊􎻮̽͋􎻮̽͌􎻮̽͐􎻮̽͑􎻮̽͒􎻮̽͗􎻮̽͛􎻮̽ͣ􎻮̽ͤ􎻮̽ͥ􎻮̽ͦ􎻮̽ͧ􎻮̽ͨ􎻮̽ͩ􎻮̽ͪ􎻮̽ͫ􎻮̽ͬ􎻮̽ͭ􎻮̽ͮ􎻮̽ͯ􎻮̽҃􎻮̽҄􎻮̽҅􎻮̽҆􎻮̽҇􎻮̽֒􎻮̽֓􎻮̽֔􎻮̽֕􎻮̽֗􎻮̽֘􎻮̽֙􎻮̽֜􎻮̽֝􎻮̽֞􎻮̽֟􎻮̽֠􎻮̽֡􎻮̽֨􎻮̽֩􎻮̽֫􎻮̽֬􎻮̽֯􎻮̽ׄ│   │􎻮̽̅􎻮̽̍􎻮̽̎􎻮̽̐􎻮̽̒􎻮̽̽􎻮̽̾􎻮̽̿􎻮̽͆􎻮̽͊􎻮̽͋􎻮̽͌􎻮̽͐􎻮̽͑􎻮̽͒􎻮̽͗􎻮̽͛􎻮̽ͣ􎻮̽ͤ􎻮̽ͥ􎻮̽ͦ􎻮̽ͧ􎻮̽ͨ􎻮̽ͩ􎻮̽ͪ􎻮̽ͫ􎻮̽ͬ􎻮̽ͭ􎻮̽ͮ􎻮̽ͯ􎻮̽҃􎻮̽҄􎻮̽҅􎻮̽҆􎻮̽҇􎻮̽֒􎻮̽֓􎻮̽֔􎻮̽֕􎻮̽֗􎻮̽֘􎻮̽֙􎻮̽֜􎻮̽֝􎻮̽֞􎻮̽֟􎻮̽֠􎻮̽֡􎻮̽֨􎻮̽֩􎻮̽֫􎻮̽֬􎻮̽֯􎻮̽ׄ│
+  │􎻮̾̅􎻮̾̍􎻮̾̎􎻮̾̐􎻮̾̒􎻮̾̽􎻮̾̾􎻮̾̿􎻮̾͆􎻮̾͊􎻮̾͋􎻮̾͌􎻮̾͐􎻮̾͑􎻮̾͒􎻮̾͗􎻮̾͛􎻮̾ͣ􎻮̾ͤ􎻮̾ͥ􎻮̾ͦ􎻮̾ͧ􎻮̾ͨ􎻮̾ͩ􎻮̾ͪ􎻮̾ͫ􎻮̾ͬ􎻮̾ͭ􎻮̾ͮ􎻮̾ͯ􎻮̾҃􎻮̾҄􎻮̾҅􎻮̾҆􎻮̾҇􎻮̾֒􎻮̾֓􎻮̾֔􎻮̾֕􎻮̾֗􎻮̾֘􎻮̾֙􎻮̾֜􎻮̾֝􎻮̾֞􎻮̾֟􎻮̾֠􎻮̾֡􎻮̾֨􎻮̾֩􎻮̾֫􎻮̾֬􎻮̾֯􎻮̾ׄ│   │􎻮̾̅􎻮̾̍􎻮̾̎􎻮̾̐􎻮̾̒􎻮̾̽􎻮̾̾􎻮̾̿􎻮̾͆􎻮̾͊􎻮̾͋􎻮̾͌􎻮̾͐􎻮̾͑􎻮̾͒􎻮̾͗􎻮̾͛􎻮̾ͣ􎻮̾ͤ􎻮̾ͥ􎻮̾ͦ􎻮̾ͧ􎻮̾ͨ􎻮̾ͩ􎻮̾ͪ􎻮̾ͫ􎻮̾ͬ􎻮̾ͭ􎻮̾ͮ􎻮̾ͯ􎻮̾҃􎻮̾҄􎻮̾҅􎻮̾҆􎻮̾҇􎻮̾֒􎻮̾֓􎻮̾֔􎻮̾֕􎻮̾֗􎻮̾֘􎻮̾֙􎻮̾֜􎻮̾֝􎻮̾֞􎻮̾֟􎻮̾֠􎻮̾֡􎻮̾֨􎻮̾֩􎻮̾֫􎻮̾֬􎻮̾֯􎻮̾ׄ│
+  │􎻮̿̅􎻮̿̍􎻮̿̎􎻮̿̐􎻮̿̒􎻮̿̽􎻮̿̾􎻮̿̿􎻮̿͆􎻮̿͊􎻮̿͋􎻮̿͌􎻮̿͐􎻮̿͑􎻮̿͒􎻮̿͗􎻮̿͛􎻮̿ͣ􎻮̿ͤ􎻮̿ͥ􎻮̿ͦ􎻮̿ͧ􎻮̿ͨ􎻮̿ͩ􎻮̿ͪ􎻮̿ͫ􎻮̿ͬ􎻮̿ͭ􎻮̿ͮ􎻮̿ͯ􎻮̿҃􎻮̿҄􎻮̿҅􎻮̿҆􎻮̿҇􎻮̿֒􎻮̿֓􎻮̿֔􎻮̿֕􎻮̿֗􎻮̿֘􎻮̿֙􎻮̿֜􎻮̿֝􎻮̿֞􎻮̿֟􎻮̿֠􎻮̿֡􎻮̿֨􎻮̿֩􎻮̿֫􎻮̿֬􎻮̿֯􎻮̿ׄ│   │􎻮̿̅􎻮̿̍􎻮̿̎􎻮̿̐􎻮̿̒􎻮̿̽􎻮̿̾􎻮̿̿􎻮̿͆􎻮̿͊􎻮̿͋􎻮̿͌􎻮̿͐􎻮̿͑􎻮̿͒􎻮̿͗􎻮̿͛􎻮̿ͣ􎻮̿ͤ􎻮̿ͥ􎻮̿ͦ􎻮̿ͧ􎻮̿ͨ􎻮̿ͩ􎻮̿ͪ􎻮̿ͫ􎻮̿ͬ􎻮̿ͭ􎻮̿ͮ􎻮̿ͯ􎻮̿҃􎻮̿҄􎻮̿҅􎻮̿҆􎻮̿҇􎻮̿֒􎻮̿֓􎻮̿֔􎻮̿֕􎻮̿֗􎻮̿֘􎻮̿֙􎻮̿֜􎻮̿֝􎻮̿֞􎻮̿֟􎻮̿֠􎻮̿֡􎻮̿֨􎻮̿֩􎻮̿֫􎻮̿֬􎻮̿֯􎻮̿ׄ│
+  │􎻮͆̅􎻮͆̍􎻮͆̎􎻮͆̐􎻮͆̒􎻮͆̽􎻮͆̾􎻮͆̿􎻮͆͆􎻮͆͊􎻮͆͋􎻮͆͌􎻮͆͐􎻮͆͑􎻮͆͒􎻮͆͗􎻮͆͛􎻮͆ͣ􎻮͆ͤ􎻮͆ͥ􎻮͆ͦ􎻮͆ͧ􎻮͆ͨ􎻮͆ͩ􎻮͆ͪ􎻮͆ͫ􎻮͆ͬ􎻮͆ͭ􎻮͆ͮ􎻮͆ͯ􎻮͆҃􎻮͆҄􎻮͆҅􎻮͆҆􎻮͆҇􎻮͆֒􎻮͆֓􎻮͆֔􎻮͆֕􎻮͆֗􎻮͆֘􎻮͆֙􎻮͆֜􎻮͆֝􎻮͆֞􎻮͆֟􎻮͆֠􎻮͆֡􎻮͆֨􎻮͆֩􎻮͆֫􎻮͆֬􎻮͆֯􎻮͆ׄ│   │􎻮͆̅􎻮͆̍􎻮͆̎􎻮͆̐􎻮͆̒􎻮͆̽􎻮͆̾􎻮͆̿􎻮͆͆􎻮͆͊􎻮͆͋􎻮͆͌􎻮͆͐􎻮͆͑􎻮͆͒􎻮͆͗􎻮͆͛􎻮͆ͣ􎻮͆ͤ􎻮͆ͥ􎻮͆ͦ􎻮͆ͧ􎻮͆ͨ􎻮͆ͩ􎻮͆ͪ􎻮͆ͫ􎻮͆ͬ􎻮͆ͭ􎻮͆ͮ􎻮͆ͯ􎻮͆҃􎻮͆҄􎻮͆҅􎻮͆҆􎻮͆҇􎻮͆֒􎻮͆֓􎻮͆֔􎻮͆֕􎻮͆֗􎻮͆֘􎻮͆֙􎻮͆֜􎻮͆֝􎻮͆֞􎻮͆֟􎻮͆֠􎻮͆֡􎻮͆֨􎻮͆֩􎻮͆֫􎻮͆֬􎻮͆֯􎻮͆ׄ│
+  │􎻮͊̅􎻮͊̍􎻮͊̎􎻮͊̐􎻮͊̒􎻮͊̽􎻮͊̾􎻮͊̿􎻮͊͆􎻮͊͊􎻮͊͋􎻮͊͌􎻮͊͐􎻮͊͑􎻮͊͒􎻮͊͗􎻮͊͛􎻮͊ͣ􎻮͊ͤ􎻮͊ͥ􎻮͊ͦ􎻮͊ͧ􎻮͊ͨ􎻮͊ͩ􎻮͊ͪ􎻮͊ͫ􎻮͊ͬ􎻮͊ͭ􎻮͊ͮ􎻮͊ͯ􎻮͊҃􎻮͊҄􎻮͊҅􎻮͊҆􎻮͊҇􎻮͊֒􎻮͊֓􎻮͊֔􎻮͊֕􎻮͊֗􎻮͊֘􎻮͊֙􎻮͊֜􎻮͊֝􎻮͊֞􎻮͊֟􎻮͊֠􎻮͊֡􎻮͊֨􎻮͊֩􎻮͊֫􎻮͊֬􎻮͊֯􎻮͊ׄ│   │􎻮͊̅􎻮͊̍􎻮͊̎􎻮͊̐􎻮͊̒􎻮͊̽􎻮͊̾􎻮͊̿􎻮͊͆􎻮͊͊􎻮͊͋􎻮͊͌􎻮͊͐􎻮͊͑􎻮͊͒􎻮͊͗􎻮͊͛􎻮͊ͣ􎻮͊ͤ􎻮͊ͥ􎻮͊ͦ􎻮͊ͧ􎻮͊ͨ􎻮͊ͩ􎻮͊ͪ􎻮͊ͫ􎻮͊ͬ􎻮͊ͭ􎻮͊ͮ􎻮͊ͯ􎻮͊҃􎻮͊҄􎻮͊҅􎻮͊҆􎻮͊҇􎻮͊֒􎻮͊֓􎻮͊֔􎻮͊֕􎻮͊֗􎻮͊֘􎻮͊֙􎻮͊֜􎻮͊֝􎻮͊֞􎻮͊֟􎻮͊֠􎻮͊֡􎻮͊֨􎻮͊֩􎻮͊֫􎻮͊֬􎻮͊֯􎻮͊ׄ│
+  │􎻮͋̅􎻮͋̍􎻮͋̎􎻮͋̐􎻮͋̒􎻮͋̽􎻮͋̾􎻮͋̿􎻮͋͆􎻮͋͊􎻮͋͋􎻮͋͌􎻮͋͐􎻮͋͑􎻮͋͒􎻮͋͗􎻮͋͛􎻮͋ͣ􎻮͋ͤ􎻮͋ͥ􎻮͋ͦ􎻮͋ͧ􎻮͋ͨ􎻮͋ͩ􎻮͋ͪ􎻮͋ͫ􎻮͋ͬ􎻮͋ͭ􎻮͋ͮ􎻮͋ͯ􎻮͋҃􎻮͋҄􎻮͋҅􎻮͋҆􎻮͋҇􎻮͋֒􎻮͋֓􎻮͋֔􎻮͋֕􎻮͋֗􎻮͋֘􎻮͋֙􎻮͋֜􎻮͋֝􎻮͋֞􎻮͋֟􎻮͋֠􎻮͋֡􎻮͋֨􎻮͋֩􎻮͋֫􎻮͋֬􎻮͋֯􎻮͋ׄ│   │􎻮͋̅􎻮͋̍􎻮͋̎􎻮͋̐􎻮͋̒􎻮͋̽􎻮͋̾􎻮͋̿􎻮͋͆􎻮͋͊􎻮͋͋􎻮͋͌􎻮͋͐􎻮͋͑􎻮͋͒􎻮͋͗􎻮͋͛􎻮͋ͣ􎻮͋ͤ􎻮͋ͥ􎻮͋ͦ􎻮͋ͧ􎻮͋ͨ􎻮͋ͩ􎻮͋ͪ􎻮͋ͫ􎻮͋ͬ􎻮͋ͭ􎻮͋ͮ􎻮͋ͯ􎻮͋҃􎻮͋҄􎻮͋҅􎻮͋҆􎻮͋҇􎻮͋֒􎻮͋֓􎻮͋֔􎻮͋֕􎻮͋֗􎻮͋֘􎻮͋֙􎻮͋֜􎻮͋֝􎻮͋֞􎻮͋֟􎻮͋֠􎻮͋֡􎻮͋֨􎻮͋֩􎻮͋֫􎻮͋֬􎻮͋֯􎻮͋ׄ│
+  │􎻮͌̅􎻮͌̍􎻮͌̎􎻮͌̐􎻮͌̒􎻮͌̽􎻮͌̾􎻮͌̿􎻮͌͆􎻮͌͊􎻮͌͋􎻮͌͌􎻮͌͐􎻮͌͑􎻮͌͒􎻮͌͗􎻮͌͛􎻮͌ͣ􎻮͌ͤ􎻮͌ͥ􎻮͌ͦ􎻮͌ͧ􎻮͌ͨ􎻮͌ͩ􎻮͌ͪ􎻮͌ͫ􎻮͌ͬ􎻮͌ͭ􎻮͌ͮ􎻮͌ͯ􎻮͌҃􎻮͌҄􎻮͌҅􎻮͌҆􎻮͌҇􎻮͌֒􎻮͌֓􎻮͌֔􎻮͌֕􎻮͌֗􎻮͌֘􎻮͌֙􎻮͌֜􎻮͌֝􎻮͌֞􎻮͌֟􎻮͌֠􎻮͌֡􎻮͌֨􎻮͌֩􎻮͌֫􎻮͌֬􎻮͌֯􎻮͌ׄ│   │􎻮͌̅􎻮͌̍􎻮͌̎􎻮͌̐􎻮͌̒􎻮͌̽􎻮͌̾􎻮͌̿􎻮͌͆􎻮͌͊􎻮͌͋􎻮͌͌􎻮͌͐􎻮͌͑􎻮͌͒􎻮͌͗􎻮͌͛􎻮͌ͣ􎻮͌ͤ􎻮͌ͥ􎻮͌ͦ􎻮͌ͧ􎻮͌ͨ􎻮͌ͩ􎻮͌ͪ􎻮͌ͫ􎻮͌ͬ􎻮͌ͭ􎻮͌ͮ􎻮͌ͯ􎻮͌҃􎻮͌҄􎻮͌҅􎻮͌҆􎻮͌҇􎻮͌֒􎻮͌֓􎻮͌֔􎻮͌֕􎻮͌֗􎻮͌֘􎻮͌֙􎻮͌֜􎻮͌֝􎻮͌֞􎻮͌֟􎻮͌֠􎻮͌֡􎻮͌֨􎻮͌֩􎻮͌֫􎻮͌֬􎻮͌֯􎻮͌ׄ│
+  │􎻮͐̅􎻮͐̍􎻮͐̎􎻮͐̐􎻮͐̒􎻮͐̽􎻮͐̾􎻮͐̿􎻮͐͆􎻮͐͊􎻮͐͋􎻮͐͌􎻮͐͐􎻮͐͑􎻮͐͒􎻮͐͗􎻮͐͛􎻮͐ͣ􎻮͐ͤ􎻮͐ͥ􎻮͐ͦ􎻮͐ͧ􎻮͐ͨ􎻮͐ͩ􎻮͐ͪ􎻮͐ͫ􎻮͐ͬ􎻮͐ͭ􎻮͐ͮ􎻮͐ͯ􎻮͐҃􎻮͐҄􎻮͐҅􎻮͐҆􎻮͐҇􎻮͐֒􎻮͐֓􎻮͐֔􎻮͐֕􎻮͐֗􎻮͐֘􎻮͐֙􎻮͐֜􎻮͐֝􎻮͐֞􎻮͐֟􎻮͐֠􎻮͐֡􎻮͐֨􎻮͐֩􎻮͐֫􎻮͐֬􎻮͐֯􎻮͐ׄ│   │􎻮͐̅􎻮͐̍􎻮͐̎􎻮͐̐􎻮͐̒􎻮͐̽􎻮͐̾􎻮͐̿􎻮͐͆􎻮͐͊􎻮͐͋􎻮͐͌􎻮͐͐􎻮͐͑􎻮͐͒􎻮͐͗􎻮͐͛􎻮͐ͣ􎻮͐ͤ􎻮͐ͥ􎻮͐ͦ􎻮͐ͧ􎻮͐ͨ􎻮͐ͩ􎻮͐ͪ􎻮͐ͫ􎻮͐ͬ􎻮͐ͭ􎻮͐ͮ􎻮͐ͯ􎻮͐҃􎻮͐҄􎻮͐҅􎻮͐҆􎻮͐҇􎻮͐֒􎻮͐֓􎻮͐֔􎻮͐֕􎻮͐֗􎻮͐֘􎻮͐֙􎻮͐֜􎻮͐֝􎻮͐֞􎻮͐֟􎻮͐֠􎻮͐֡􎻮͐֨􎻮͐֩􎻮͐֫􎻮͐֬􎻮͐֯􎻮͐ׄ│
+  ╰──────────────────────────────────────────────────────╯   ╰──────────────────────────────────────────────────────╯
+
+  NOTES
+  (no notes for this slide)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  0:00 ───────────────────────────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 s2.0 idle ===
+  3/6  Diagram  ●○○○                                                                         30:00 · starts at slide 2
+  ? keys
+  NOW                                                        NEXT · step 2
+  ╭──────────────────────────────────────────────────────╮   ╭──────────────────────────────────────────────────────╮
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  ╰──────────────────────────────────────────────────────╯   ╰──────────────────────────────────────────────────────╯
+
+  NOTES
+  a ring, a box and an arrow
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  0:00 ───────────────────────────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 s2.0 running ===
+  3/6  Diagram  ●○○○                                                                           23:00 left   3:00 ahead
+  ? keys
+  NOW                                                        NEXT · step 2
+  ╭──────────────────────────────────────────────────────╮   ╭──────────────────────────────────────────────────────╮
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  ╰──────────────────────────────────────────────────────╯   ╰──────────────────────────────────────────────────────╯
+
+  NOTES
+  a ring, a box and an arrow
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━─────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 s2.0 paused ===
+  3/6  Diagram  ●○○○                                                                  PAUSED  18:00 left   2:00 behind
+  ? keys
+  NOW                                                        NEXT · step 2
+  ╭──────────────────────────────────────────────────────╮   ╭──────────────────────────────────────────────────────╮
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  ╰──────────────────────────────────────────────────────╯   ╰──────────────────────────────────────────────────────╯
+
+  NOTES
+  a ring, a box and an arrow
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  12:00 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 s2.0 over ===
+  3/6  Diagram  ●○○○                                                                          3:00 OVER   23:00 behind
+  ? keys
+  NOW                                                        NEXT · step 2
+  ╭──────────────────────────────────────────────────────╮   ╭──────────────────────────────────────────────────────╮
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  ╰──────────────────────────────────────────────────────╯   ╰──────────────────────────────────────────────────────╯
+
+  NOTES
+  a ring, a box and an arrow
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  33:00 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 30:00   03:04
+=== 120x36 s2.0 behind ===
+  3/6  Diagram  ●○○○                                                                          5:00 left   15:00 behind
+  ? keys
+  NOW                                                        NEXT · step 2
+  ╭──────────────────────────────────────────────────────╮   ╭──────────────────────────────────────────────────────╮
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  ╰──────────────────────────────────────────────────────╯   ╰──────────────────────────────────────────────────────╯
+
+  NOTES
+  a ring, a box and an arrow
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  25:00 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━──────────────── 30:00   03:04
+=== 120x36 s2.0 ahead ===
+  3/6  Diagram  ●○○○                                                                           29:00 left   9:00 ahead
+  ? keys
+  NOW                                                        NEXT · step 2
+  ╭──────────────────────────────────────────────────────╮   ╭──────────────────────────────────────────────────────╮
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  ╰──────────────────────────────────────────────────────╯   ╰──────────────────────────────────────────────────────╯
+
+  NOTES
+  a ring, a box and an arrow
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  1:00 ━━━────────────────────────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 unlinked ===
+  2/6  Bullets  ●●○                                                                           23:00 left   2:00 behind
+  ○ DISCONNECTED · reconnecting…
+  NOW                                                        NEXT · step 3
+  ╭──────────────────────────────────────────────────────╮   ╭──────────────────────────────────────────────────────╮
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  ╰──────────────────────────────────────────────────────╯   ╰──────────────────────────────────────────────────────╯
+
+  NOTES
+  (no notes for this slide)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━─────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 count ===
+  2/6  Bullets  ●●○                                                                           23:00 left   2:00 behind
+  GO TO 12▏ g/⏎
+  NOW                                                        NEXT · step 3
+  ╭──────────────────────────────────────────────────────╮   ╭──────────────────────────────────────────────────────╮
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  ╰──────────────────────────────────────────────────────╯   ╰──────────────────────────────────────────────────────╯
+
+  NOTES
+  (no notes for this slide)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━─────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 stale ===
+  2/6  Renamed  ●○○                                                                          30:00 · starts at slide 2
+  ? keys
+  NOW                                                        NEXT · step 2
+  ╭──────────────────────────────────────────────────────╮   ╭──────────────────────────────────────────────────────╮
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │   preview out of date: restart the presenter view    │   │   preview out of date: restart the presenter view    │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  ╰──────────────────────────────────────────────────────╯   ╰──────────────────────────────────────────────────────╯
+
+  NOTES
+  (no notes for this slide)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  0:00 ───────────────────────────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 no-deck-size ===
+  4/6  Character layer                                                                       30:00 · starts at slide 2
+  ? keys
+  NEXT · 5/6 Last
+  NOTES
+  (no notes for this slide)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  0:00 ───────────────────────────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 blank-black ===
+  2/6  Bullets  ●●○                                                                          30:00 · starts at slide 2
+  ■ BLANK · black · b resumes
+  NOW                                                        NEXT · step 3
+  ╭──────────────────────────────────────────────────────╮   ╭──────────────────────────────────────────────────────╮
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  ╰──────────────────────────────────────────────────────╯   ╰──────────────────────────────────────────────────────╯
+
+  NOTES
+  (no notes for this slide)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  0:00 ───────────────────────────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 120x36 blank-white ===
+  2/6  Bullets  ●●○                                                                          30:00 · starts at slide 2
+  □ BLANK · white · w resumes
+  NOW                                                        NEXT · step 3
+  ╭──────────────────────────────────────────────────────╮   ╭──────────────────────────────────────────────────────╮
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  │                                                      │   │                                                      │
+  ╰──────────────────────────────────────────────────────╯   ╰──────────────────────────────────────────────────────╯
+
+  NOTES
+  (no notes for this slide)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  0:00 ───────────────────────────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 200x50 waiting ===
+  deck-test                                                                                                                                                                  30:00 · starts at slide 2
+  ? keys
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                         Waiting for the deck…
+
+                                                                                   Start the deck in another window.
+                                                                                              /tmp/x.sock
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  0:00 ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 200x50 s0.0 running ===
+  1/6  Block letters                                                                                                                                                          23:00 left   7:00 behind
+  ? keys
+  NOW                                                                                                NEXT · 2/6 Bullets
+  ╭──────────────────────────────────────────────────────────────────────────────────────────────╮   ╭──────────────────────────────────────────────────────────────────────────────────────────────╮
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  ╰──────────────────────────────────────────────────────────────────────────────────────────────╯   ╰──────────────────────────────────────────────────────────────────────────────────────────────╯
+
+  NOTES
+  (no notes for this slide)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 200x50 s1.1 running ===
+  2/6  Bullets  ●●○                                                                                                                                                           23:00 left   2:00 behind
+  ? keys
+  NOW                                                                                                NEXT · step 3
+  ╭──────────────────────────────────────────────────────────────────────────────────────────────╮   ╭──────────────────────────────────────────────────────────────────────────────────────────────╮
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  ╰──────────────────────────────────────────────────────────────────────────────────────────────╯   ╰──────────────────────────────────────────────────────────────────────────────────────────────╯
+
+  NOTES
+  (no notes for this slide)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 200x50 s2.3 running ===
+  3/6  Diagram  ●●●●                                                                                                                                                          23:00 left   10:30 ahead
+  ? keys
+  NOW                                                                                                NEXT · 4/6 Character layer
+  ╭──────────────────────────────────────────────────────────────────────────────────────────────╮   ╭──────────────────────────────────────────────────────────────────────────────────────────────╮
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  ╰──────────────────────────────────────────────────────────────────────────────────────────────╯   ╰──────────────────────────────────────────────────────────────────────────────────────────────╯
+
+  NOTES
+  a ring, a box and an arrow
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 200x50 s5.1 running ===
+  6/6  Wide  ●●                                                                                                                                                               23:00 left   20:30 ahead
+  ? keys
+  NOW                                                                                                NEXT · end of deck
+  ╭──────────────────────────────────────────────────────────────────────────────────────────────╮   ╭──────────────────────────────────────────────────────────────────────────────────────────────╮
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                    that's the last slide                                     │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  ╰──────────────────────────────────────────────────────────────────────────────────────────────╯   ╰──────────────────────────────────────────────────────────────────────────────────────────────╯
+
+  NOTES
+  wide characters
+  and a second line
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 200x50 long-notes ===
+  1/6  Block letters                                                                                                                                                         30:00 · starts at slide 2
+  ? keys
+  NOW                                                                                                NEXT · 2/6 Bullets
+  ╭──────────────────────────────────────────────────────────────────────────────────────────────╮   ╭──────────────────────────────────────────────────────────────────────────────────────────────╮
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  ╰──────────────────────────────────────────────────────────────────────────────────────────────╯   ╰──────────────────────────────────────────────────────────────────────────────────────────────╯
+
+  NOTES
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  a long line of speaker notes, which wraps over several lines
+  …
+  0:00 ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 200x50 keys ===
+  2/6  Bullets  ●●○                                                                                                                                                          30:00 · starts at slide 2
+  ? keys
+  NEXT · step 3
+  NOTES
+  (no notes for this slide)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                  ╭─ Keys ───────────────────────────────────────────────────────────╮
+                                                                  │                                                                  │
+                                                                  │  → l space pgdn      next step / slide                           │
+                                                                  │  ← h pgup            previous                                    │
+                                                                  │  ] [                 next / previous slide (skip steps)          │
+                                                                  │  g G                 first / last slide                          │
+                                                                  │  12g  12⏎            jump to slide 12                            │
+                                                                  │  r                   replay this slide                           │
+                                                                  │  b .                 black screen (again to resume)              │
+                                                                  │  w ,                 white screen (again to resume)              │
+                                                                  │  t  T                start or pause the timer / reset it         │
+                                                                  │  q                   quit                                        │
+                                                                  ╰─ ? or esc closes · deck keys still work ─────────────────────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  0:00 ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 200x50 small-deck ===
+  4/6  Character layer                                                                                                                                                       30:00 · starts at slide 2
+  ? keys
+  NOW                                                                                                NEXT · 5/6 Last
+  ╭──────────────────────────────────────────────────────────────────────────────────────────────╮   ╭──────────────────────────────────────────────────────────────────────────────────────────────╮
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  │                                                                                              │   │                                                                                              │
+  ╰──────────────────────────────────────────────────────────────────────────────────────────────╯   ╰──────────────────────────────────────────────────────────────────────────────────────────────╯
+
+  NOTES
+  (no notes for this slide)
+
+
+
+
+
+
+
+
+
+
+  0:00 ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 200x50 posting/live-dialog ===
+  2/6  Bullets  ●●○                                                                                                                                                           23:00 left   2:00 behind
+  ? keys                                                                                                                                                       ● POSTING as @me.bsky.social · 0/2 sent
+  NEXT · step 3
+  NOTES                                                                                                                                                                   post  sends when you move on
+  (no notes for this slide)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                  ╭─ Posting as @me.bsky.social ─────────────────────────────────────╮
+                                                                  │                                                                  │
+                                                                  │  0 of 2 sent · a new thread                                      │
+                                                                  │                                                                  │
+                                                                  │  Posting carries on: the status line shows how it goes, and P    │
+                                                                  │  opens this again.                                               │
+                                                                  │                                                                  │
+                                                                  │                                    [ Pause posting ]  [ Close ]  │
+                                                                  ╰─ tab moves · enter selects · esc closes · deck keys paused ──────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── 30:00   03:04
+=== 200x50 posting/rehearsing ===
+  2/6  Bullets  ●●○                                                                                                                                                           23:00 left   2:00 behind
+  ? keys                                                                                                                                                                    ● REHEARSING · 0/2 written
+  NEXT · step 3
+  NOTES                                                                                                                                                                   post  sends when you move on
+  (no notes for this slide)
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                  ╭─ Rehearsing posts ───────────────────────────────────────────────╮
+                                                                  │                                                                  │
+                                                                  │  0 of 2 written                                                  │
+                                                                  │  in /nonexistent/decker/talks/deck-test/rehearsal/dry-run.md     │
+                                                                  │  ▲ Posting for real would stop here:                             │
+                                                                  │    bsky: slide 2's post "the builds": 11 images, but a post      │
+                                                                  │    takes up to 10                                                │
+                                                                  │  The rehearsal goes on regardless.                               │
+                                                                  │                                                                  │
+                                                                  │  The rehearsal carries on: the status line shows how it goes,    │
+                                                                  │  and P opens this again.                                         │
+                                                                  │                                                                  │
+                                                                  │                       [ Pause ]  [ Stop rehearsing ]  [ Close ]  │
+                                                                  ╰─ tab moves · enter selects · esc closes · deck keys paused ──────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  7:00 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── 30:00   03:04

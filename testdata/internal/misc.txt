@@ -1,0 +1,26 @@
+=== pixelCell ===
+{ch:  fg:[255 122 0] bg:[255 122 0] attrs:0 ul:0 wide:false}
+{ch:▀ fg:[255 122 0] bg:[64 192 255] attrs:0 ul:0 wide:false}
+=== styles ===
+"\x1b[1;38;2;255;122;0mx\x1b[m"
+=== helpBox ===
+╭──────────────────────────────────────────────────────╮
+│                                                      │
+│  → l space pgdn  next step / slide                   │
+│  ← h pgup        previous                            │
+│  ] [             next / previous slide (skip steps)  │
+│  g G             first / last slide                  │
+│  12g  12⏎        jump to slide 12                    │
+│  r               replay this slide                   │
+│  b .             black screen (again to resume)      │
+│  w ,             white screen (again to resume)      │
+│  n               speaker notes                       │
+│  ?               this help                           │
+│  q               quit                                │
+│                                                      │
+╰──────────────────────────────────────────────────────╯
+=== chrome ===
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁ ● dev  ●●○○  ✎  3/5
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁ ● dev  ●●●  2/5
+=== defaultSocket ===
+name.sock

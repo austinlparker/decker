@@ -1,6 +1,9 @@
 package decker
 
-import "errors"
+import (
+	"errors"
+	"slices"
+)
 
 // Deck is a talk: its slides in running order, its theme, and a name.
 // Pass it to Main from the talk's main function.
@@ -51,6 +54,19 @@ func (d *Deck) Render(i int, c Ctx) string {
 	g := d.cells(i, c)
 	defer g.release()
 	return g.String()
+}
+
+// Canvas renders slide i's pixels as Render does, without the character
+// layer or turning them into cells: what video and post images show, for
+// tests (decktest.Golden). Like Render it sets c's position from i. The
+// Pixels are the caller's.
+func (d *Deck) Canvas(i int, c Ctx) *Pixels {
+	sc := d.scene(i, c)
+	defer sc.Release()
+	px := *sc.Px
+	px.Pix = slices.Clone(sc.Px.Pix)
+	px.review = nil
+	return &px
 }
 
 // Section returns the section slide i (0-based) belongs to: its own

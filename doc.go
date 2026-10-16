@@ -45,8 +45,8 @@
 // # Frame purity
 //
 // A frame depends only on its Ctx: no clocks, no math/rand. Any moment can
-// then be replayed, snapshotted, rendered to video and pinned by golden
-// tests. Use [Hash01] for repeatable noise and Ctx.T, Ctx.Step and Ctx.StepT
+// then be replayed, snapshotted, rendered to video and checked against
+// reference images. Use [Hash01] for repeatable noise and Ctx.T, Ctx.Step and Ctx.StepT
 // for time.
 //
 // # Main types

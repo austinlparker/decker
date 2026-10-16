@@ -32,30 +32,34 @@ together; when bsky starts using engine API that isn't released yet, raise
 the engine version it requires to the one that release will be (the next
 section's rules say which), or bsky's next release fails its check.
 
-`gofmt -l .` should print nothing. `go test -short ./...` skips the slow
-golden tests and is useful during edits, but run the full suite before a PR.
+`gofmt -l .` should print nothing. `go test -short ./...` skips the slower
+reference tests and is useful during edits, but run the full suite before a PR.
 CI also checks the GoReleaser configuration.
 
 ## Rendering and API changes
 
 Frames must depend only on `Ctx`; use `Hash01` for noise and `Ctx.T` or
-`Ctx.StepT` for time. Preserve floating-point operation order during refactors.
+`Ctx.StepT` for time.
 Before 1.0 the exported API changes in place: when a name, signature or
 behavior should change, change it, update every caller in the repository, and
 call out the break in the PR. Don't keep the old form compiling beside the
 new one: aliases, `Deprecated:` declarations, renaming vars and forwarding
 functions fail `TestNoCompatShims` in `shim_test.go`.
 
-Goldens pin pixels and terminal cells. Do not regenerate them to hide a
-failure. For an intentional visual change, run:
+Reference images in `testdata` pin how slides and the engine's screens look,
+within a tolerance that absorbs the rounding differences between machines,
+and reference text pins the character layer, escape sequences and traces
+exactly. Do not regenerate them to hide a failure; a failure leaves what it
+drew and a diff image where it says. For an intentional visual change, run:
 
 ```sh
 UPDATE_GOLDEN=1 go test ./...
 git diff -- testdata
 ```
 
-Review every changed key and explain the intended output change in the PR.
-A refactor should leave the golden files unchanged. New drawing APIs belong
+Only the references that changed are rewritten. Look at every changed image
+and explain the intended output change in the PR. A refactor should leave
+`testdata` unchanged. New drawing APIs belong
 in [the gallery](gallery_test.go), their Go comments, and the
 [guide's toolbox](docs/guide.md#toolbox).
 

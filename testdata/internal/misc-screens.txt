@@ -1,0 +1,39 @@
+=== panic ===
+
+
+
+
+
+
+
+
+
+
+=== nil view ===
+
+
+
+
+=== off-screen ===
+
+  off-screen
+
+
+
+=== scene ===
+
+
+  put
+    over
+
+
+
+
+
+
+=== grid, cloned ===
+    界
+ x
+=== grid ===
+    界
+ x

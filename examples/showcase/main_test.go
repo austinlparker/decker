@@ -10,6 +10,7 @@ import (
 
 func TestSlides(t *testing.T) { decktest.Slides(t, talk()) }
 func TestReview(t *testing.T) { decktest.Review(t, talk()) }
+func TestGolden(t *testing.T) { decktest.Golden(t, talk(), "testdata/golden") }
 
 // TestPosts checks every post against Bluesky's limits, and that each post
 // still shows the kind it's there to.
