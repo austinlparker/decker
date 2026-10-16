@@ -1,11 +1,14 @@
 # Where things live
 
 Changing the engine itself? Read [AGENTS.md](../AGENTS.md) first: the
-invariants, the golden tests, and a recipe for each kind of addition.
+invariants, the reference tests, and a recipe for each kind of addition.
 
 | File | What's in it |
 | --- | --- |
 | `deck.go`, `slide.go`, `ctx.go` | `Deck`, `Slide` with its `Source` citations, and `Ctx` with its layout in screen fractions |
+| `notes.go` | `Deck.Notes`: the speaker notes' Markdown split into one section per slide, checked against the slides' titles, with the post blocks taken out |
+| `publish.go` | `Publisher`, `Session`, `Thread`, `Delivery`: posting the talk as a thread from the presenter view; which slides count as moved on from, uploading the slide up's media ahead, the queue and its retries, the thread file (posts keyed by content, the pending post saved before it goes out, the account it's posted as), rendering each post's media (`Deck.Posts` for tests), the dry run |
+| `posting.go`, `dialog.go` | setting posting up from the presenter view: the account and signing in, which thread, posting or rehearsing, the media rendered once a run, and the files they keep in the user's config directory, all read and written in commands off the view's loop; the presenter view's dialogs, posting and the keys sheet, as boxes over the dimmed screen, and the posting dialog's fields, buttons and focus |
 | `layout.go` | `Rect`: boxes cut from the canvas for layout |
 | `scale.go` | `Scale`: data values mapped onto pixels with round ticks and labels, for hand-drawn axes; shares its tick rounding with the charts' |
 | `cli.go` | `Main`: the command line, parsed by kong, one command struct per mode with its flags, checks and `Run` (live, present, list, review, handout, snapshot, sheet, video) |
@@ -28,8 +31,10 @@ invariants, the golden tests, and a recipe for each kind of addition.
 | `review.go`, `reviewlog.go`, `reviewreport.go`, `reviewimage.go` | `Deck.Review`: every build checked at three sizes while it draws, with what components report (`Ctx.Fits`, text off the canvas or too small) and which element inked each pixel (overlaps); the `review` command's report as text, Markdown and annotated images |
 | `transition.go`, `transfx.go`, `morph.go`, `direction.go` | slide transitions: each mixes two scenes, for the terminal and video alike. `transition.go` has the kinds and directions and the ones that move or sweep frames (push, cover, uncover, split, wipe, dissolve); `transfx.go` the ones that rework pixels (fades, iris, zoom, pixelate, glitch); the morph moves placed elements |
 | `model.go`, `keys.go`, `termout.go`, `dev.go` | the app: navigation, the key table, writing frames, dev reload |
-| `presenter.go`, `link.go`, `preview.go` | the presenter view, the socket link to the deck, slide previews |
+| `presenter.go`, `presview.go`, `link.go`, `preview.go` | the presenter view: its model and keys, and its screen (header, status line, previews and notes or a dialog, time bar); the socket link to the deck; slide previews |
 | `present_window.go`, `kitty.go` | launch a Ghostty deck window with its own font size; upload and manage full-resolution presenter images |
 | `png.go` | PNG snapshots and contact sheets, painted from cell grids |
 | `video.go` | rendering a deck to a video |
-| `decktest/` | the test suite for decks |
+| `decktest/` | the test suite for decks: renders (and that drawing again gives the same frame), review, reference images, posts checked against the publisher |
+| `internal/visual/` | reference images and text for tests: frames halved and compared within a tolerance set from measurement, sheets of small frames, readable diffs |
+| `bsky/` | its own module, `github.com/austinlparker/decker/bsky`, so the engine doesn't carry its dependencies (`examples/showcase`, which posts with it, is a module too). `bsky.Publisher`: posting the talk to Bluesky; OAuth sign-in as a loopback client with the session kept in the system keychain, uploads through the video service, image posts and galleries, links, mentions and hashtags as facets, record keys made from the thread file so a retry, after a restart too, never posts twice |

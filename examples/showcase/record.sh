@@ -12,7 +12,7 @@ fps=${FPS:-15}
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
-go build -o "$tmp/showcase" ./examples/showcase
+(cd examples/showcase && go build -o "$tmp/showcase" .)
 
 # name first-slide last-slide
 while read -r name from until; do

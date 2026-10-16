@@ -1,6 +1,7 @@
 package decker
 
 import (
+	"github.com/charmbracelet/x/ansi"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -129,7 +130,8 @@ func TestPresenterQuitsOnQuitBindings(t *testing.T) {
 // and checks every frame is exactly the terminal's size. Set PRESENTER_PNG
 // to a directory to also save each frame as an image.
 func TestPresenterViewFits(t *testing.T) {
-	slides := testDeck().Slides
+	d := testDeck()
+	slides, notes := d.Slides, d.slideNotes()
 	outline := make([]linkOutline, len(slides))
 	for i, s := range slides {
 		outline[i] = linkOutline{Title: s.Title, Steps: s.steps()}
@@ -144,7 +146,7 @@ func TestPresenterViewFits(t *testing.T) {
 			p := newPresenter(&Deck{Slides: slides, Theme: testTheme}, "/tmp/x.sock", 30*time.Minute)
 			p.w, p.h, p.linked = size[0], size[1], at.linked
 			if at.slide >= 0 {
-				p.st = linkState{Slide: at.slide, Step: at.step, Outline: outline, Notes: slides[at.slide].Notes, W: 682, H: 171}
+				p.st = linkState{Slide: at.slide, Step: at.step, Outline: outline, Notes: notes[at.slide], W: 682, H: 171}
 				p.running, p.since, p.banked = true, p.now.Add(-7*time.Minute), 0
 			}
 			view := p.View().Content
@@ -162,6 +164,36 @@ func TestPresenterViewFits(t *testing.T) {
 				if err := writePNG(parseGrid(view, size[0], size[1], testTheme), name); err != nil {
 					t.Fatal(err)
 				}
+			}
+		}
+	}
+}
+
+// TestPresenterStatesFit draws every posting state, long notes with a post
+// failing, and a jump being typed, at sizes from 60x15 up, and checks each
+// is exactly the terminal's size, and that a narrow one keeps what matters.
+func TestPresenterStatesFit(t *testing.T) {
+	d := testDeck()
+	d.Notes = "## Block letters\n\n## Bullets\n\n" + strings.Repeat("a long line of speaker notes, which wraps over several lines\n", 30)
+	for _, size := range [][2]int{{60, 15}, {80, 24}, {100, 30}, {120, 36}, {120, 40}, {200, 50}} {
+		w, h := size[0], size[1]
+		states := postingStates(d, w, h, map[previewKey]string{})
+		jump := presenterFor(d, w, h, false, 1, 1, map[previewKey]string{})
+		jump.count, jump.st.Blank, jump.running, jump.since = "12", "black", true, goldenBase.Add(-7*time.Minute)
+		states = append(states, namedPresenter{"jump", jump})
+		for _, s := range states {
+			view := ansi.Strip(s.p.View().Content)
+			lines := strings.Split(view, "\n")
+			if len(lines) != h {
+				t.Errorf("%dx%d %s: %d lines", w, h, s.name, len(lines))
+			}
+			for i, l := range lines {
+				if lw := lipgloss.Width(l); lw > w {
+					t.Errorf("%dx%d %s: line %d is %d wide", w, h, s.name, i+1, lw)
+				}
+			}
+			if s.name == "jump" && (!strings.Contains(lines[1], "GO TO 12") || !strings.Contains(lines[1], "BLANK") || !strings.Contains(lines[0], "23:00")) {
+				t.Errorf("%dx%d: the jump, the blank or the time is missing:\n%s", w, h, view)
 			}
 		}
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -25,10 +26,23 @@ func (c presentCmd) Run(d *Deck) error {
 	if err != nil {
 		return err
 	}
-	p := newPresenter(d, c.Socket, c.Length)
-	p.st.Slide, p.st.Step = max(c.Slide-1, 0), max(c.Step-1, 0)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	p := newPresenter(d, c.Socket, c.Length)
+	p.st.Slide, p.st.Step = max(c.Slide-1, 0), max(c.Step-1, 0)
+	if p.post = newPosting(d, postingRoot(), p.drawMu); p.post != nil {
+		restore, err := logTo(filepath.Join(p.post.home, "posting.log"))
+		if err != nil {
+			return err
+		}
+		defer restore()
+		defer p.post.end()
+		// Media is rendered afresh in each run; what an earlier one left is
+		// stale.
+		if err := os.RemoveAll(filepath.Join(p.post.home, "media")); err != nil {
+			return err
+		}
+	}
 	window.ctx = ctx
 	p.launch = window.open
 	if images {
@@ -83,11 +97,24 @@ type presenter struct {
 	launchErr     string
 	launchAttempt int
 
+	post      *posting   // nil if the notes have no posts
+	dialog    dialogKind // the dialog open over the middle of the screen
+	quitArmed time.Time  // until when a second q quits, with posts still to send
+
 	// The talk timer starts when the deck first leaves slide 1, or with t.
 	running bool
 	since   time.Time     // when it last started
 	banked  time.Duration // time counted before the last pause
 }
+
+// dialogKind is which of the presenter view's dialogs is open.
+type dialogKind uint8
+
+const (
+	dialogNone dialogKind = iota
+	dialogKeys
+	dialogPosting
+)
 
 type (
 	presTickMsg           time.Time
@@ -104,6 +131,14 @@ type (
 const reconnectEvery = 500 * time.Millisecond
 
 func (p presenter) Init() tea.Cmd { return tea.Batch(p.tick(), p.connect(0)) }
+
+// pub is the open thread, live or a rehearsal; nil if there's none.
+func (p presenter) pub() *publishing {
+	if p.post == nil {
+		return nil
+	}
+	return p.post.pub
+}
 
 func (p presenter) tick() tea.Cmd {
 	return tea.Tick(250*time.Millisecond, func(t time.Time) tea.Msg { return presTickMsg(t) })
@@ -131,6 +166,9 @@ func (p presenter) listen() tea.Cmd {
 }
 
 func (p presenter) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if p, cmd, ok := p.postingMsg(msg); ok {
+		return p, cmd
+	}
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		changed := p.w != msg.Width || p.h != msg.Height
@@ -150,6 +188,9 @@ func (p presenter) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return p, p.listen()
 	case linkDownMsg:
 		p.linked = false
+		if pb := p.pub(); pb != nil {
+			pb.known = false
+		}
 		p.link.close()
 		return p, p.connect(reconnectEvery)
 	case linkStateMsg:
@@ -158,13 +199,14 @@ func (p presenter) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if !p.running && p.banked == 0 && p.st.Slide > 0 {
 			p.running, p.since = true, time.Now()
 		}
+		post := p.track()
 		if resized {
 			clear(p.previews)
 			if p.images != nil {
-				return p, tea.Batch(p.listen(), tea.Sequence(tea.Raw(p.images.clear()), p.upload()))
+				return p, tea.Batch(p.listen(), post, tea.Sequence(tea.Raw(p.images.clear()), p.upload()))
 			}
 		}
-		return p, tea.Batch(p.listen(), p.upload())
+		return p, tea.Batch(p.listen(), post, p.upload())
 	case kittyUploadMsg:
 		if p.images != nil {
 			if p.images.finish(msg) != "" {
@@ -191,15 +233,23 @@ func (p presenter) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case presentationWaitMsg:
 		if int(msg) == p.launchAttempt && p.launching && !p.linked {
 			p.launching = false
-			p.launchErr = "The presentation has not connected. Press p to retry, or check its window."
+			p.launchErr = "it hasn't connected; check its window"
 		}
 	case tea.KeyPressMsg:
+		if p.dialog == dialogPosting {
+			if p, cmd, ok := p.postingKey(msg); ok {
+				return p, cmd
+			}
+		}
 		return p.handleKey(msg.String())
 	}
 	return p, nil
 }
 
 func (p presenter) handleKey(k string) (tea.Model, tea.Cmd) {
+	if k != "q" {
+		p.quitArmed = time.Time{}
+	}
 	if n, done := countKey(&p.count, k); done {
 		if n > 0 {
 			p.link.send(linkCmd{Slide: n})
@@ -208,6 +258,12 @@ func (p presenter) handleKey(k string) (tea.Model, tea.Cmd) {
 	}
 	switch {
 	case keyActs[k].act == "quit":
+		// q asks again while a live thread has posts to send: they'd be
+		// lost. ctrl+c always quits.
+		if now := time.Now(); k == "q" && p.unsent() > 0 && !p.quitArmed.After(now) {
+			p.quitArmed, p.now = now.Add(3*time.Second), now
+			return p, nil
+		}
 		if p.images != nil {
 			return p, tea.Sequence(tea.Raw(p.images.clear()), tea.Quit)
 		}
@@ -230,6 +286,17 @@ func (p presenter) handleKey(k string) (tea.Model, tea.Cmd) {
 		}
 	case k == "T":
 		p.running, p.banked = false, 0
+	case keyActs[k].act == "help":
+		if p.dialog == dialogKeys {
+			p.dialog = dialogNone
+		} else {
+			p.dialog = dialogKeys
+		}
+	case keyActs[k].act == "closeHelp":
+		p.dialog = dialogNone
+	case k == "P" && p.post != nil:
+		p.post.show()
+		p.dialog = dialogPosting
 	case keyActs[k].nav:
 		p.link.send(linkCmd{Key: k})
 	}
@@ -271,119 +338,6 @@ func clock(d time.Duration) string {
 	return fmt.Sprintf("%d:%02d", int(d.Minutes()), int(d.Seconds())%60)
 }
 
-func (p presenter) View() tea.View {
-	if p.w == 0 || p.h == 0 {
-		return tea.NewView("")
-	}
-	view := p.mainView
-	if p.st.Outline == nil {
-		view = p.waitingView
-	}
-	v := tea.NewView(view())
-	v.AltScreen = true
-	v.BackgroundColor = p.deck.Theme.Background.Color()
-	v.WindowTitle = "presenter"
-	return v
-}
-
-func (p presenter) waitingView() string {
-	setup := "Run the deck in another window."
-	if p.launch != nil {
-		setup = "Press p to open the presentation in a new Ghostty window."
-	}
-	if p.launching {
-		setup = "Opening the presentation…"
-	} else if p.launchErr != "" {
-		setup = p.launchErr
-	}
-	style := p.sty.text
-	if p.launch != nil {
-		style = style.Width(max(p.w-2*presMargin, 1)).MaxHeight(max(p.h-footerLines-4, 1))
-	}
-	msg := p.sty.accent.Render("Waiting for the deck…") + "\n\n" +
-		style.Render(setup) + "\n" +
-		p.sty.faint.Render(p.socket)
-	mid := lipgloss.Place(p.w, max(p.h-footerLines, 1), lipgloss.Center, lipgloss.Center, msg)
-	return mid + "\n" + p.footer()
-}
-
-const (
-	presMargin = 2 // left and right edges
-	presGutter = 3 // between the two previews
-	presHeader = 2 // the header and the blank line under it
-)
-
-func (p presenter) inner() int { return max(p.w-2*presMargin, 10) }
-
-func (p presenter) curOutline() linkOutline {
-	return p.st.Outline[min(p.st.Slide, len(p.st.Outline)-1)]
-}
-
-func (p presenter) mainView() string {
-	cur, inner := p.curOutline(), p.inner()
-	left := p.sty.accent.Render(fmt.Sprintf("%d/%d", p.st.Slide+1, len(p.st.Outline))) + "  " + p.sty.text.Bold(true).Render(cur.Title)
-	if cur.Section != "" {
-		left += p.sty.muted.Render("  · " + cur.Section)
-	}
-	var right []string
-	if !p.linked {
-		right = append(right, p.sty.warn.Render("○ reconnecting to the deck…"))
-	}
-	if p.st.Blank != "" {
-		right = append(right, p.sty.warn.Bold(true).Render("BLANK")+p.sty.muted.Render(" ("+p.st.Blank+")"))
-	}
-	if p.count != "" {
-		right = append(right, p.sty.jumping(p.count))
-	}
-	if cur.Steps > 1 {
-		right = append(right, p.sty.muted.Render(fmt.Sprintf("step %d/%d ", p.st.Step+1, cur.Steps))+
-			p.sty.meter("●", "○", p.st.Step+1, cur.Steps))
-	}
-	header := spread(left, strings.Join(right, "   "), inner)
-	rest := p.h - presHeader - footerLines
-
-	// Previews of now and next, if they fit and leave room for notes.
-	var previews string
-	if k, ok := p.key(p.st.Slide, p.st.Step); ok {
-		nextLabel, nextBox := "END OF DECK", p.placeholder(k.pw, k.ph, "that's the last slide")
-		if nk, label, ok := p.nextKey(k); ok {
-			nextLabel, nextBox = label, p.preview(nk)
-		}
-		now := lipgloss.JoinVertical(lipgloss.Left, p.sty.accent.Render("NOW"), frame(p.preview(k), p.deck.Theme.Accent))
-		next := lipgloss.JoinVertical(lipgloss.Left, p.sty.muted.Render(truncate(nextLabel, k.pw+2)), frame(nextBox, p.deck.Theme.Faint))
-		previews = lipgloss.JoinHorizontal(lipgloss.Top, now, strings.Repeat(" ", presGutter), next)
-		rest -= lipgloss.Height(previews) + 1
-	}
-
-	notes := p.st.Notes
-	if notes == "" {
-		notes = p.sty.faint.Render(noNotes)
-	}
-	lines := strings.Split(lipgloss.NewStyle().Width(inner).Foreground(p.deck.Theme.Text.Color()).Render(notes), "\n")
-	if avail := rest - 1; len(lines) > avail { // the NOTES label takes a line
-		lines = append(lines[:max(avail-1, 0)], p.sty.faint.Render("…"))
-	}
-	noteBlock := p.sty.accent2.Render("NOTES") + "\n" + strings.Join(lines, "\n")
-
-	launchStatus := ""
-	if p.launching {
-		launchStatus = p.sty.accent.Render("Opening the presentation…")
-	} else if p.launchErr != "" {
-		launchStatus = p.sty.warn.Render(truncate(strings.ReplaceAll(p.launchErr, "\n", " "), inner))
-	}
-	parts := []string{header, launchStatus}
-	if previews != "" {
-		parts = append(parts, previews, "")
-	}
-	parts = append(parts, noteBlock)
-	top := indent(strings.Join(parts, "\n"), strings.Repeat(" ", presMargin))
-	gap := max(p.h-lipgloss.Height(top)-footerLines, 0)
-	return top + strings.Repeat("\n", gap) + "\n" + p.footer()
-}
-
-// footerLines is the footer's height: a rule, the timer line, and keys.
-const footerLines = 3
-
 // nextTarget is the slide and step the "next" preview shows, with its
 // label. ok is false on the last step of the last slide.
 func (p presenter) nextTarget() (next [2]int, label string, ok bool) {
@@ -391,7 +345,8 @@ func (p presenter) nextTarget() (next [2]int, label string, ok bool) {
 	case p.st.Step < cur.Steps-1:
 		return [2]int{p.st.Slide, p.st.Step + 1}, fmt.Sprintf("NEXT · step %d", p.st.Step+2), true
 	case p.st.Slide < len(p.st.Outline)-1:
-		return [2]int{p.st.Slide + 1, 0}, "NEXT · " + p.st.Outline[p.st.Slide+1].Title, true
+		n := p.st.Slide + 1
+		return [2]int{n, 0}, fmt.Sprintf("NEXT · %d/%d %s", n+1, len(p.st.Outline), p.st.Outline[n].Title), true
 	}
 	return next, "", false
 }
@@ -465,57 +420,6 @@ func (p presenter) upload() tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-func (p presenter) footer() string {
-	inner := p.inner()
-	el := p.elapsed()
-
-	timer := p.sty.text.Bold(true).Render(clock(el)) + p.sty.muted.Render(" / "+clock(p.length))
-	switch {
-	case !p.running && el == 0:
-		timer += p.sty.faint.Render("   starts on slide 2, or press t")
-	case !p.running:
-		timer += p.sty.warn.Render("   paused")
-	case el > p.length:
-		timer += p.sty.warn.Render("   " + clock(el-p.length) + " over")
-	default:
-		timer += p.sty.muted.Render("   " + clock(p.length-el) + " left")
-	}
-
-	status := ""
-	if p.st.Outline != nil && el > 0 {
-		d := pace(p.st.Outline, p.st.Slide, p.st.Step, el, p.length)
-		switch {
-		case d > 30*time.Second:
-			status = p.sty.accent2.Render(clock(d) + " ahead")
-		case d >= -30*time.Second:
-			status = p.sty.good.Render("on pace")
-		case d >= -2*time.Minute:
-			status = p.sty.accent.Render(clock(d) + " behind")
-		default:
-			status = p.sty.warn.Render(clock(d) + " behind")
-		}
-	}
-
-	// A bar of time used, with a marker for how far through the deck you are.
-	barW := max(inner/4, 10)
-	cells := func(d time.Duration) int { return int(float64(barW) * float64(d) / float64(max(p.length, 1))) }
-	used := min(cells(el), barW)
-	bar := p.sty.meter("━", "━", used, barW)
-	if p.st.Outline != nil {
-		at := pace(p.st.Outline, p.st.Slide, p.st.Step, 0, p.length) // share of the deck shown, as time
-		pos := min(cells(at), barW-1)
-		bar = cutAt(bar, pos, p.sty.text.Bold(true).Render("┃"))
-	}
-
-	line1 := spread(timer+"   "+bar+"   "+status, p.sty.muted.Render(p.now.Format("15:04")), inner)
-	keys := "→ ← step   ] [ slide   12g jump   r replay   t timer   T reset   q quit"
-	if p.launch != nil {
-		keys = "p open deck   " + keys
-	}
-	rule := p.sty.faint.Render(strings.Repeat("─", inner))
-	return indent(rule+"\n"+line1+"\n"+truncate(p.sty.faint.Render(keys), inner), strings.Repeat(" ", presMargin))
-}
-
 // noNotes stands in for the speaker notes of a slide that has none.
 const noNotes = "(no notes for this slide)"
 
@@ -536,13 +440,7 @@ func spread(left, right string, w int) string {
 	return left + strings.Repeat(" ", gap) + right
 }
 
-// cutAt replaces the cell at pos in a styled line with mark.
-func cutAt(line string, pos int, mark string) string {
-	return truncate(line, pos) + mark + truncateLeft(line, pos+1)
-}
-
-func truncate(s string, w int) string     { return ansi.Truncate(s, max(w, 0), "") }
-func truncateLeft(s string, n int) string { return ansi.TruncateLeft(s, max(n, 0), "") }
+func truncate(s string, w int) string { return ansi.Truncate(s, max(w, 0), "") }
 
 func indent(s, pad string) string {
 	return pad + strings.ReplaceAll(s, "\n", "\n"+pad)
@@ -554,4 +452,29 @@ func frame(s string, c RGB) string {
 
 func (p presenter) placeholder(w, h int, msg string) string {
 	return lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center, p.sty.faint.Render(msg))
+}
+
+// track tells the open thread where the deck is, as the link last reported
+// it, and starts its next post if one is due. The slide the deck moved on
+// from posts, and the last slide does once its last build is up; the
+// slide up uploads its media meanwhile. A slide of this build that isn't
+// the deck's (dev mode) does none of it.
+func (p presenter) track() tea.Cmd {
+	pb := p.pub()
+	if pb == nil {
+		return nil
+	}
+	var upload tea.Cmd
+	if p.linked && p.st.Outline != nil {
+		if left, ok := pb.at(p.st.Slide, p.st.Step); ok && p.matches(left) {
+			pb.enqueue(left)
+		}
+		if p.matches(pb.slide) {
+			if pb.lastShown(p.st.Outline) {
+				pb.enqueue(pb.slide)
+			}
+			upload = pb.upload(pb.slide)
+		}
+	}
+	return tea.Batch(upload, pb.next())
 }

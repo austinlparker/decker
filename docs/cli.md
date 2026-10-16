@@ -25,7 +25,7 @@ go run . video talk.mp4 --slide 1 --until 3 --size 1280x720 --fps 30 --hold 4
 | Command | Result |
 | --- | --- |
 | none, or `live` | Present interactively in the terminal; `--dev` rebuilds on Go source or module changes and keeps the slide and build after a successful build |
-| `present` | Show notes, timer and previews; `p` opens the deck in a new Ghostty window on macOS |
+| `present` | Show notes, timer and previews; `p` opens the deck in a new Ghostty window on macOS; `?` lists its keys; `P` opens the posting dialog, to post the talk as a thread as you give it |
 | `list` | Print slide titles, build counts and sections |
 | `review DIR` | Check every build of every slide at 240×67, 320×90 and 682×171 for clipped, dropped, off-canvas, unreadable or overlapping content; print the issues, write `DIR/index.md` with pictures, and exit 1 on errors |
 | `handout DIR` | Write `DIR/handout.md` and a PNG thumbnail of every slide at its final build |
@@ -101,8 +101,8 @@ deck/presenter pair a different socket path.
 Dev mode needs `go` on `PATH`, watches imported packages in the talk's module,
 and writes rebuilt binaries to `.slides/DECK_NAME` under the working directory.
 A Go workspace can include a local decker checkout for engine edits.
-Edits to embedded images or fonts alone do not trigger a rebuild; save a
-watched Go file after changing those assets.
+Files the talk embeds, such as `notes.md`, images and fonts, also trigger
+a rebuild.
 
 ## Review
 

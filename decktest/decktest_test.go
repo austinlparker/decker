@@ -1,9 +1,11 @@
 package decktest
 
 import (
+	"context"
 	"errors"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -77,6 +79,23 @@ func TestSlidesFailsOnEveryPart(t *testing.T) {
 	}
 }
 
+// TestSlidesChecksTheDeck runs Slides, in a child test process, on a deck
+// whose notes have fallen out of step with its slides.
+func TestSlidesChecksTheDeck(t *testing.T) {
+	if os.Getenv("DECKTEST_NOTES") != "" {
+		d := boomDeck("")
+		d.Notes = "## Renamed\n"
+		Slides(t, d)
+		return
+	}
+	cmd := exec.Command(os.Args[0], "-test.run=^TestSlidesChecksTheDeck$")
+	cmd.Env = append(os.Environ(), "DECKTEST_NOTES=1")
+	out, err := cmd.CombinedOutput()
+	if err == nil || !strings.Contains(string(out), `deck: Notes line 1: section 1 is "Renamed"`) {
+		t.Errorf("Slides passed or said something else: %v\n%s", err, out)
+	}
+}
+
 func TestReviewPassesACleanDeck(t *testing.T) {
 	d := decker.Deck{Name: "clean", Theme: theme, Slides: []decker.Slide{{
 		Title: "Hello",
@@ -94,5 +113,116 @@ func TestReviewPassesACleanDeck(t *testing.T) {
 	is := d.Review()
 	if len(is) != 3 || is[0].Severity != decker.SeverityError || !strings.Contains(is[0].Msg, "past the right edge") {
 		t.Errorf("off-edge deck: %v", is)
+	}
+}
+
+// checked is a Publisher that keeps what Check is given and turns away a
+// post that says "too long". It can't sign in: Posts mustn't.
+type checked struct{ posts []decker.Post }
+
+func (*checked) SignIn(context.Context, string, func(string)) (decker.Session, error) {
+	return nil, errors.New("Posts signed in")
+}
+
+func (p *checked) Check(_ context.Context, posts []decker.Post) error {
+	p.posts = posts
+	for _, post := range posts {
+		if post.Text == "too long" {
+			return errors.New("too long for the service")
+		}
+	}
+	return nil
+}
+
+// TestPosts checks Posts renders every post and hands them all to the
+// Publisher, and, in a child test process, fails when it turns one away.
+func TestPosts(t *testing.T) {
+	pub := &checked{}
+	d := boomDeck("")
+	d.Publisher = pub
+	d.Notes = "```post\nopening\n```\n## Boom\n```post\nthe slide\n```\n"
+	if os.Getenv("DECKTEST_POSTS") != "" {
+		d.Notes = "## Boom\n```post\ntoo long\n```\n"
+		Posts(t, d)
+		return
+	}
+	posts := Posts(t, d)
+	if len(posts) != 2 || len(pub.posts) != 2 || posts[0].Text != "opening" || len(posts[0].Media) != 0 ||
+		posts[1].Slide != 0 || len(posts[1].Media) != 1 {
+		t.Fatalf("posts %+v, checked %+v", posts, pub.posts)
+	}
+	if _, err := os.Stat(posts[1].Media[0].Path); err != nil {
+		t.Errorf("the slide's image: %v", err)
+	}
+	cmd := exec.Command(os.Args[0], "-test.run=^TestPosts$")
+	cmd.Env = append(os.Environ(), "DECKTEST_POSTS=1")
+	out, err := cmd.CombinedOutput()
+	if err == nil || !strings.Contains(string(out), "too long for the service") {
+		t.Errorf("Posts passed or said something else: %v\n%s", err, out)
+	}
+}
+
+// TestSlidesFailsAnImpureView runs Slides, in a child test process, on a
+// deck whose View counts the frames it has drawn.
+func TestSlidesFailsAnImpureView(t *testing.T) {
+	if os.Getenv("DECKTEST_IMPURE") != "" {
+		d := boomDeck("")
+		frames := 0
+		d.Slides[0].View = func(c decker.Ctx, sc *decker.Scene) {
+			frames++
+			sc.Px.Rect(float64(frames%10), 0, 4, 4, decker.Hex("#FF8800"), 1)
+		}
+		Slides(t, d)
+		return
+	}
+	cmd := exec.Command(os.Args[0], "-test.run=^TestSlidesFailsAnImpureView$")
+	cmd.Env = append(os.Environ(), "DECKTEST_IMPURE=1")
+	out, err := cmd.CombinedOutput()
+	if err == nil || !strings.Contains(string(out), "drawn again, it changed") {
+		t.Errorf("Slides passed or said something else: %v\n%s", err, out)
+	}
+}
+
+// goldenDeck is a slide whose box sits at x, with words in the character
+// layer.
+func goldenDeck(x float64) decker.Deck {
+	d := boomDeck("")
+	d.Slides[0].Steps = 2
+	d.Slides[0].View = func(c decker.Ctx, sc *decker.Scene) {
+		sc.Px.Rect(c.X(x), c.Y(0.2), c.X(0.3), c.Y(0.3), decker.Hex("#FF8800"), 1)
+		if c.Reached(1) {
+			sc.Text(2, 1, "words", decker.Hex("#FFFFFF").Color())
+		}
+	}
+	return d
+}
+
+// TestGolden records a deck's references, checks them, and, in a child
+// test process, fails a deck whose box moved and a reference no slide
+// draws.
+func TestGolden(t *testing.T) {
+	if dir := os.Getenv("DECKTEST_GOLDEN"); dir != "" {
+		Golden(t, goldenDeck(0.2), dir)
+		return
+	}
+	dir := t.TempDir()
+	t.Setenv("UPDATE_GOLDEN", "1")
+	Golden(t, goldenDeck(0.1), dir)
+	t.Setenv("UPDATE_GOLDEN", "")
+	Golden(t, goldenDeck(0.1), dir)
+	chars, _ := os.ReadFile(filepath.Join(dir, "characters.txt"))
+	if want := "=== 1.2 Boom, 80×24 ===\n\n  words\n"; !strings.HasSuffix(string(chars), want) {
+		t.Errorf("characters.txt:\n%s", chars)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "02-Gone.png"), nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command(os.Args[0], "-test.run=^TestGolden$")
+	cmd.Env = append(os.Environ(), "DECKTEST_GOLDEN="+dir)
+	out, err := cmd.CombinedOutput()
+	for _, want := range []string{"01-Boom.png:", "build 1 at 0.25: a pixel moved by", "build 2 at 80×24: a pixel moved by", "02-Gone.png: no slide draws it"} {
+		if err == nil || !strings.Contains(string(out), want) {
+			t.Errorf("Golden passed or didn't say %q: %v\n%s", want, err, out)
+		}
 	}
 }

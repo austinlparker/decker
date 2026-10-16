@@ -21,7 +21,7 @@ func (p presenter) key(i, step int) (k previewKey, ok bool) {
 	// A cell shows one pixel across and two down, like the deck's, so the
 	// deck's shape in cells carries over directly.
 	ph := pw * dh / dw
-	most := p.h - presHeader - footerLines - 3 - 6 // label + frame, and 6 lines of notes
+	most := p.h - presHeader - footerLines - previewChrome - 1 - notesMin // the NOTES label too
 	if p.images != nil {
 		most = min(most, kittyMaxCells)
 	}

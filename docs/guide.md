@@ -35,8 +35,8 @@ character and removes unsupported quote marks with `DropQuotes`. The
 FIGlet loader currently loads ASCII input glyphs only.
 
 One idea per slide: a headline and at most a couple of short lines or a
-visual. Put the detail in the speaker notes (`Notes`, shown in the presenter
-view) and what you cite in `Sources`. Keep titles under about 24 characters
+visual. Put the detail in the speaker notes (`Deck.Notes`, shown in the
+presenter view) and what you cite in `Sources`. Keep titles under about 24 characters
 so they stay full size.
 
 ### Choosing and loading fonts
@@ -223,16 +223,24 @@ the deck quits or restarts (every save in dev mode), it reconnects by itself.
 Its keys are the deck's keys, so point the clicker at the presenter window.
 The deck's own keys keep working if the presenter view goes away.
 
-The presenter view shows:
+The presenter view has four parts, which stay where they are:
 
-- the slide number, title and build step, and a `BLANK` tag while the deck is
-  blanked (`b`, `w`);
-- small previews of what's on screen now and what comes next;
-- the current slide's notes;
-- a 30-minute timer, which starts when you leave slide 1 (or press `t`);
-- a pace check: how far ahead or behind an even pace you are, counting
-  build steps, so a slide with four builds gets four times a section
-  opener's share of the time.
+- **the header**: the slide number, title and build steps on the left; on
+  the right, the time left of a 30-minute talk (it starts when you leave
+  slide 1, or press `t`) and the pace, how far ahead or behind an even pace
+  you are, counting build steps, so a slide with four builds gets four
+  times a section opener's share of the time;
+- **the status line**: anything that needs you, such as `■ BLANK` while the
+  deck is blanked (`b`, `w`), `○ DISCONNECTED`, or the slide number you're
+  typing to jump to; and, for a talk with posts, how posting stands. With
+  nothing to say, it shows `? keys`;
+- **the previews** of what's on screen now and what comes next, if there's
+  room, and the current slide's notes;
+- **the time bar** at the bottom: time used against the talk's length, and
+  the clock.
+
+`?` lists the keys in place of the previews and notes; `?` or `esc` closes
+it.
 
 Ghostty and kitty show full-resolution slide images automatically using
 the Kitty graphics protocol. Other terminals, and sessions inside tmux or
@@ -242,6 +250,143 @@ actual dimensions and settled build step; while an image loads, its cell
 preview remains visible. Resizing either window refreshes the images.
 
 For a different talk length, pass `--length 45m` to the presenter view.
+
+## Presenting: posting the talk live
+
+The presenter view can post the talk as a thread while you give it: when
+you move on from a slide, its posts go out as replies, in order. Write the
+posts in the notes, as fenced `post` blocks in each slide's section:
+
+````markdown
+```post
+Starting my talk on observability now. Follow along 🧵
+```
+
+## Where the time goes
+
+Each build adds one hop. Database is the one to talk about.
+
+```post media=builds builds=2-4
+Where does 300ms go? Edge, auth, service, and then the database eats 120.
+```
+```alt
+Bars per hop on a millisecond scale; database is the longest.
+```
+````
+
+A post block before the first section opens the thread, and attaches
+nothing. `media=` picks what a post on a slide attaches:
+
+| `media=` | Attaches |
+| --- | --- |
+| `final` (the default) | the last build, settled, as an image |
+| `builds` | an image of each build, or of the ones `builds=2-4,6` lists |
+| `clip` | a video of the slide entering and building, played muted and looping like a GIF |
+| `none` | nothing |
+
+An `alt` block right after a post describes its media; without one, the
+alt text is the slide's number and title. Post and alt blocks don't show in
+the notes, the presenter view or the handout; the presenter view says how
+the slide's posts stand beside its notes.
+
+A slide posts when you move on from it, forward, however briefly it was up.
+Slides you jump over (`12g`, `G`) don't post: jumping is how you skip one
+on purpose. Moving back never posts again. The last slide, with nothing to
+move on to, posts once its last build is up.
+
+The talk needs a `Deck.Publisher` to post with. The `bsky` module has
+one for Bluesky; it's a module of its own, so talks that don't post don't
+take on its dependencies (`go get github.com/austinlparker/decker/bsky`):
+
+```go
+import "github.com/austinlparker/decker/bsky"
+
+d := &decker.Deck{
+	Notes:     notes,
+	Publisher: &bsky.Publisher{Langs: []string{"en"}},
+	// ...
+}
+```
+
+The [showcase example](../examples/showcase) makes every kind of post.
+Put `decktest.Posts` in the talk's tests (see [Tests](#tests)) and a
+post the service would turn away, too long or too big, fails the test
+instead of the talk.
+
+Posting is set up from the presenter view (`go run . present`): `P` opens
+the posting dialog, which works before the deck is running too. Type the
+account to post as, such as `me.bsky.social` (it's remembered for next
+time), choose whether to start a new thread or carry on the last one, and
+pick a button:
+
+- **Start posting** signs in if it must, renders every post's media, and
+  has the publisher check every post against the service's limits, all
+  before anything posts, so do it before you're on stage. Then the dialog
+  closes and each slide posts as you move on from it.
+- **Rehearse** does the same without signing in, writing each post to a
+  file instead of sending it, and shows a problem posting for real would
+  stop on as a warning. Checks only the account can answer, such as its
+  daily video allowance, wait for posting for real. **Stop rehearsing** goes back to setting up.
+
+`tab` and the arrow keys move between the dialog's fields and buttons,
+`enter` or `space` presses a button or picks an option, and `esc` closes
+the dialog; whatever is running carries on, and the status line follows
+it. While the dialog is open it takes every key, so a clicker press doesn't
+reach the deck; but once posting has started, the dialog opens on
+**Close**, so a stray press does nothing, and `esc` only ever closes it.
+Opened while posting, it shows how many posts have gone out and why one is
+failing, and pauses and resumes posting.
+
+The first sign-in is through your browser; the dialog shows the address
+too, in case none opens. The `bsky` publisher keeps the session in the
+system keychain (the macOS Keychain, the Secret Service on Linux, the
+Windows Credential Manager) as a `decker-bsky` item named for the account,
+and later runs pick it up without the browser until Bluesky ends it, two
+weeks after signing in. A session that has ended signs in through the
+browser again, so sign in within the two weeks before the talk. It asks
+only for what posting takes: creating posts, uploading images and video,
+and having Bluesky's video service process clips for the account.
+
+Within a post, `https://` links, `#hashtags` and `@handles` link the way
+they do in Bluesky's apps, and every `@handle` must resolve. Bluesky holds a
+post to 300 characters and ten images, or one clip, and a clip to an
+account with a verified email and room in its daily video allowance; the
+check before posting covers all of it. Up to four images go up as an
+ordinary image post; five to ten, as a gallery, which apps from before
+mid-2026 don't show. An image over Bluesky's 2MB goes up as a JPEG instead.
+
+Each thread keeps its record of what went out in a directory of its own,
+under `decker/talks/NAME/threads` in your config directory
+(`~/Library/Application Support` on macOS, `~/.config` on Linux), and the
+rehearsal writes `decker/talks/NAME/rehearsal/dry-run.md`. Each post is
+recorded as pending before it goes out and as sent once it has, so a
+presenter view that restarts can carry on the same thread without posting
+anything twice: a post that was going out is tried again first, and the
+publisher finds it if it went (the `bsky` publisher makes each post's
+record key from what the thread file keeps of it). The record names posts
+by what they say and show and their slide's title, not by position, so
+carrying on after moving slides or posts doesn't skip or repeat any, and a
+post edited since counts as a new one. A thread is carried on only as the
+account that posted it. The posts' media is rendered
+into `decker/talks/NAME/media` once a run, so starting after a rehearsal
+doesn't render it again, and cleared by the next run. What the publisher logs goes to
+`decker/talks/NAME/posting.log`, not the screen.
+
+While posting, the status line shows `● POSTING as @me.bsky.social · 3/12 sent`,
+adding `, 2 skipped` for posts on slides the deck has moved past without
+them: jumped over, or passed while paused. Going back to
+such a slide and moving on posts it, at the end of the thread. While a
+slide is up, its images and clips upload, so its posts go out as soon as
+you move on: a clip can take a minute to upload and process, and the posts
+after it would wait. Uploads and posts run in the background: neither the
+deck nor the presenter view waits on them.
+The
+NOTES line says what the slide's posts will do: `sends when you move on`,
+`queued`, `✓ sent`. A post that fails stays first in line, since the rest
+reply to it, and is retried, waiting longer each time up to a minute: the
+status line shows `▲ POST FAILED` and when it retries, and the dialog shows
+why. Paused, slides you move on from don't post. `q` asks again before
+quitting while posts wait to send; `ctrl+c` doesn't.
 
 The two windows talk over a Unix socket in the temp directory, named after
 the deck. To run two copies of one deck at once, give each pair its own
@@ -269,11 +414,13 @@ Pressing the same key again brings the slide back, and so does any
 navigation key, which then also does its move. The other blank key switches
 color. The slide's clock keeps running underneath, so animations finish while
 it is up. Pressed in the presenter view, the keys blank the deck, and the
-presenter view shows `BLANK` in its header while keeping the notes and
-previews. Blanking closes the notes and help.
+presenter view shows `BLANK` on its status line while keeping the notes
+and previews. Blanking closes the notes and help.
 
 Only in the presenter view: `p` opens the deck in a new Ghostty window
-(macOS), `t` starts or pauses the timer, `T` resets it.
+(macOS), `t` starts or pauses the timer, `T` resets it, and for a talk
+whose notes have posts, `P` opens the posting dialog. `?` lists the keys in
+both windows.
 
 Only in the deck: `n` shows the notes on the projector (a
 fallback if the presenter view isn't running), `?` shows help (`esc` closes it) and
@@ -290,23 +437,54 @@ Start with the complete [hello example](../examples/hello/main.go). As a talk gr
 | `theme.go` | the palette, the typefaces, and the `decker.Theme` built from them |
 | `style.go` | the talk's slide templates: how a title, a statement, a section opener and a bullet build look |
 | `slides*.go` | the slides, and `talk()`: the `decker.Deck` with its name, theme and running order |
+| `notes.md` | the speaker notes: a `## Title` section per slide, in order, embedded into `Deck.Notes` |
 
 The next snippets illustrate a larger talk's structure; `theme`,
 `titleSlide`, `bullets` and `title` are your own templates. For a program
 you can run unchanged, use the [hello example](../examples/hello/main.go).
 
 ```go
-import "github.com/austinlparker/decker"
+import (
+	_ "embed"
+
+	"github.com/austinlparker/decker"
+)
+
+//go:embed notes.md
+var notes string
 
 func main() { decker.Main(talk()) }
 
 func talk() decker.Deck {
-	return decker.Deck{Name: "my-talk", Theme: theme, Slides: []decker.Slide{
+	return decker.Deck{Name: "my-talk", Theme: theme, Notes: notes, Slides: []decker.Slide{
 		titleSlide(),
-		bullets("Why", "notes…", "First reason", "Second reason"),
+		bullets("Why", "First reason", "Second reason"),
 		mySlide(),
 	}}
 }
+```
+
+`notes.md` has a section per slide, in running order, each headed with its
+slide's title exactly as the Go code writes it. Text before the first
+section is about the whole talk. Sections can stop before the last slide,
+and later slides have no notes, but a section whose heading isn't its
+slide's title stops the deck from running, with the line it's on: add,
+remove or reorder a slide's section with the slide.
+
+```markdown
+# My talk
+
+## Title
+
+Welcome; say who you are.
+
+## Why
+
+Two reasons, one build each.
+
+## Something
+
+Say the thing.
 ```
 
 ### Theme
@@ -329,7 +507,6 @@ func mySlide() decker.Slide {
 	return decker.Slide{
 		Title:      "Something",                     // window title and slide list
 		Steps:      2,                               // two build states: Ctx.Step 0 and 1
-		Notes:      "say the thing",                 // shown in the presenter view
 		Section:    "Part one",                      // chapter; later slides inherit it until one sets another
 		Transition: decker.TransitionWipe.Over(0.6), // Push (default), Dissolve, Wipe, Morph, Fade, FadeThrough, Cover, Uncover, Split, Iris, Zoom, Pixelate, Glitch, None; Over sets seconds, From a side
 		Sources: []decker.Source{ // what it cites, for the handout
@@ -514,18 +691,32 @@ import (
 
 func TestSlides(t *testing.T)      { decktest.Slides(t, talk()) }
 func TestReview(t *testing.T)      { decktest.Review(t, talk()) }
-func TestGolden(t *testing.T)      { decktest.Golden(t, talk(), "testdata/golden.txt") }
+func TestPosts(t *testing.T)       { decktest.Posts(t, talk()) }
+func TestGolden(t *testing.T)      { decktest.Golden(t, talk(), "testdata/golden") }
 func BenchmarkFrames(b *testing.B) { decktest.Frames(b, talk()) }
 ```
 
 `Slides` renders every slide at every build step, at three sizes and four
-moments, and fails on panics in a View, a placed element or the overlay.
+moments, and fails on panics in a View, a placed element or the overlay,
+and on a frame that comes out different when drawn again: a View must
+depend only on its `Ctx`.
 `Review` fails on every error `review` would report (see below), so a slide
-that starts clipping fails the build. `Golden` hashes every frame of every step at eight moments and
-three sizes, and fails if any of them changed: after changing a slide on
-purpose, record it with `UPDATE_GOLDEN=1 go test -run Golden`. That makes
-the engine safe to change: an engine change that moves one pixel of any
-talk fails that talk's test.
+that starts clipping fails the build. `Posts` renders every post in the
+notes and has the deck's `Publisher` check them, as a rehearsal does,
+without signing in. `Golden` keeps an image of each slide in the
+directory, every build appearing, entered and settled, and settled again
+at 240×67 and 80×24, where layout is tightest, and fails when a slide no
+longer looks the same; text in the character layer is checked
+exactly. Images are compared at half size and within a small tolerance:
+the same program doesn't draw the same bits on every machine (an M-series
+Mac rounds some arithmetic differently from most Linux CI), and those
+differences are far too small to see, while a word changed, an element
+moved half a pixel or a color shifted is not. A failure says which build,
+moment or size, and leaves what it drew and a diff image where it says. After
+changing a slide on purpose, record with `UPDATE_GOLDEN=1 go test -run
+Golden`; only the images that changed are rewritten. That makes the engine
+safe to change: an engine change that alters how a talk looks fails that
+talk's test.
 
 
 ### Reviewing a deck

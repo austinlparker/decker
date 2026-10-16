@@ -45,14 +45,18 @@
 // # Frame purity
 //
 // A frame depends only on its Ctx: no clocks, no math/rand. Any moment can
-// then be replayed, snapshotted, rendered to video and pinned by golden
-// tests. Use [Hash01] for repeatable noise and Ctx.T, Ctx.Step and Ctx.StepT
+// then be replayed, snapshotted, rendered to video and checked against
+// reference images. Use [Hash01] for repeatable noise and Ctx.T, Ctx.Step and Ctx.StepT
 // for time.
 //
 // # Main types
 //
-//   - [Deck], [Slide]: the talk, and one slide with its steps, notes,
-//     [Source] citations and [Transition].
+//   - [Deck], [Slide]: the talk with its speaker notes in Markdown, and one
+//     slide with its steps, [Source] citations and [Transition].
+//   - [Publisher], [Session], [Thread], [Delivery], [Post], [Media]:
+//     posting the talk as a thread as it's given, from the post blocks in
+//     its notes: a Publisher checks posts and signs in, its Session opens
+//     a talk's posts, and the Thread posts them.
 //   - [Ctx]: what changes between frames (T, Step, StepT), the slide's position
 //     (Index, Count, Section), plus layout helpers.
 //   - [Rect]: a box on the canvas; layout cuts and splits rects

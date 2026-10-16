@@ -8,3 +8,4 @@ import (
 
 func TestSlides(t *testing.T) { decktest.Slides(t, talk()) }
 func TestReview(t *testing.T) { decktest.Review(t, talk()) }
+func TestPosts(t *testing.T)  { decktest.Posts(t, talk()) }

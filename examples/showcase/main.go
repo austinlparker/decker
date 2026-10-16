@@ -1,13 +1,29 @@
-// Command showcase is the deck behind the README's example videos: three short
-// clips of what a talk can draw. Each clip is a range of slides; record.sh
-// exports them with the video command and turns them into GIFs.
+// Command showcase is decker's example talk: what a talk can draw, and its
+// speaker notes and posts, in notes.md. Slides 1-8 are the README's example
+// videos, three short clips that record.sh exports with the video command
+// and turns into GIFs. The posts make a Bluesky thread, every kind a talk
+// can post; main_test.go checks them against Bluesky's limits without
+// posting.
+//
+//	go run . present
+//
+// In the presenter view, P opens the posting dialog: Rehearse writes the
+// posts to a file, and Start posting signs in and posts for real.
+//
+// The example is a module of its own, so the engine doesn't depend on
+// bsky; run it from its directory.
 package main
 
 import (
+	_ "embed"
 	"strings"
 
 	"github.com/austinlparker/decker"
+	"github.com/austinlparker/decker/bsky"
 )
+
+//go:embed notes.md
+var notes string
 
 func main() { decker.Main(talk()) }
 
@@ -37,19 +53,30 @@ var theme = &decker.Theme{
 var stencil = decker.StockFigletFont("Decker Stencil")
 
 func talk() decker.Deck {
-	return decker.Deck{Name: "decker-showcase", Theme: theme, Slides: []decker.Slide{
-		// Clip 1, slides 1-3: type and letter effects.
-		titleSlide(),
-		statementSlide(),
-		effectsSlide(),
-		// Clip 2, slides 4-5: charts and numbers.
-		statsSlide(),
-		chartsSlide(),
-		// Clip 3, slides 6-8: code, diagrams and magic move.
-		codeSlide(),
-		pipelineSlide(),
-		pipelineMovedSlide(),
-	}}
+	return decker.Deck{
+		Name:      "decker-showcase",
+		Theme:     theme,
+		Notes:     notes,
+		Publisher: &bsky.Publisher{Langs: []string{"en"}},
+		Slides: []decker.Slide{
+			// Clip 1, slides 1-3: type and letter effects.
+			titleSlide(),
+			statementSlide(),
+			effectsSlide(),
+			// Clip 2, slides 4-5: charts and numbers.
+			statsSlide(),
+			chartsSlide(),
+			// Clip 3, slides 6-8: code, diagrams and magic move.
+			codeSlide(),
+			pipelineSlide(),
+			pipelineMovedSlide(),
+			// Posting, slides 9-12: the posts the slides above can't show.
+			buildsSlide(),
+			grainSlide(),
+			skipSlide(),
+			thanksSlide(),
+		},
+	}
 }
 
 // heading draws a slide's title and returns the y below it.
