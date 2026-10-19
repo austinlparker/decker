@@ -11,7 +11,7 @@ invariants, the reference tests, and a recipe for each kind of addition.
 | `posting.go`, `dialog.go` | setting posting up from the presenter view: the account and signing in, which thread, posting or rehearsing, the media rendered once a run, and the files they keep in the user's config directory, all read and written in commands off the view's loop; the presenter view's dialogs, posting and the keys sheet, as boxes over the dimmed screen, and the posting dialog's fields, buttons and focus |
 | `layout.go` | `Rect`: boxes cut from the canvas for layout |
 | `scale.go` | `Scale`: data values mapped onto pixels with round ticks and labels, for hand-drawn axes; shares its tick rounding with the charts' |
-| `cli.go` | `Main`: the command line, parsed by kong, one command struct per mode with its flags, checks and `Run` (live, present, list, review, handout, snapshot, sheet, video) |
+| `cli.go` | `Main`: the command line, parsed by kong, one command struct per mode with its flags, checks and `Run` (live, present, list, review, handout, snapshot, sheet, pdf, video) |
 | `handout.go` | the `handout` command: a Markdown handout with each slide's thumbnail, notes and sources, and every source once |
 | `theme.go`, `color.go` | `Theme`; `RGB`, `Hex`, `Mix` |
 | `draw.go` | stock components: `Panel`, `Arrow`, `Label`, `PageNumber`, `ProgressBar`, `Chip`, `CycleDiagram`, `BulletList`… |
@@ -35,6 +35,7 @@ invariants, the reference tests, and a recipe for each kind of addition.
 | `present_window.go`, `kitty.go` | launch a Ghostty deck window with its own font size; upload and manage full-resolution presenter images |
 | `png.go` | PNG snapshots and contact sheets, painted from cell grids |
 | `video.go` | rendering a deck to a video |
+| `pdf.go` | the `pdf` command: a page per slide or build, each a frame of the pixel canvas as a lossless image, with an outline of the slides |
 | `decktest/` | the test suite for decks: renders (and that drawing again gives the same frame), review, reference images, posts checked against the publisher |
 | `internal/visual/` | reference images and text for tests: frames halved and compared within a tolerance set from measurement, sheets of small frames, readable diffs |
 | `bsky/` | its own module, `github.com/austinlparker/decker/bsky`, so the engine doesn't carry its dependencies (`examples/showcase`, which posts with it, is a module too). `bsky.Publisher`: posting the talk to Bluesky; OAuth sign-in as a loopback client with the session kept in the system keychain, uploads through the video service, image posts and galleries, links, mentions and hashtags as facets, record keys made from the thread file so a retry, after a restart too, never posts twice |

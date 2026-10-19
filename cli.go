@@ -18,7 +18,7 @@ import (
 
 // Main runs a deck from the command line: live in the terminal by default,
 // or the command given (present, list, review, handout, snapshot, sheet,
-// video). It exits on a bad command line or a failed command; `--help`
+// pdf, video). It exits on a bad command line or a failed command; `--help`
 // lists them all.
 func Main(d Deck) {
 	k, ctx, err := parseArgs(&d, os.Args[1:])
@@ -44,6 +44,7 @@ type cli struct {
 	Handout  handoutCmd  `cmd:"" help:"Write DIR/handout.md, with each slide's thumbnail, notes and sources, and the thumbnails."`
 	Snapshot snapshotCmd `cmd:"" help:"Print one build of one slide, or write it as a PNG."`
 	Sheet    sheetCmd    `cmd:"" help:"Write every slide, at its last build, into one PNG contact sheet."`
+	PDF      pdfCmd      `cmd:"" name:"pdf" help:"Write the deck as a PDF, a page for each slide at its last build."`
 	Video    videoCmd    `cmd:"" help:"Render the deck to an MP4 video (needs ffmpeg)."`
 }
 
@@ -288,13 +289,42 @@ func (c sheetCmd) Run(d *Deck) error {
 	return writeSheet(frames, c.Shrink, c.File)
 }
 
+// pixelSize is a frame's size in pixels, WIDTHxHEIGHT on the command line.
+// The height is even: a canvas has two pixels to a cell's height.
+type pixelSize struct{ W, H int }
+
+// Decode reads a size from the command line, for kong.
+func (s *pixelSize) Decode(ctx *kong.DecodeContext) error {
+	var v string
+	if err := ctx.Scan.PopValueInto("size", &v); err != nil {
+		return err
+	}
+	var w, h int
+	if n, _ := fmt.Sscanf(v, "%dx%d", &w, &h); n != 2 || fmt.Sprintf("%dx%d", w, h) != v {
+		return fmt.Errorf("%q: want WIDTHxHEIGHT, like 1920x1080", v)
+	}
+	if w <= 0 || h <= 0 || h%2 != 0 {
+		return fmt.Errorf("%s: want a positive width and a positive, even height", v)
+	}
+	*s = pixelSize{w, h}
+	return nil
+}
+
+type pdfCmd struct {
+	File   string    `arg:"" help:"The PDF to write."`
+	Size   pixelSize `default:"1920x1080" help:"Each page's size in pixels, WIDTHxHEIGHT."`
+	Builds bool      `help:"A page for every build of each slide, not only its last."`
+}
+
+func (c pdfCmd) Run(d *Deck) error { return writePDF(d, c.File, c.Size, c.Builds) }
+
 type videoCmd struct {
-	File  string  `arg:"" help:"The MP4 to write."`
-	Slide int     `default:"1" help:"First slide, from 1."`
-	Until int     `help:"Last slide, from 1; the default is the end."`
-	Size  string  `default:"1920x1080" help:"The video's size in pixels, WIDTHxHEIGHT."`
-	Hold  float64 `default:"4" help:"Seconds each build stays on screen, unless its slide sets Hold."`
-	FPS   int     `name:"fps" default:"60" help:"Frames per second."`
+	File  string    `arg:"" help:"The MP4 to write."`
+	Slide int       `default:"1" help:"First slide, from 1."`
+	Until int       `help:"Last slide, from 1; the default is the end."`
+	Size  pixelSize `default:"1920x1080" help:"The video's size in pixels, WIDTHxHEIGHT."`
+	Hold  float64   `default:"4" help:"Seconds each build stays on screen, unless its slide sets Hold."`
+	FPS   int       `name:"fps" default:"60" help:"Frames per second."`
 }
 
 func (c videoCmd) Validate() error {
@@ -305,12 +335,9 @@ func (c videoCmd) Validate() error {
 }
 
 func (c videoCmd) Run(d *Deck) error {
-	vo := videoOptions{path: c.File, fps: c.FPS, hold: c.Hold, first: c.Slide - 1, last: 1 << 30}
+	vo := videoOptions{path: c.File, width: c.Size.W, height: c.Size.H, fps: c.FPS, hold: c.Hold, first: c.Slide - 1, last: 1 << 30}
 	if c.Until > 0 {
 		vo.last = c.Until - 1
-	}
-	if _, err := fmt.Sscanf(c.Size, "%dx%d", &vo.width, &vo.height); err != nil {
-		return errors.New("--size: want WIDTHxHEIGHT, like 1920x1080")
 	}
 	return renderVideo(d, vo)
 }
