@@ -5,7 +5,7 @@
 // function that draws one frame from a [Ctx] onto a [Scene], and [Main] gives
 // the deck its command line: present, presenter view, dev reload, a review of
 // every build for clipped or unreadable content, snapshots, contact sheets,
-// handouts and video.
+// handouts, PDF and video.
 // The presenter can open a deck window in Ghostty on macOS with its own
 // terminal font size; Ghostty and kitty also support full-resolution previews.
 //

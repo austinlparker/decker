@@ -37,7 +37,15 @@ func TestCommandLine(t *testing.T) {
 		}},
 		{[]string{"video", "v.mp4", "--until", "3"}, "video <file>", func(c any) bool {
 			v := c.(videoCmd)
-			return v.File == "v.mp4" && v.Until == 3 && v.Size == "1920x1080" && v.FPS == 60
+			return v.File == "v.mp4" && v.Until == 3 && v.Size == pixelSize{1920, 1080} && v.FPS == 60
+		}},
+		{[]string{"pdf", "talk.pdf"}, "pdf <file>", func(c any) bool {
+			p := c.(pdfCmd)
+			return p.File == "talk.pdf" && p.Size == pixelSize{1920, 1080} && !p.Builds
+		}},
+		{[]string{"pdf", "talk.pdf", "--size", "1280x720", "--builds"}, "pdf <file>", func(c any) bool {
+			p := c.(pdfCmd)
+			return p.Size == pixelSize{1280, 720} && p.Builds
 		}},
 		{[]string{"present", "--previews", "cells"}, "present", func(c any) bool { return c.(presentCmd).Previews == "cells" }},
 	} {
@@ -69,7 +77,12 @@ func TestCommandLineRejects(t *testing.T) {
 		{"present", "--presentation-font-size", "0"},
 		{"--fps", "0"},
 		{"video", "v.mp4", "--fps", "0"},
-		{"--png", "f.png"}, // a snapshot flag, without snapshot
+		{"--png", "f.png"},                      // a snapshot flag, without snapshot
+		{"pdf"},                                 // no file
+		{"pdf", "a.pdf", "--size", "1920x1081"}, // a canvas has two pixels to a cell's height
+		{"pdf", "a.pdf", "--size", "1920x1080x3"},
+		{"pdf", "a.pdf", "-w", "40"},
+		{"video", "v.mp4", "--size", "0x2"},
 	} {
 		if _, _, err := parseArgs(testDeck(), args); err == nil {
 			t.Errorf("%q: accepted", args)

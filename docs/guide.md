@@ -127,6 +127,7 @@ go run . review review       # check every build at three sizes for clipped or l
 go run . handout handout     # handout/handout.md: thumbnails, notes and sources
 go run . snapshot --slide 6 --step 4 -t 2.5 -w 240 -h 67 --png frame.png
 go run . sheet sheet.png -w 682 -h 171 --shrink 8
+go run . pdf talk.pdf             # a page per slide, to share after the talk
 go run . video talk.mp4 --fps 30
 ```
 
@@ -148,6 +149,11 @@ and 682×171, and lists what is lost or hard to read: Code lines clipped,
 Table rows dropped, text off the canvas or below the readable size, a
 panic. It writes `DIR/index.md` with pictures of what it found, and exits
 non-zero when it finds an error. See [Reviewing a deck](#reviewing-a-deck).
+
+`pdf FILE` writes the deck as a PDF to share: a page for each slide at its
+last build, or for every build with `--builds`, each a `--size`-pixel frame
+(1920×1080 by default) as video draws it, so without the character layer.
+Its outline lists the slides by title.
 
 `handout DIR` writes a document to rehearse from or hand out: `DIR/handout.md`
 and a thumbnail of every slide (`01.png`, `02.png`…) at its last step, at

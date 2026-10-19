@@ -53,8 +53,8 @@ Code with a moving highlight, a diagram, and a magic move to the next slide:
 - **A true-color terminal with Unicode half-block support** for live talks.
   Try Ghostty, kitty, WezTerm or iTerm2. A smaller terminal font gives smoother
   slides because it increases the pixel count.
-- **FFmpeg with `libx264`**, only for video export. Snapshots, contact sheets
-  and slide lists run without an interactive terminal.
+- **FFmpeg with `libx264`**, only for video export. Snapshots, contact sheets,
+  PDFs and slide lists run without an interactive terminal.
 
 Decker is a Go library. A talk is a separate `main` package that calls
 `decker.Main`; decks are authored in Go, with their own layouts and assets.
@@ -145,6 +145,7 @@ go run . review review                # every build at three sizes: what's clipp
 go run . handout handout              # handout.md: thumbnails, notes and sources
 go run . snapshot --step 2 -w 160 -h 45 --png frame.png
 go run . sheet sheet.png              # all slides at their final step
+go run . pdf talk.pdf                 # a page per slide; --builds for every build
 go run . video talk.mp4 --fps 30      # silent video; needs ffmpeg
 ```
 

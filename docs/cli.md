@@ -17,6 +17,7 @@ go run . review review
 go run . handout handout -w 160 -h 45
 go run . snapshot --slide 1 --step 2 -t 1.5 -w 240 -h 67 --png frame.png
 go run . sheet sheet.png -w 682 -h 171 --shrink 8
+go run . pdf talk.pdf --size 1280x720 --builds
 go run . video talk.mp4 --slide 1 --until 3 --size 1280x720 --fps 30 --hold 4
 ```
 
@@ -31,6 +32,7 @@ go run . video talk.mp4 --slide 1 --until 3 --size 1280x720 --fps 30 --hold 4
 | `handout DIR` | Write `DIR/handout.md` and a PNG thumbnail of every slide at its final build |
 | `snapshot` | Render one slide and build as ANSI text to stdout, or as a PNG with `--png` |
 | `sheet FILE` | Write a four-column PNG contact sheet of all slides at their final build |
+| `pdf FILE` | Write a PDF with a page for each slide at its final build, or for every build with `--builds` |
 | `video FILE` | Export animation and transitions as a silent H.264 video |
 
 Flags go after the command, and each command takes only its own: a flag for
@@ -58,7 +60,8 @@ two dashes; `-w`, `-h` and `-t` are the short forms of `--width`,
 | `--length DURATION` | `30m` | present: the talk's length; Go duration syntax, e.g. `45m` |
 | `--presentation-font-size PT` | `4` | present: positive, finite font size in points for the Ghostty window opened with `p` |
 | `--previews MODE` | `auto` | present: `auto` selects images in Ghostty/kitty outside tmux/zellij; `image` forces images; `cells` forces half-block previews |
-| `--size WIDTHxHEIGHT` | `1920x1080` | video: output size in **pixels** |
+| `--size WIDTHxHEIGHT` | `1920x1080` | video, pdf: output size in **pixels**, the height even |
+| `--builds` | off | pdf: a page for every build, not only each slide's last |
 | `--hold SECONDS` | `4` | video: time per build, overridden by a positive `Slide.Hold` |
 | `--until N` | end | video: last slide, **1-based** |
 
@@ -123,14 +126,23 @@ worst issue. The images omit character-layer text, as video does.
 ## Export behavior
 
 PNG snapshots and contact sheets render terminal cells, including the
-character layer. Video reads the pixel canvas directly, so `Scene.Text`,
-`Scene.Put` and `Scene.Sprite` content is absent; use `Text`, `Rich` or
-`Block` for content needed in both outputs.
+character layer. Video and PDF read the pixel canvas directly, one output
+pixel to a canvas pixel, so `Scene.Text`, `Scene.Put` and `Scene.Sprite`
+content is absent; use `Text`, `Rich` or `Block` for content needed in
+every output.
+
+`pdf FILE` draws each page as `sheet` draws a frame, settled at the final
+build, but at `--size` pixels: 1920×1080 is a 1920×540-cell canvas. Each
+page is that size in points, holding the frame as a lossless image, so the
+text is pictures, not text to select or search. With `--builds`, every
+build gets a page, in order. The outline (a viewer's bookmarks) has each
+slide's title, at its first page, and the document's title is the deck's
+name. The file depends only on the deck and the flags; it has no date.
 
 Video needs `ffmpeg` on `PATH` with the `libx264` encoder. `--slide` and
 `--until` bound the export; it starts every included slide at its first
 step. The first step gets transition time in addition to its hold time.
-Video has no audio. PNG, sheet and video output replace an existing file.
+Video has no audio. PNG, sheet, PDF and video output replace an existing file.
 
 `handout DIR` creates `DIR` if needed and writes `handout.md` and one
 thumbnail per slide, named `01.png`, `02.png`… (padded to the slide count's
@@ -146,5 +158,5 @@ the flags. Existing files of the same names are replaced; others in `DIR`
 are left alone.
 
 Source of truth: [`cli.go`](../cli.go), [`present_window.go`](../present_window.go),
-[`kitty.go`](../kitty.go), [`handout.go`](../handout.go), [`png.go`](../png.go),
+[`kitty.go`](../kitty.go), [`handout.go`](../handout.go), [`png.go`](../png.go), [`pdf.go`](../pdf.go),
 [`video.go`](../video.go) and [`dev.go`](../dev.go).
