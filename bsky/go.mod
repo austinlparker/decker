@@ -7,14 +7,14 @@ require (
 	github.com/bluesky-social/indigo v0.0.0-20261013190618-3beb6e491b79
 	github.com/rivo/uniseg v0.4.7
 	github.com/zalando/go-keyring v0.2.8
-	golang.org/x/sync v0.24.0
+	golang.org/x/sync v0.25.0
 )
 
 require (
-	charm.land/bubbletea/v2 v2.1.0 // indirect
+	charm.land/bubbletea/v2 v2.1.1 // indirect
 	charm.land/lipgloss/v2 v2.0.6 // indirect
 	github.com/alecthomas/chroma/v2 v2.27.0 // indirect
-	github.com/alecthomas/kong v1.16.1 // indirect
+	github.com/alecthomas/kong v1.17.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect
